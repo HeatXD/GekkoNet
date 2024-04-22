@@ -12,7 +12,7 @@ namespace Gekko {
 	public:
 		static void Test();
 
-		Session() = default;
+		Session();
 
 		void Init(u8 num_players, u8 max_spectators, u8 input_delay, u32 input_size);
 

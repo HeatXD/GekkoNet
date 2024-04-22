@@ -6,6 +6,17 @@ void Gekko::Session::Test()
 	std::cout << "Hello Gekko!\n";
 }
 
+Gekko::Session::Session()
+{
+	_host = nullptr;
+	_input_size = 0;
+	_max_spectators = 0;
+	_num_players = 0;
+	_started = false;
+	_num_players = 0;
+	_local_delay = 0;
+}
+
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
 {
 	_host = adapter;

@@ -2,56 +2,187 @@
 #include "../GekkoLib/gekko.h"
 #include <windows.h>
 #include "example.h"
+#include "SDL2/SDL.h"
+#include <chrono>
 
-struct GState {
-	int Inp1 = 0;
-	int Inp2 = 0;
-	int Sum = 0;
+SDL_Window* window = nullptr;
+SDL_Renderer* renderer = nullptr;
+bool running = false;
+
+bool init_window(void) {
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+		fprintf(stderr, "Error initializing SDL.\n");
+		return false;
+	}
+	window = SDL_CreateWindow(
+		"GekkoNet Example",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		900,
+		900,
+		0
+	);
+	if (!window) {
+		fprintf(stderr, "Error creating SDL Window.\n");
+		return false;
+	}
+	renderer = SDL_CreateRenderer(window, -1, 0);
+	if (!renderer) {
+		fprintf(stderr, "Error creating SDL Renderer.\n");
+		return false;
+	}
+	return true;
+}
+
+void del_window(void) {
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
+}
+
+struct GInput {
+	union inp {
+		struct dir {
+			char up : 1;
+			char down : 1;
+			char left : 1;
+			char right : 1;
+		}dir;
+		unsigned char value;
+	}input;
 };
 
-int main(void)
+void process_events() {
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		switch (event.type) {
+		case SDL_QUIT:
+			running = false;
+			break;
+		case SDL_KEYDOWN:
+			auto key = event.key.keysym.sym;
+			if (key == SDLK_ESCAPE) {
+				running = false;
+				break;
+			}
+			break;
+		}
+	}
+}
+
+struct GState {
+	int px[2];
+	int py[2];
+};
+
+void update_state(GState& gs, GInput inputs[2], int num_players) {
+	for (int player = 0; player < num_players; player++) {
+		if (inputs[player].input.dir.up) gs.py[player] -= 2;
+		if (inputs[player].input.dir.down) gs.py[player] += 2;
+		if (inputs[player].input.dir.left) gs.px[player] -= 2;
+		if (inputs[player].input.dir.right)gs.px[player] += 2;
+	}
+}
+
+void render_state(GState& gs) {
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	for (int player = 0; player < 2; player++)
+	{
+		SDL_Rect ball_rect = {
+			gs.px[player],
+			gs.py[player],
+			40,
+			40
+		};
+		SDL_RenderFillRect(renderer, &ball_rect);
+	}
+}
+
+void get_key_inputs(GInput inputs[2]) {
+	// reset inputs
+	inputs[0].input.value = 0;
+	inputs[0].input.value = 0;
+	// fetch inputs
+	auto keys = SDL_GetKeyboardState(NULL);
+	// P1
+	inputs[0].input.dir.up = keys[SDL_SCANCODE_W];
+	inputs[0].input.dir.left = keys[SDL_SCANCODE_A];
+	inputs[0].input.dir.down = keys[SDL_SCANCODE_S];
+	inputs[0].input.dir.right = keys[SDL_SCANCODE_D];
+	// P2
+	inputs[1].input.dir.up = keys[SDL_SCANCODE_UP];
+	inputs[1].input.dir.left = keys[SDL_SCANCODE_LEFT];
+	inputs[1].input.dir.down = keys[SDL_SCANCODE_DOWN];
+	inputs[1].input.dir.right = keys[SDL_SCANCODE_RIGHT];
+}
+
+int main(int argc, char* args[])
 {
-	std::cout << "Hello World!\n";
+	running = init_window();
+
+	GState state = {};
+	GInput inputs[2] = {};
 
 	Gekko::Session::Test();
 
-	union input {
-		unsigned char val;
-	};
+	int num_players = 2;
 
 	auto sess = Gekko::Session();
-	sess.Init(2, 0, 1, sizeof(char));
+	sess.Init(num_players, 0, 0, sizeof(char));
 
 	auto p1 = sess.AddPlayer(Gekko::PlayerType::Local);
 	auto p2 = sess.AddPlayer(Gekko::PlayerType::Local);
 
-	int idx = 0;
-	unsigned char inp = 255;
-	while (true)
-	{
-		sess.AddLocalInput(p1, &inp);
-		sess.AddLocalInput(p2, &inp);
+	// timing 
+	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
+	using clock = std::chrono::steady_clock;
 
-		auto ev = sess.UpdateSession();
-		for (int j = 0; j < ev.size(); j++)
-		{
-			std::cout << "ev type: " << ev[j].type << "\n";
-			switch (ev[j].type)
+	time_point timer(clock::now());
+	frame fps = {};
+
+	while (running) {
+		fps = std::chrono::duration_cast<frame>(clock::now() - timer);
+
+		if (fps.count() > 0) {
+			timer = clock::now();
+
+			process_events();
+			get_key_inputs(inputs);
+
+			//add local inputs to the session
+			sess.AddLocalInput(p1, &inputs[0].input.value);
+			sess.AddLocalInput(p2, &inputs[1].input.value);
+
+			auto ev = sess.UpdateSession();
+
+			for (int i = 0; i < ev.size(); i++)
 			{
-			case Gekko::EventType::AdvanceEvent:
-				printf("P1 %d, P2 %d\n", ev[j].data.ev.adv.inputs[0], ev[j].data.ev.adv.inputs[1]);
-				// THE USER HAS TO FREE THE INPUTS THEYRE USING. when theyre done
-				std::free(ev[j].data.ev.adv.inputs);
-				break;
-			default:
-				break;
+				switch (ev[i].type)
+				{
+				case Gekko::AdvanceEvent:
+					// on advance event, advance the gamestate using the given inputs
+					inputs[0].input.value = ev[i].data.ev.adv.inputs[0];
+					inputs[1].input.value = ev[i].data.ev.adv.inputs[1];
+					// be sure to free the inputs when u have used or collected them.
+					std::free(ev[i].data.ev.adv.inputs);
+					// now we can use them to update state.
+					update_state(state, inputs, num_players);
+					break;
+				default:
+					break;
+				}
 			}
-
 		}
-		std::cout << "iter: " << idx << " ev size:" << ev.size() << "\n";
-		Sleep(10);
-		idx++;
+
+		// draw the state every iteration
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderClear(renderer);
+		render_state(state);
+		SDL_RenderPresent(renderer);
 	}
+
+	del_window();
 
 	return 0;
 }
