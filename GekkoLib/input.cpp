@@ -67,24 +67,6 @@ std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame)
 	return inp;
 }
 
-//std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame)
-//{
-//	auto inp = new GameInput();
-//
-//	inp->frame = GameInput::NULL_FRAME;
-//	inp->input = nullptr;
-//	inp->input_len = 0;
-//
-//	if(_last_received_input < frame)
-//		return inp;
-//
-//	if (_inputs[frame % BUFF_SIZE].frame == GameInput::NULL_FRAME)
-//		return inp;
-//
-//	inp->Init(_inputs[frame % BUFF_SIZE]);
-//	return inp;
-//}
-
 void Gekko::GameInput::Init(GameInput& other)
 {
 	frame = other.frame;

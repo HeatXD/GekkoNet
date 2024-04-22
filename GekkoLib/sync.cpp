@@ -6,6 +6,12 @@ Gekko::SyncSystem::SyncSystem()
 	_current_frame = GameInput::NULL_FRAME;
 	_input_size = 0;
 	_num_players = 0;
+	_input_buffers = nullptr;
+}
+
+Gekko::SyncSystem::~SyncSystem()
+{
+	delete _input_buffers;
 }
 
 void Gekko::SyncSystem::Init(u8 num_players, u32 input_size, u8 input_delay)
