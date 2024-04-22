@@ -1,0 +1,7 @@
+# CMake generation dependency list for this directory.
+C:/Program Files/CMake/share/cmake-3.25/Modules/FetchContent.cmake
+C:/Program Files/CMake/share/cmake-3.25/Modules/FetchContent/CMakeLists.cmake.in
+C:/Program Files/CMake/share/cmake-3.25/Modules/FindGit.cmake
+C:/Program Files/CMake/share/cmake-3.25/Modules/FindPackageHandleStandardArgs.cmake
+C:/Program Files/CMake/share/cmake-3.25/Modules/FindPackageMessage.cmake
+F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/examples/CMakeLists.txt

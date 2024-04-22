@@ -1,0 +1,7 @@
+build
+/.vscode
+package-lock.json
+node_modules
+cmake-build-debug
+.idea
+docs

@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\examples\textures\textures_image_loading.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\examples\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{36EC6865-2974-3AFA-9272-23A27EF9B46A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

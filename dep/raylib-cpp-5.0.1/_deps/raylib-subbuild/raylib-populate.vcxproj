@@ -1,0 +1,294 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A3863016-55BF-35B7-923D-38956B687E23}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>raylib-populate</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-mkdir.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Creating directories for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/tmp/raylib-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-mkdir</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-download.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Performing download step (git clone) for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps
+if %errorlevel% neq 0 goto :cmEnd
+F:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -P F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/tmp/raylib-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\raylib-populate-gitinfo.txt;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-mkdir;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-download</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-update.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Performing update step for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-src
+if %errorlevel% neq 0 goto :cmEnd
+F:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -P F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/tmp/raylib-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-download;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-update</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-patch.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No patch step for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-update;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-patch</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-configure.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No configure step for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-build
+if %errorlevel% neq 0 goto :cmEnd
+F:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\tmp\raylib-populate-cfgcmd.txt;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-patch;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-configure</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-build.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No build step for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-build
+if %errorlevel% neq 0 goto :cmEnd
+F:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-configure;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-build</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-install.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No install step for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-build
+if %errorlevel% neq 0 goto :cmEnd
+F:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-build;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-install</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\2475be539883e2070baef106a9476141\raylib-populate-test.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No test step for 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-build
+if %errorlevel% neq 0 goto :cmEnd
+F:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-install;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-test</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\20958af194b8eb021f1611c23f83cebd\raylib-populate-complete.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Completed 'raylib-populate'</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/Debug/raylib-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/raylib-populate-prefix/src/raylib-populate-stamp/Debug/raylib-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-install;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-mkdir;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-download;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-update;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-patch;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-configure;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-build;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\src\raylib-populate-stamp\Debug\raylib-populate-test;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\Debug\raylib-populate-complete</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\ad41214e5384658e4b7236236a126dfc\raylib-populate.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\Debug\raylib-populate-complete;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\raylib-populate</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SF:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild -BF:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild --check-stamp-file F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.25\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.25\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\ExternalProject\RepositoryInfo.txt.in;C:\Program Files\CMake\share\cmake-3.25\Modules\ExternalProject\cfgcmd.txt.in;C:\Program Files\CMake\share\cmake-3.25\Modules\ExternalProject\gitclone.cmake.in;C:\Program Files\CMake\share\cmake-3.25\Modules\ExternalProject\gitupdate.cmake.in;C:\Program Files\CMake\share\cmake-3.25\Modules\ExternalProject\mkdirs.cmake.in;C:\Program Files\CMake\share\cmake-3.25\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.25\Modules\Platform\WindowsPaths.cmake;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\3.25.2\CMakeSystem.cmake;F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\raylib-populate-prefix\tmp\raylib-populate-mkdirs.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\CMakeFiles\raylib-populate">
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="F:\Downloads\raylib-cpp-5.0.1\raylib-cpp-5.0.1\_deps\raylib-subbuild\ZERO_CHECK.vcxproj">
+      <Project>{8F68A3B9-4553-3D35-B80E-04444EFCC12B}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

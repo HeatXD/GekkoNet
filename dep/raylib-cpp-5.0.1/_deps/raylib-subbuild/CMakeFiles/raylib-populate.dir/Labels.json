@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/raylib-populate"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/ad41214e5384658e4b7236236a126dfc/raylib-populate.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/20958af194b8eb021f1611c23f83cebd/raylib-populate-complete.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-build.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-configure.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-download.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-install.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-mkdir.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-patch.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-test.rule"
+		},
+		{
+			"file" : "F:/Downloads/raylib-cpp-5.0.1/raylib-cpp-5.0.1/_deps/raylib-subbuild/CMakeFiles/2475be539883e2070baef106a9476141/raylib-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"raylib-populate"
+		],
+		"name" : "raylib-populate"
+	}
+}
