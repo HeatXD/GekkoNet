@@ -20,7 +20,7 @@ int main(void)
 	};
 
 	auto sess = Gekko::Session();
-	sess.Init(2, 0, 10, sizeof(char));
+	sess.Init(2, 0, 1, sizeof(char));
 
 	auto p1 = sess.AddPlayer(Gekko::PlayerType::Local);
 	auto p2 = sess.AddPlayer(Gekko::PlayerType::Local);

@@ -88,9 +88,11 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 void Gekko::Session::UpdatePlayerStatus()
 {
+	// TODO
 }
 
 bool Gekko::Session::AllPlayersValid()
 {
+	// TODO
 	return true;
 }

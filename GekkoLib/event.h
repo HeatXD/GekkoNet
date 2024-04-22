@@ -13,18 +13,16 @@ namespace Gekko {
 
 	struct Advance
 	{
-		Advance() = default;
-		~Advance();
-
 		Frame frame;
 		u32 input_len;
 		u8* inputs;
 	};
 
 	struct EventData {
-		EventData();
-		union x {
-			~x();
+		EventData() = default;
+		union event {
+			event();
+			~event();
 			Advance adv;
 			u32 xxx;
 		}ev;
