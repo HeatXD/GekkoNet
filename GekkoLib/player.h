@@ -24,6 +24,8 @@ namespace Gekko {
 
 		PlayerType GetType();
 
+		PlayerStatus GetStatus();
+
 	private:
 		PlayerType _type;
 		PlayerStatus _status;

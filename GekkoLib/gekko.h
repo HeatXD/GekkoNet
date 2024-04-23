@@ -17,13 +17,17 @@ namespace Gekko {
 		void Init(u8 num_players, u8 max_spectators, u32 input_size);
 
 		void SetLocalDelay(Handle player, u8 delay);
+
 		void SetNetAdapter(NetAdapter* adapter);
+
 		Handle AddPlayer(PlayerType type, NetAddress addr = NetAddress());
 
 		void AddLocalInput(Handle player, Input input);
 
 		std::vector<Event> UpdateSession();
+
 		void UpdatePlayerStatus();
+
 		bool AllPlayersValid();
 
 	private:

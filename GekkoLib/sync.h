@@ -25,6 +25,7 @@ namespace Gekko {
 		u8 _num_players;
 		u32 _input_size;
 		Frame _current_frame;
+
 		InputBuffer* _input_buffers;
 	};
 }

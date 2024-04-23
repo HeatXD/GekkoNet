@@ -13,3 +13,8 @@ Gekko::PlayerType Gekko::Player::GetType()
 {
 	return _type;
 }
+
+Gekko::PlayerStatus Gekko::Player::GetStatus()
+{
+	return _status;
+}

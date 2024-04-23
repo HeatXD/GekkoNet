@@ -5,9 +5,10 @@ Gekko::Event::Event()
 	type = None;
 }
 
-Gekko::EventData::event::event() 
+Gekko::EventData::data::data() 
 {
-	xxx = 0;
+	x = 0;
 };
 
-Gekko::EventData::event::~event() {};
+Gekko::EventData::EventData() {};
+

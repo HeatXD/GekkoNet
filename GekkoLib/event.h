@@ -8,7 +8,9 @@
 namespace Gekko {
 	enum EventType {
 		None = 0,
-		AdvanceEvent
+		AdvanceEvent,
+		SaveEvent,
+		LoadEvent
 	};
 
 	struct Advance
@@ -18,14 +20,33 @@ namespace Gekko {
 		u8* inputs;
 	};
 
+	struct Save
+	{
+		Frame frame;
+		u64 checksum;
+		u32 state_len;
+		u8* state;
+	};
+
+	struct Load
+	{
+		Frame frame;
+		u32 state_len;
+		u8* state;
+	};
+
 	struct EventData {
-		EventData() = default;
-		union event {
-			event();
-			~event();
+		EventData();
+		union data{
+			data();
+
+			// events 
 			Advance adv;
-			u32 xxx;
-		}ev;
+			Save save;
+			Load load;
+			
+			u32 x;
+		} ev;
 	};
 
 	struct Event {

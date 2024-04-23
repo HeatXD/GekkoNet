@@ -103,6 +103,24 @@ void Gekko::Session::UpdatePlayerStatus()
 
 bool Gekko::Session::AllPlayersValid()
 {
-	// TODO
+	if (!_started) {
+		for (int i = 0; i < _num_players; i++) {
+			if (_players[i].GetStatus() == Initiating) {
+				return false;
+			}
+		}
+
+		// on session start we care that all spectators start with the players.
+		// when the session started and someone wants to join midway 
+		// we should send an initiation packet with state.
+		for (int i = 0; i < _spectators.size(); i++) {
+			if (_spectators[i].GetStatus() == Initiating) {
+				return false;
+			}
+		}
+
+		// if none returned that the session is ready!
+		_started = true;
+	}
 	return true;
 }
