@@ -14,7 +14,6 @@ Gekko::Session::Session()
 	_num_players = 0;
 	_started = false;
 	_num_players = 0;
-	_local_delay = 0;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -22,24 +21,24 @@ void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
 	_host = adapter;
 }
 
-void Gekko::Session::Init(u8 num_players, u8 max_spectators, u8 input_delay, u32 input_size)
+void Gekko::Session::Init(u8 num_players, u8 max_spectators, u32 input_size)
 {
 	_host = nullptr;
 	_started = false;
 
 	_num_players = num_players;
 	_max_spectators = max_spectators;
-	_local_delay = input_delay;
 	_input_size = input_size;
 
 	// setup input queues for the players
-	_sync.Init(_num_players, _input_size, _local_delay);
+	_sync.Init(_num_players, _input_size, 0);
 }
 
-void Gekko::Session::SetLocalDelay(u8 delay)
+void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
 {
-	_local_delay = delay;
-	// TODO update local input queues to adjust for the new delay
+	if (player - 1 >= 0 && _players[player].GetType() == Local) {
+		_sync.SetLocalDelay(player, delay);
+	}
 }
 
 Gekko::Handle Gekko::Session::AddPlayer(PlayerType type, NetAddress addr)

@@ -14,9 +14,9 @@ namespace Gekko {
 
 		Session();
 
-		void Init(u8 num_players, u8 max_spectators, u8 input_delay, u32 input_size);
+		void Init(u8 num_players, u8 max_spectators, u32 input_size);
 
-		void SetLocalDelay(u8 delay);
+		void SetLocalDelay(Handle player, u8 delay);
 		void SetNetAdapter(NetAdapter* adapter);
 		Handle AddPlayer(PlayerType type, NetAddress addr = NetAddress());
 
@@ -30,7 +30,6 @@ namespace Gekko {
 		bool _started;
 
 		u32 _input_size;
-		u8 _local_delay;
 
 		u8 _num_players;
 		u8 _max_spectators;

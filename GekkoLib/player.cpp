@@ -8,3 +8,8 @@ Gekko::Player::Player(PlayerType type, NetAddress address)
 	_stats = NetStats();
 	_status = _type == Local ? Connected : Initiating;
 }
+
+Gekko::PlayerType Gekko::Player::GetType()
+{
+	return _type;
+}

@@ -61,16 +61,7 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 	return true;
 }
 
-//bool Gekko::SyncSystem::GetCurrentInputs(std::vector<Input>& inputs, Frame& frame)
-//{
-//	for (u8 i = 0; i < _num_players; i++) {
-//		auto inp = _input_buffers[i].GetInput(_current_frame);
-//
-//		if (inp->frame == GameInput::NULL_FRAME)
-//			return false;
-//
-//		inputs.push_back(inp);
-//	}
-//	frame = _current_frame;
-//	return true;
-//}
+void Gekko::SyncSystem::SetLocalDelay(Handle player, u8 delay)
+{
+	_input_buffers[player - 1].SetDelay(delay);
+}

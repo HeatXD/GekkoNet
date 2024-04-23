@@ -49,6 +49,44 @@ void Gekko::InputBuffer::AddInput(Frame frame, Input input)
 	}
 }
 
+void Gekko::InputBuffer::SetDelay(u8 delay)
+{
+	// early return AddLocalInput will handle it
+	if (_last_received_input == GameInput::NULL_FRAME || _input_delay == delay) {
+		_input_delay = delay;
+		return;
+	}
+
+	// when out current delay is smaller then the new delay 
+	// all we have to do is expand the delay with the last input we received
+	if (_input_delay < delay)
+	{
+		_input_delay = delay;
+		Frame last_input = _last_received_input;
+
+		for (i32 i = 1; i <= _input_delay; i++) {
+			Input dummy = std::malloc(_input_size);
+
+			if (dummy)
+				std::memcpy(dummy,_inputs[last_input % BUFF_SIZE].input, _input_size);
+
+			AddInput(last_input + i, dummy);
+
+			std::free(dummy);
+		}
+		return;
+	}
+
+	// if our current delay is bigger then our new delay the plan is different. 
+	// since we probably already sent the inputs up to _last_received_input 
+	// which includes the previous delay we should not modify any inputs that happend before that
+	// this will probably mean that it will drop local inputs until the local machine catches up
+	if (_input_delay > delay) {
+		_input_delay = delay;
+		return;
+	}
+}
+
 std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame)
 {
 	std::unique_ptr<GameInput> inp(new GameInput());

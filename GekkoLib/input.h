@@ -29,6 +29,8 @@ namespace Gekko {
 		void AddLocalInput(Frame frame, Input input);
 		void AddInput(Frame frame, Input input);
 
+		void SetDelay(u8 delay);
+
 		std::unique_ptr<GameInput> GetInput(Frame frame);
 
 	private:

@@ -22,6 +22,8 @@ namespace Gekko {
 	public:
 		Player(PlayerType type, NetAddress address);
 
+		PlayerType GetType();
+
 	private:
 		PlayerType _type;
 		PlayerStatus _status;

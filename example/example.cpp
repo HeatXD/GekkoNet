@@ -52,7 +52,7 @@ struct GInput {
 	}input;
 };
 
-void process_events() {
+void process_events(Gekko::Session& sess) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
@@ -60,9 +60,21 @@ void process_events() {
 			running = false;
 			break;
 		case SDL_KEYDOWN:
-			auto key = event.key.keysym.sym;
-			if (key == SDLK_ESCAPE) {
+			if (event.key.keysym.sym == SDLK_ESCAPE) {
 				running = false;
+				break;
+			}
+			break;
+		case SDL_KEYUP:
+			auto key = event.key.keysym.sym;
+			if (key == SDLK_q) {
+				sess.SetLocalDelay(1, 30);
+				printf("delay set to 30!\n");
+				break;
+			}
+			if (key == SDLK_e) {
+				sess.SetLocalDelay(1, 1);
+				printf("delay set to 1!\n");
 				break;
 			}
 			break;
@@ -128,7 +140,7 @@ int main(int argc, char* args[])
 	int num_players = 2;
 
 	auto sess = Gekko::Session();
-	sess.Init(num_players, 0, 0, sizeof(char));
+	sess.Init(num_players, 0, sizeof(char));
 
 	auto p1 = sess.AddPlayer(Gekko::PlayerType::Local);
 	auto p2 = sess.AddPlayer(Gekko::PlayerType::Local);
@@ -147,7 +159,7 @@ int main(int argc, char* args[])
 		if (fps.count() > 0) {
 			timer = clock::now();
 
-			process_events();
+			process_events(sess);
 			get_key_inputs(inputs);
 
 			//add local inputs to the session
