@@ -1,6 +1,7 @@
 #pragma once
 
 #include "net_adapter.h"
+#include "backend.h"
 
 namespace Gekko {
 
@@ -20,7 +21,7 @@ namespace Gekko {
 	class Player
 	{
 	public:
-		Player(PlayerType type, NetAddress address);
+		Player(PlayerType type, NetAddress& address);
 
 		PlayerType GetType();
 

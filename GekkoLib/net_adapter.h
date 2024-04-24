@@ -5,10 +5,4 @@
 namespace Gekko {
 	class NetAdapter {
 	};
-
-	class NetAddress {
-	};
-
-	struct NetStats {
-	};
 }
