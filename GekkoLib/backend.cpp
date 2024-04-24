@@ -28,7 +28,6 @@ void Gekko::NetAddress::Copy(NetAddress& other)
 		_data.reset();
 
 	_data = std::unique_ptr<u8[]>(new u8[_size]);
-
 	// copy address data
 	std::memcpy(_data.get(), other.GetAddress(), _size);
 }

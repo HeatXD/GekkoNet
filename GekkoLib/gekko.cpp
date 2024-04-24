@@ -69,7 +69,7 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 {
 	auto ev = std::vector<Event>();
 	// Connection Handling
-	UpdatePlayerStatus();
+	Poll();
 	// Gameplay
 	if (AllPlayersValid()) {
 		// check whether we have all the inputs needed to proceed
@@ -95,6 +95,17 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 		_sync.IncrementFrame();
 	}
 	return ev;
+}
+
+void Gekko::Session::Poll()
+{
+	// return if no host is defined.
+	if (!_host)
+		return;
+
+	auto msg = _host->ReceiveMessages();
+
+	UpdatePlayerStatus();
 }
 
 void Gekko::Session::UpdatePlayerStatus()

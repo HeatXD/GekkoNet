@@ -26,6 +26,9 @@ namespace Gekko {
 
 		std::vector<Event> UpdateSession();
 
+	private:
+		void Poll();
+
 		void UpdatePlayerStatus();
 
 		bool AllPlayersValid();
