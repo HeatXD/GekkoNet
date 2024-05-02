@@ -14,7 +14,7 @@ Gekko::SyncSystem::~SyncSystem()
 	delete _input_buffers;
 }
 
-void Gekko::SyncSystem::Init(u8 num_players, u32 input_size, u8 input_delay)
+void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 {
 	_input_size = input_size;
 	_num_players = num_players;
@@ -24,7 +24,7 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size, u8 input_delay)
 
 	// on creation setup input buffers
 	for (int i = 0; i < _num_players; i++) {
-		_input_buffers[i].Init(input_delay, input_size);
+		_input_buffers[i].Init(0, input_size);
 	}
 }
 
@@ -51,6 +51,22 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 	for (u8 i = 0; i < _num_players; i++) {
 		auto inp = _input_buffers[i].GetInput(_current_frame);
 	
+		if (inp->frame == GameInput::NULL_FRAME)
+			return false;
+
+		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
+	}
+	frame = _current_frame;
+	inputs = std::move(all_input);
+	return true;
+}
+
+bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique_ptr<u8[]>& inputs, Frame& frame)
+{
+	std::unique_ptr<u8[]> all_input(new u8[_input_size * handles.size()]);
+	for (u8 i = 0; i < handles.size(); i++) {
+		auto inp = _input_buffers[handles[i] - 1].GetInput(_current_frame);
+
 		if (inp->frame == GameInput::NULL_FRAME)
 			return false;
 

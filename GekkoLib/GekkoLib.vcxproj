@@ -129,12 +129,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="backend.h" />
     <ClInclude Include="event.h" />
     <ClInclude Include="gekko.h" />
     <ClInclude Include="gekko_types.h" />
     <ClInclude Include="input.h" />
-    <ClInclude Include="net_adapter.h" />
-    <ClInclude Include="player.h" />
     <ClInclude Include="sync.h" />
   </ItemGroup>
   <ItemGroup>

@@ -11,12 +11,12 @@ namespace Gekko {
 		void Init(GameInput& other);
 		void Init(Frame frame_num, Input inp, u32 inp_len);
 
-		GameInput() = default;
+		GameInput();
 		~GameInput();
 
-		Frame frame = NULL_FRAME;
-		Input input = nullptr;
-		u32 input_len = 0;
+		Frame frame;
+		Input input;
+		u32 input_len;
 	};
 
 	struct InputBuffer {

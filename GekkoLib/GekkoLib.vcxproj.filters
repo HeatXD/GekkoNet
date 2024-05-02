@@ -21,12 +21,6 @@
     <ClInclude Include="gekko_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="player.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="net_adapter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="event.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -34,6 +28,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="backend.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

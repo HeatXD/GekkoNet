@@ -1,9 +1,13 @@
-#include "player.h"
+#include "backend.h"
 
-Gekko::Player::Player(PlayerType type, NetAddress& address)
+Gekko::Player::Player(Handle phandle, PlayerType type, NetAddress& addr, u64 magic)
 {
+	handle = phandle;
+
+	session_magic = magic;
+	address.Copy(addr);
+
 	_type = type;
-	_address.Copy(address);
 
 	_stats = NetStats();
 	_status = _type == Local ? Connected : Initiating;

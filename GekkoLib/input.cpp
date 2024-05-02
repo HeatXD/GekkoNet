@@ -137,6 +137,13 @@ void Gekko::GameInput::Init(Frame frame_num, Input inp, u32 inp_len)
 		std::memcpy(input, inp, input_len);
 }
 
+Gekko::GameInput::GameInput()
+{
+	frame = NULL_FRAME;
+	input_len = 0;
+	input = nullptr;
+}
+
 Gekko::GameInput::~GameInput()
 {
 	if (input) {

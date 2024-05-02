@@ -2,8 +2,8 @@
 
 #include <vector>
 
+#include "backend.h"
 #include "gekko_types.h"
-#include "player.h"
 #include "event.h"
 #include "sync.h"
 
@@ -29,8 +29,6 @@ namespace Gekko {
 	private:
 		void Poll();
 
-		void UpdatePlayerStatus();
-
 		bool AllPlayersValid();
 
 	private:
@@ -38,13 +36,14 @@ namespace Gekko {
 
 		u32 _input_size;
 
+		u64 _session_magic;
+
 		u8 _num_players;
 		u8 _max_spectators;
 
-		std::vector<Player> _players;
-		std::vector<Player> _spectators;
-
 		SyncSystem _sync;
+
+		MessageSystem _msg;
 
 		NetAdapter* _host;
 	};
