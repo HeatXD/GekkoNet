@@ -16,7 +16,8 @@ namespace Gekko {
 		u8* GetAddress();
 		u32 GetSize();
 
-		void Copy(NetAddress& other);
+		void Copy(NetAddress* other);
+		bool Equals(NetAddress& other);
 
 	private:
 		std::unique_ptr<u8[]> _data;
@@ -61,8 +62,8 @@ namespace Gekko {
 
 	class NetAdapter {
 	public:
-		virtual std::vector<NetData> ReceiveMessages() {};
-		virtual void SendMessage(NetAddress& addr, NetPacket& pkt) {};
+		virtual std::vector<NetData> ReceiveData() = 0;
+		virtual void SendData(NetAddress& addr, NetPacket& pkt) = 0;
 	};
 
 	enum PlayerType {
@@ -80,16 +81,20 @@ namespace Gekko {
 	class Player
 	{
 	public:
-		Player(Handle phandle, PlayerType type, NetAddress& addr, u64 magic = 0);
+		Player(Handle phandle, PlayerType type, NetAddress* addr, u32 magic = 0);
 
 		PlayerType GetType();
 
 		PlayerStatus GetStatus();
 
+		void SetStatus(PlayerStatus type);
+
+
 	public:
 		Handle handle;
-		u64 session_magic;
+		u32 session_magic;
 		NetAddress address;
+		u8 sync_num;
 
 	private:
 		PlayerType _type;
@@ -109,7 +114,9 @@ namespace Gekko {
 
 		void SendPendingOutput(NetAdapter* host);
 
-		void HandleData(std::vector<NetData>& data);
+		void HandleData(std::vector<NetData>& data, bool session_started);
+
+		void SendSyncRequest(NetAddress* addr);
 
 	public:
 		std::vector<Player*> locals;
@@ -122,8 +129,9 @@ namespace Gekko {
 	private:
 		static const u32 MAX_PLAYER_SEND_SIZE = 32;
 		static const u32 MAX_SPECTATOR_SEND_SIZE = 64;
+		static const u32 NUM_TO_SYNC = 5;
 
-		u64 _session_magic;
+		u32 _session_magic;
 
 		u32 _input_size;
 

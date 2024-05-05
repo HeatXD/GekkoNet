@@ -1,8 +1,7 @@
 #include <iostream>
-#include "../GekkoLib/gekko.h"
 #include <windows.h>
-#include "example.h"
 #include "SDL2/SDL.h"
+#include "../../GekkoLib/gekko.h"
 #include <chrono>
 
 SDL_Window* window = nullptr;
@@ -15,7 +14,7 @@ bool init_window(void) {
 		return false;
 	}
 	window = SDL_CreateWindow(
-		"GekkoNet Example",
+		"GekkoNet Example: Local Session",
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
 		900,

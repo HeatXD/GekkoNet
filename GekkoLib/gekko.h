@@ -20,7 +20,7 @@ namespace Gekko {
 
 		void SetNetAdapter(NetAdapter* adapter);
 
-		Handle AddPlayer(PlayerType type, NetAddress addr = NetAddress());
+		Handle AddPlayer(PlayerType type, NetAddress* addr = nullptr);
 
 		void AddLocalInput(Handle player, Input input);
 
@@ -35,8 +35,6 @@ namespace Gekko {
 		bool _started;
 
 		u32 _input_size;
-
-		u64 _session_magic;
 
 		u8 _num_players;
 		u8 _max_spectators;

@@ -20,16 +20,24 @@ Gekko::NetAddress::NetAddress()
 	_data = nullptr;
 }
 
-void Gekko::NetAddress::Copy(NetAddress& other)
+void Gekko::NetAddress::Copy(NetAddress* other)
 {
-	_size = other._size;
+	if (!other)
+		return;
+
+	_size = other->_size;
 
 	if (_data) 
 		_data.reset();
 
 	_data = std::unique_ptr<u8[]>(new u8[_size]);
 	// copy address data
-	std::memcpy(_data.get(), other.GetAddress(), _size);
+	std::memcpy(_data.get(), other->GetAddress(), _size);
+}
+
+bool Gekko::NetAddress::Equals(NetAddress& other)
+{
+	return _size == other._size && std::memcmp(_data.get(), other._data.get(), _size);
 }
 
 Gekko::u8* Gekko::NetAddress::GetAddress()
@@ -89,12 +97,12 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	if (!host) return;
 
 	// add input packet
-	if (!_player_input_send_list.empty()) {
+	if (!_player_input_send_list.empty() && !remotes.empty()) {
 		AddPendingInput(false);
 	}
 
 	// add spectator input packet
-	if (!_spectator_input_send_list.empty()) {
+	if (!_spectator_input_send_list.empty() && !spectators.empty()) {
 		AddPendingInput(true);
 	}
 
@@ -105,9 +113,9 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 			for (size_t i = 0; i < remotes.size(); i++) {
 				if (remotes[i]->address.GetSize() != 0) {
 					// copy addr, set magic and send it off!
-					pkt->addr.Copy(remotes[i]->address);
+					pkt->addr.Copy(&remotes[i]->address);
 					pkt->pkt.magic = remotes[i]->session_magic;
-					host->SendMessage(pkt->addr, pkt->pkt);
+					host->SendData(pkt->addr, pkt->pkt);
 				}
 			}
 			// now when done we can cleanup the inputs since we used malloc
@@ -117,16 +125,16 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 			for (size_t i = 0; i < spectators.size(); i++) {
 				if (spectators[i]->address.GetSize() != 0) {
 					// copy addr, set magic and send it off!
-					pkt->addr.Copy(spectators[i]->address);
+					pkt->addr.Copy(&spectators[i]->address);
 					pkt->pkt.magic = spectators[i]->session_magic;
-					host->SendMessage(pkt->addr, pkt->pkt);
+					host->SendData(pkt->addr, pkt->pkt);
 				}
 			}
 			// now when done we can cleanup the inputs since we used malloc
 			std::free(pkt->pkt.x.input.inputs);
 		}
 		else {
-			host->SendMessage(pkt->addr, pkt->pkt);
+			host->SendData(pkt->addr, pkt->pkt);
 		}
 		// cleanup packet
 		delete pkt;
@@ -135,31 +143,120 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	}
 }
 
-void Gekko::MessageSystem::HandleData(std::vector<NetData>& data)
+void Gekko::MessageSystem::HandleData(std::vector<NetData>& data, bool session_started)
 {
 	for (u32 i = 0; i < data.size(); i++) {
+		auto message = new NetData;
 		// handle connection events
-		if (data[i].pkt.type == PacketType::SyncRequest)
-		{
+		if (data[i].pkt.type == PacketType::SyncRequest) {
+			// handle and set the peer its session magic
+			// but when the session has started only allow spectators
+			if (!session_started) {
+				for (u32 j = 0; j < remotes.size(); j++) {
+					if (remotes[j]->address.Equals(data[i].addr)) {
+						remotes[j]->session_magic = data[i].pkt.x.sync_request.rng_data;
+					}
+				}
+			}
 
-			continue;
-		}
-
-		if (data[i].pkt.type == PacketType::SyncResponse)
-		{
-			// TODO
+			for (u32 j = 0; j < spectators.size(); j++) {
+				if (spectators[j]->address.Equals(data[i].addr)) {
+					spectators[j]->session_magic = data[i].pkt.x.sync_request.rng_data;
+				}
+			}
+			
+			// send a packet containing the local session magic
+			message->addr.Copy(&data[i].addr);
+			message->pkt.type = SyncResponse;
+			message->pkt.magic = data[i].pkt.x.sync_response.rng_data;
+			message->pkt.x.sync_response.rng_data = _session_magic;
+			//
+			_pending_output.push(message);
 			continue;
 		}
 
 		if (data[i].pkt.magic != _session_magic) continue;
 		// handle other events
 
-		if (data[i].pkt.type == PacketType::Inputs)
-		{
+		if (data[i].pkt.type == PacketType::SyncResponse) {
+			i32 stop_sending = 0; 
+
+			for (u32 j = 0; j < remotes.size(); j++) {
+				if (remotes[j]->GetStatus() == Connected) continue;
+
+				if (remotes[j]->address.Equals(data[i].addr)) {
+					remotes[j]->session_magic = data[i].pkt.x.sync_request.rng_data;
+
+					if (remotes[j]->sync_num < NUM_TO_SYNC) {
+						remotes[j]->sync_num++;
+						stop_sending--;
+						printf("handle: %d syncing(%d/%d)\n", remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
+						continue;
+					}
+
+					if (remotes[j]->sync_num == NUM_TO_SYNC) {
+						remotes[j]->SetStatus(Connected);
+						stop_sending++;
+						printf("handle: %d connected!\n", remotes[j]->handle);
+						continue;
+					}
+				}
+			}
+
+			for (u32 j = 0; j < spectators.size(); j++) {
+				if (spectators[j]->GetStatus() == Connected) continue;
+
+				if (spectators[j]->address.Equals(data[i].addr)) {
+					spectators[j]->session_magic = data[i].pkt.x.sync_request.rng_data;
+
+					if (spectators[j]->sync_num < NUM_TO_SYNC) {
+						spectators[j]->sync_num++;
+						stop_sending--;
+						printf("handle: %d syncing (%d/%d)\n", spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
+						continue;
+					}
+
+					if (spectators[j]->sync_num == NUM_TO_SYNC) {
+						spectators[j]->SetStatus(Connected);
+						stop_sending++;
+						printf("handle: %d connected!\n", spectators[j]->handle);
+						// TODO SEND CONNECT INIT MESSAGE WITH GAMESTATE IF NEEDED
+						continue;
+					}
+				}
+			}
+
+			if (stop_sending < 0) {
+				// send a packet containing the local session magic
+				message->addr.Copy(&data[i].addr);
+				message->pkt.type = SyncResponse;
+				message->pkt.magic = data[i].pkt.x.sync_response.rng_data;
+				message->pkt.x.sync_response.rng_data = _session_magic;
+				//
+				_pending_output.push(message);
+			}
+			continue;
+		}
+
+		if (data[i].pkt.type == PacketType::Inputs) {
 			// TODO
 			continue;
 		}
 	}
+}
+
+void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
+{
+	if (!addr) return;
+
+	auto message = new NetData;
+
+	message->addr.Copy(addr);
+	message->pkt.type = SyncRequest;
+	message->pkt.magic = 0;
+	message->pkt.x.sync_request.rng_data = _session_magic;
+
+	_pending_output.push(message);
 }
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
@@ -168,7 +265,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
 
-	const u32 num_players = spectator ? locals.size() + remotes.size() : locals.size();
+	const u32 num_players = spectator ? (u32)(locals.size() + remotes.size()) : (u32)locals.size();
 	const u32 input_size = _input_size * num_players;
 	const u32 input_count = (u32)send_list.size();
 	const u32 total_size = input_size * input_count;
@@ -181,7 +278,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 		idx++;
 	}
 
-	// TODO? maybe add some type of compression to the inputs
+	// TODO? maybe add some type of compression to the inputs.
 	// the address and magic is set later so dont worry about it now
 
 	auto data = new NetData;

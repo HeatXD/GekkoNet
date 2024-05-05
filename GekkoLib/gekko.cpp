@@ -15,7 +15,6 @@ Gekko::Session::Session()
 	_num_players = 0;
 	_started = false;
 	_num_players = 0;
-	_session_magic = 0;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -50,7 +49,7 @@ void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
 	}
 }
 
-Gekko::Handle Gekko::Session::AddPlayer(PlayerType type, NetAddress addr)
+Gekko::Handle Gekko::Session::AddPlayer(PlayerType type, NetAddress* addr)
 {
 	if (type == PlayerType::Spectator) {
 		if (_msg.spectators.size() >= _max_spectators)
@@ -97,9 +96,8 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 		if (!_sync.GetCurrentInputs(inputs, frame))
 			return ev;
 
-		// send inputs to spectators
-		if(!_msg.spectators.empty())
-			_msg.AddSpectatorInput(frame, inputs.get());
+		// send inputs to spectators 
+		_msg.AddSpectatorInput(frame, inputs.get());
 	
 		// we have the inputs lets create an event for the user
 		// to advance with the given inputs
@@ -126,11 +124,11 @@ void Gekko::Session::Poll()
 	if (!_host)
 		return;
 
-	auto data = _host->ReceiveMessages();
-	_msg.HandleData(data);
+	auto data = _host->ReceiveData();
+	_msg.HandleData(data, _started);
 
 	// add local input for the network
-	if (_msg.locals.size() > 0) {
+	if (_msg.locals.size() > 0 && _started) {
 		std::vector<Handle> handles;
 		for (u32 i = 0; i < _msg.locals.size(); i++) {
 			handles.push_back(_msg.locals[i]->handle);
@@ -152,6 +150,9 @@ bool Gekko::Session::AllPlayersValid()
 	if (!_started) {
 		for (u32 i = 0; i < _msg.remotes.size(); i++) {
 			if (_msg.remotes[i]->GetStatus() == Initiating) {
+				if (_msg.remotes[i]->sync_num == 0) {
+					_msg.SendSyncRequest(&_msg.remotes[i]->address);
+				}
 				return false;
 			}
 		}
@@ -160,11 +161,15 @@ bool Gekko::Session::AllPlayersValid()
 		// we should send an initiation packet with state.
 		for (u32 i = 0; i < _msg.spectators.size(); i++) {
 			if (_msg.spectators[i]->GetStatus() == Initiating) {
+				if (_msg.spectators[i]->sync_num == 0) {
+					_msg.SendSyncRequest(&_msg.spectators[i]->address);
+				}
 				return false;
 			}
 		}
 		// if none returned that the session is ready!
 		_started = true;
+		printf("__ session started __\n");
 	}
 	return true;
 }
