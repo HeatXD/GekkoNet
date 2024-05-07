@@ -21,9 +21,11 @@ namespace Gekko {
 
 		bool GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame);
 
-		bool GetLocalInputs(std::vector<Handle>& handles, std::unique_ptr<u8[]>& inputs, Frame& frame);
+		bool GetLocalInputs(std::vector<Handle>& handles, std::unique_ptr<u8[]>& inputs, Frame frame);
 
 		void SetLocalDelay(Handle player, u8 delay);
+		
+		u8 GetLocalDelay(Handle player);
 
 		Frame GetCurrentFrame();
 

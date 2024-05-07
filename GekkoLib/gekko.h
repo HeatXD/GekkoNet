@@ -33,6 +33,10 @@ namespace Gekko {
 
 		void HandleReceivedInputs();
 
+		void SendLocalInputs();
+
+		u8 GetMinLocalDelay();
+
 	private:
 		bool _started;
 

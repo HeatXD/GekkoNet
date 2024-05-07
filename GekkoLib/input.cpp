@@ -87,6 +87,11 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 	}
 }
 
+Gekko::u8 Gekko::InputBuffer::GetDelay() 
+{
+	return _input_delay;
+}
+
 std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame)
 {
 	std::unique_ptr<GameInput> inp(new GameInput());

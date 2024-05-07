@@ -31,6 +31,8 @@ namespace Gekko {
 
 		void SetDelay(u8 delay);
 
+		u8 GetDelay();
+
 		std::unique_ptr<GameInput> GetInput(Frame frame);
 
 	private:

@@ -222,11 +222,11 @@ int main(int argc, char* args[])
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
-	// sess1.SetLocalDelay(s1p1, 3);
+	sess1.SetLocalDelay(s1p1, 1);
 
 	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
 	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
-	// sess2.SetLocalDelay(s2p2, 3);
+	sess2.SetLocalDelay(s2p2, 3);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;

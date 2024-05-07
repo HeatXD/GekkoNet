@@ -144,18 +144,7 @@ void Gekko::Session::Poll()
 	HandleReceivedInputs();
 
 	// add local input for the network
-	if (_msg.locals.size() > 0 && _started) {
-		std::vector<Handle> handles;
-		for (u32 i = 0; i < _msg.locals.size(); i++) {
-			handles.push_back(_msg.locals[i]->handle);
-		}
-
-		Frame frame = GameInput::NULL_FRAME;
-		std::unique_ptr<u8[]> inputs;
-		if (_sync.GetLocalInputs(handles, inputs, frame)) {
-			_msg.AddInput(frame, inputs.get());
-		}
-	}
+	SendLocalInputs();
 
 	// now send data
 	_msg.SendPendingOutput(_host);
@@ -232,4 +221,33 @@ void Gekko::Session::HandleReceivedInputs()
 		std::free(current->input.inputs);
 		delete current;
 	}
+}
+
+void Gekko::Session::SendLocalInputs()
+{
+	if (_msg.locals.size() > 0 && _started) {
+		std::vector<Handle> handles;
+		for (u32 i = 0; i < _msg.locals.size(); i++) {
+			handles.push_back(_msg.locals[i]->handle);
+		}
+
+		const u32 delay = GetMinLocalDelay();
+		const Frame current = _sync.GetCurrentFrame();
+
+		std::unique_ptr<u8[]> inputs;
+		for (Frame frame = current; frame <= current + delay; frame++) {
+			if (_sync.GetLocalInputs(handles, inputs, frame)) {
+				_msg.AddInput(frame, inputs.get());
+			}
+		}
+	}
+}
+
+Gekko::u8 Gekko::Session::GetMinLocalDelay()
+{
+	u8 min = UINT8_MAX;
+	for (auto player : _msg.locals) {
+		min = std::min(_sync.GetLocalDelay(player->handle), min);
+	}
+	return min;
 }

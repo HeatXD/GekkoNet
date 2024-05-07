@@ -21,16 +21,16 @@ bool init_windows(void) {
 		"GekkoNet Example: Fake Online Session 1: Playing",
 		0,
 		50,
-		400,
+		600,
 		400,
 		0
 	);
 
 	window2 = SDL_CreateWindow(
 		"GekkoNet Example: Fake Online Session 2: Spectating",
-		400,
+		600,
 		50,
-		400,
+		600,
 		400,
 		0
 	);
