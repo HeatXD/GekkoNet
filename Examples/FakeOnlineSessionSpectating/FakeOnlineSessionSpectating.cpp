@@ -156,7 +156,7 @@ class FakeNetAdapter : public Gekko::NetAdapter {
 		auto data = std::unique_ptr<Gekko::NetData>(new Gekko::NetData);
 		data->pkt = pkt;
 
-		Gekko::u8 addr_from = 0;
+		Gekko::u8 addr_from = (Gekko::u8)*addr.GetAddress() == 1 ? 2 : 1;
 		if ((Gekko::u8)*addr.GetAddress() == 1) addr_from = 2; else addr_from = 1;
 
 		auto tmp = Gekko::NetAddress(&addr_from, (Gekko::u32)sizeof(char));
