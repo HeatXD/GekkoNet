@@ -338,7 +338,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 
 	auto data = new NetData;
 
-	data->pkt.type = PacketType::Inputs;
+	data->pkt.type = spectator ? PacketType::SpectatorInputs : PacketType::Inputs;
 	data->pkt.x.input.input_count = (u32)send_list.size();
 	data->pkt.x.input.start_frame = last_added - (u32)send_list.size();
 	data->pkt.x.input.inputs = (u8*)std::malloc(total_size);

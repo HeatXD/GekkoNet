@@ -18,7 +18,7 @@ bool init_windows(void) {
 		return false;
 	}
 	window1 = SDL_CreateWindow(
-		"GekkoNet Example: Fake Online Session 1",
+		"GekkoNet Example: Fake Online Session 1: Playing",
 		0,
 		50,
 		400,
@@ -27,7 +27,7 @@ bool init_windows(void) {
 	);
 
 	window2 = SDL_CreateWindow(
-		"GekkoNet Example: Fake Online Session 2",
+		"GekkoNet Example: Fake Online Session 2: Spectating",
 		400,
 		50,
 		400,
@@ -88,8 +88,8 @@ void process_events() {
 }
 
 struct GState {
-	int px[2] = {0, 0};
-	int py[2] = {0, 0};
+	int px[2] = { 0, 0 };
+	int py[2] = { 0, 0 };
 };
 
 void update_state(GState& gs, GInput inputs[2], int num_players) {
@@ -141,7 +141,7 @@ class FakeNetAdapter : public Gekko::NetAdapter {
 	virtual std::vector<Gekko::NetData*> ReceiveData() {
 		auto& curr_inbox = recv_idx % 2 == 1 ? inbox_session2 : inbox_session1;
 		auto result = std::vector<Gekko::NetData*>();
-		
+
 		for (auto& ptr : curr_inbox) {
 			result.push_back(ptr.release());
 		}
@@ -173,7 +173,7 @@ class FakeNetAdapter : public Gekko::NetAdapter {
 			data->pkt.x.input.start_frame = pkt.x.input.start_frame;
 			data->pkt.x.input.total_size = pkt.x.input.total_size;
 			data->pkt.x.input.inputs = (Gekko::u8*)std::malloc(pkt.x.input.total_size);
-			
+
 			if (data->pkt.x.input.inputs)
 				std::memcpy(data->pkt.x.input.inputs, pkt.x.input.inputs, pkt.x.input.total_size);
 		}
@@ -181,9 +181,10 @@ class FakeNetAdapter : public Gekko::NetAdapter {
 			data->pkt = pkt;
 		}
 
-		if (addr_from == 1){
+		if (addr_from == 1) {
 			inbox_session2.push_back(std::move(data));
-		} else {
+		}
+		else {
 			inbox_session1.push_back(std::move(data));
 		}
 
@@ -209,7 +210,7 @@ int main(int argc, char* args[])
 	auto sess1 = Gekko::Session();
 	auto sess2 = Gekko::Session();
 
-	sess1.Init(num_players, 0, sizeof(char));
+	sess1.Init(num_players, 1, sizeof(char));
 	sess2.Init(num_players, 0, sizeof(char));
 
 	sess1.SetNetAdapter(&adapter);
@@ -222,12 +223,10 @@ int main(int argc, char* args[])
 	auto addr2 = Gekko::NetAddress((Gekko::u8*)&addrs2, sizeof(char));
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
-	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
-	// sess1.SetLocalDelay(s1p1, 3);
+	auto s1p2 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
+	auto s1s1 = sess1.AddActor(Gekko::PlayerType::Spectator, &addr2);
 
 	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
-	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
-	// sess2.SetLocalDelay(s2p2, 3);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
@@ -249,7 +248,7 @@ int main(int argc, char* args[])
 
 			//add local inputs to the session
 			sess1.AddLocalInput(s1p1, &inputs[0].input.value);
-			sess2.AddLocalInput(s2p2, &inputs[1].input.value);
+			sess1.AddLocalInput(s1p2, &inputs[1].input.value);
 
 			int frame = 0;
 

@@ -200,7 +200,17 @@ void Gekko::Session::HandleReceivedInputs()
 
 		// handle it as a spectator input if there are no local players.
 		if (_msg.locals.size() == 0) {
-			// todo
+			const u32 count = current->input.input_count;
+			const u32 inp_len_per_frame = current->input.total_size / count;
+			const Frame start = current->input.start_frame;
+
+			for (u32 i = 1; i <= count; i++) {
+				for (u32 j = 0; j < _num_players; j++) {
+					Frame frame = start + i;
+					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _input_size)];
+					_sync.AddRemoteInput(j + 1, input, frame);
+				}
+			}
 		}
 		else {
 			const u32 count = current->input.input_count;
