@@ -12,7 +12,7 @@ Gekko::Player::Player(Handle phandle, PlayerType type, NetAddress* addr, u32 mag
 	_type = type;
 
 	_stats = NetStats();
-	_status = _type == Local ? Connected : Initiating;
+	_status = _type == LocalPlayer ? Connected : Initiating;
 }
 
 Gekko::PlayerType Gekko::Player::GetType()

@@ -20,9 +20,9 @@ namespace Gekko {
 
 		void SetNetAdapter(NetAdapter* adapter);
 
-		Handle AddPlayer(PlayerType type, NetAddress* addr = nullptr);
+		Handle AddActor(PlayerType type, NetAddress* addr = nullptr);
 
-		void AddLocalInput(Handle player, Input input);
+		void AddLocalInput(Handle player, void* input);
 
 		std::vector<Event> UpdateSession();
 
@@ -30,6 +30,8 @@ namespace Gekko {
 		void Poll();
 
 		bool AllPlayersValid();
+
+		void HandleReceivedInputs();
 
 	private:
 		bool _started;

@@ -12,15 +12,15 @@ SDL_Renderer* renderer2 = nullptr;
 
 bool running = false;
 
-bool init_window(void) {
+bool init_windows(void) {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		fprintf(stderr, "Error initializing SDL.\n");
 		return false;
 	}
 	window1 = SDL_CreateWindow(
 		"GekkoNet Example: Fake Online Session 1",
-		SDL_WINDOWPOS_CENTERED,
-		SDL_WINDOWPOS_CENTERED,
+		0,
+		50,
 		400,
 		400,
 		0
@@ -28,8 +28,8 @@ bool init_window(void) {
 
 	window2 = SDL_CreateWindow(
 		"GekkoNet Example: Fake Online Session 2",
-		SDL_WINDOWPOS_CENTERED,
-		SDL_WINDOWPOS_CENTERED,
+		400,
+		50,
 		400,
 		400,
 		0
@@ -62,11 +62,11 @@ struct GInput {
 	union inp {
 		struct dir {
 			char up : 1;
-			char down : 1;
 			char left : 1;
+			char down : 1;
 			char right : 1;
 		}dir;
-		unsigned char value;
+		unsigned short int value;
 	}input;
 };
 
@@ -97,7 +97,7 @@ void update_state(GState& gs, GInput inputs[2], int num_players) {
 		if (inputs[player].input.dir.up) gs.py[player] -= 2;
 		if (inputs[player].input.dir.down) gs.py[player] += 2;
 		if (inputs[player].input.dir.left) gs.px[player] -= 2;
-		if (inputs[player].input.dir.right)gs.px[player] += 2;
+		if (inputs[player].input.dir.right) gs.px[player] += 2;
 	}
 }
 
@@ -134,17 +134,70 @@ void get_key_inputs(GInput inputs[2]) {
 }
 
 class FakeNetAdapter : public Gekko::NetAdapter {
-	virtual std::vector<Gekko::NetData> ReceiveData() {
-		return std::vector<Gekko::NetData>();
+	int recv_idx = 0;
+	std::vector<std::unique_ptr<Gekko::NetData>> inbox_session1;
+	std::vector<std::unique_ptr<Gekko::NetData>> inbox_session2;
+
+	virtual std::vector<Gekko::NetData*> ReceiveData() {
+		auto& curr_inbox = recv_idx % 2 == 1 ? inbox_session2 : inbox_session1;
+		auto result = std::vector<Gekko::NetData*>();
+		
+		for (auto& ptr : curr_inbox) {
+			result.push_back(ptr.release());
+		}
+
+		if (recv_idx % 2 == 1) {
+			inbox_session2.clear();
+		} else {
+			inbox_session1.clear();
+		}
+
+		recv_idx++;
+		return result;
 	}
+
 	virtual void SendData(Gekko::NetAddress& addr, Gekko::NetPacket& pkt) {
-		printf("send pkt type: %d to netaddr: %d \n", pkt.type, *addr.GetAddress());
+		auto data = std::unique_ptr<Gekko::NetData>(new Gekko::NetData);
+		data->pkt = pkt;
+
+		Gekko::u8 addr_from = 0;
+		if ((Gekko::u8)*addr.GetAddress() == 1) addr_from = 2; else addr_from = 1;
+
+		auto tmp = Gekko::NetAddress(&addr_from, (Gekko::u32)sizeof(char));
+		data->addr.Copy(&tmp);
+
+		// be sure to copy input since it gets cleaned up later if not send.
+		// normally you wouldnt need to do this. just sent it over the network instead.
+
+		if (pkt.type == Gekko::SpectatorInputs || pkt.type == Gekko::Inputs) {
+			data->pkt.type = pkt.type;
+			data->pkt.magic = pkt.magic;
+
+			data->pkt.x.input.input_count = pkt.x.input.input_count;
+			data->pkt.x.input.start_frame = pkt.x.input.start_frame;
+			data->pkt.x.input.total_size = pkt.x.input.total_size;
+			data->pkt.x.input.inputs = (Gekko::u8*)std::malloc(pkt.x.input.total_size);
+			
+			if (data->pkt.x.input.inputs)
+				std::memcpy(data->pkt.x.input.inputs, pkt.x.input.inputs, pkt.x.input.total_size);
+		}
+		else {
+			data->pkt = pkt;
+		}
+
+		if (addr_from == 1){
+			inbox_session2.push_back(std::move(data));
+		} else {
+			inbox_session1.push_back(std::move(data));
+		}
+
+		// printf("netaddr:%d sent pkt type:%d to netaddr:%d\n", addr_from, pkt.type, *addr.GetAddress());
 	}
 };
 
 int main(int argc, char* args[])
 {
-	running = init_window();
+	running = init_windows();
 
 	GState state1 = {};
 	GState state2 = {};
@@ -160,8 +213,8 @@ int main(int argc, char* args[])
 	auto sess1 = Gekko::Session();
 	auto sess2 = Gekko::Session();
 
-	sess1.Init(num_players, 0, sizeof(char));
-	sess2.Init(num_players, 0, sizeof(char));
+	sess1.Init(num_players, 0, sizeof(short int));
+	sess2.Init(num_players, 0, sizeof(short int));
 
 	sess1.SetNetAdapter(&adapter);
 	sess2.SetNetAdapter(&adapter);
@@ -172,16 +225,17 @@ int main(int argc, char* args[])
 	char addrs2 = 2;
 	auto addr2 = Gekko::NetAddress((Gekko::u8*)&addrs2, sizeof(char));
 
-	auto s1p1 = sess1.AddPlayer(Gekko::PlayerType::Local);
-	auto s1p2 = sess1.AddPlayer(Gekko::PlayerType::Remote, &addr2);
+	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
+	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
+	// sess1.SetLocalDelay(s1p1, 3);
 
-	auto s2p1 = sess2.AddPlayer(Gekko::PlayerType::Remote, &addr1);
-	auto s2p2 = sess2.AddPlayer(Gekko::PlayerType::Local);
-
+	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
+	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
+	// sess2.SetLocalDelay(s2p2, 3);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-	using frame = std::chrono::duration<unsigned int, std::ratio<1, 20>>;
+	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
 	using clock = std::chrono::steady_clock;
 
 	time_point timer(clock::now());
@@ -201,6 +255,8 @@ int main(int argc, char* args[])
 			sess1.AddLocalInput(s1p1, &inputs[0].input.value);
 			sess2.AddLocalInput(s2p2, &inputs[1].input.value);
 
+			int frame = 0;
+
 			auto ev1 = sess1.UpdateSession();
 			for (int i = 0; i < ev1.size(); i++)
 			{
@@ -209,7 +265,9 @@ int main(int argc, char* args[])
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev1[i].data.ev.adv.inputs[0];
-					inputs[1].input.value = ev1[i].data.ev.adv.inputs[1];
+					inputs[1].input.value = ev1[i].data.ev.adv.inputs[2];
+					frame = ev1[i].data.ev.adv.frame;
+					printf("S1, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
 					// be sure to free the inputs when u have used or collected them.
 					std::free(ev1[i].data.ev.adv.inputs);
 					// now we can use them to update state.
@@ -228,7 +286,9 @@ int main(int argc, char* args[])
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev2[i].data.ev.adv.inputs[0];
-					inputs[1].input.value = ev2[i].data.ev.adv.inputs[1];
+					inputs[1].input.value = ev2[i].data.ev.adv.inputs[2];
+					frame = ev2[i].data.ev.adv.frame;
+					printf("S2, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
 					// be sure to free the inputs when u have used or collected them.
 					std::free(ev2[i].data.ev.adv.inputs);
 					// now we can use them to update state.

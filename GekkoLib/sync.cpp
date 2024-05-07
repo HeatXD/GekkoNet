@@ -40,6 +40,18 @@ void Gekko::SyncSystem::AddLocalInput(Handle player, Input input)
 	_input_buffers[plyr].AddLocalInput(_current_frame, input);
 }
 
+void Gekko::SyncSystem::AddRemoteInput(Handle player, Input input, Frame frame)
+{
+	// valid handles start from 1 while the input buffers index starts at 0.
+	i32 plyr = player - 1;
+
+	// drop inputs from incorrect handles
+	if (plyr >= _num_players || plyr < 0)
+		return;
+
+	_input_buffers[plyr].AddInput(frame, input);
+}
+
 void Gekko::SyncSystem::IncrementFrame()
 {
 	_current_frame++;
@@ -80,4 +92,9 @@ bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique
 void Gekko::SyncSystem::SetLocalDelay(Handle player, u8 delay)
 {
 	_input_buffers[player - 1].SetDelay(delay);
+}
+
+Gekko::Frame Gekko::SyncSystem::GetCurrentFrame()
+{
+	return _current_frame;
 }

@@ -141,8 +141,8 @@ int main(int argc, char* args[])
 	auto sess = Gekko::Session();
 	sess.Init(num_players, 0, sizeof(char));
 
-	auto p1 = sess.AddPlayer(Gekko::PlayerType::Local);
-	auto p2 = sess.AddPlayer(Gekko::PlayerType::Local);
+	auto p1 = sess.AddActor(Gekko::PlayerType::LocalPlayer);
+	auto p2 = sess.AddActor(Gekko::PlayerType::LocalPlayer);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;

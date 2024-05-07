@@ -15,6 +15,8 @@ namespace Gekko {
 
 		void AddLocalInput(Handle player, Input input);
 
+		void AddRemoteInput(Handle player, Input input, Frame frame);
+
 		void IncrementFrame();
 
 		bool GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame);
@@ -22,6 +24,8 @@ namespace Gekko {
 		bool GetLocalInputs(std::vector<Handle>& handles, std::unique_ptr<u8[]>& inputs, Frame& frame);
 
 		void SetLocalDelay(Handle player, u8 delay);
+
+		Frame GetCurrentFrame();
 
 	private:
 		u8 _num_players;

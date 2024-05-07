@@ -14,7 +14,6 @@ Gekko::Session::Session()
 	_max_spectators = 0;
 	_num_players = 0;
 	_started = false;
-	_num_players = 0;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -49,7 +48,7 @@ void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
 	}
 }
 
-Gekko::Handle Gekko::Session::AddPlayer(PlayerType type, NetAddress* addr)
+Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 {
 	if (type == PlayerType::Spectator) {
 		if (_msg.spectators.size() >= _max_spectators)
@@ -59,17 +58,20 @@ Gekko::Handle Gekko::Session::AddPlayer(PlayerType type, NetAddress* addr)
 		_msg.spectators.push_back(new Player(new_handle, type, addr));
 
 		return new_handle;
-	}
+	} 
 	else {
 		if (_started || _msg.locals.size() + _msg.remotes.size() >= _num_players)
 			return 0;
 
 		u32 new_handle = (u32)(_msg.locals.size() + _msg.remotes.size()) + 1;
 
-		if (type == Local) {
+		if (type == LocalPlayer) {
 			_msg.locals.push_back(new Player(new_handle, type, addr));
-		}
-		else {
+		} else {
+			// require an address when specifing a remote player
+			if (addr == nullptr)
+				return 0;
+
 			_msg.remotes.push_back(new Player(new_handle, type, addr));
 		}
 
@@ -77,9 +79,20 @@ Gekko::Handle Gekko::Session::AddPlayer(PlayerType type, NetAddress* addr)
 	}
 }
 
-void Gekko::Session::AddLocalInput(Handle player, Input input)
+void Gekko::Session::AddLocalInput(Handle player, void* input)
 {
-	_sync.AddLocalInput(player, input);
+	Input inp = (u8*)input;
+	bool is_local = false;
+
+	for (i32 i = 0; i < _msg.locals.size(); i++) {
+		if (_msg.locals[i]->handle == player) {
+			is_local = true;
+			break;
+		}
+	}
+
+	if(is_local)
+		_sync.AddLocalInput(player, inp);
 }
 
 std::vector<Gekko::Event> Gekko::Session::UpdateSession()
@@ -127,6 +140,9 @@ void Gekko::Session::Poll()
 	auto data = _host->ReceiveData();
 	_msg.HandleData(data, _started);
 
+	// handle received inputs
+	HandleReceivedInputs();
+
 	// add local input for the network
 	if (_msg.locals.size() > 0 && _started) {
 		std::vector<Handle> handles;
@@ -172,4 +188,38 @@ bool Gekko::Session::AllPlayersValid()
 		printf("__ session started __\n");
 	}
 	return true;
+}
+
+void Gekko::Session::HandleReceivedInputs()
+{
+	NetInputData* current = nullptr;
+	auto& received_inputs = _msg.LastReceivedInputs();
+	while (!received_inputs.empty()) {
+		current = received_inputs.front();
+		received_inputs.pop();
+
+		// handle it as a spectator input if there are no local players.
+		if (_msg.locals.size() == 0) {
+			// todo
+		}
+		else {
+			const u32 count = current->input.input_count;
+			const u32 handles = (u32)current->handles.size();
+			const u32 inp_len_per_frame = current->input.total_size / count;
+			const Frame start = current->input.start_frame;
+	
+			for (u32 i = 1; i <= count; i++) {
+				for (u32 j = 0; j < handles; j++) {
+					Frame frame = start + i;
+					Handle handle = current->handles[j];
+					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _input_size)];
+					_sync.AddRemoteInput(handle, input, frame);
+				}
+			}
+		}
+
+		// free the inputs since we used malloc.		
+		std::free(current->input.inputs);
+		delete current;
+	}
 }

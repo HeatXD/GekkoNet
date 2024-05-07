@@ -11,14 +11,14 @@ void Gekko::InputBuffer::Init(u8 delay, u32 input_size)
 	_last_received_input = GameInput::NULL_FRAME;
 
 	// init GameInput array
-	Input dummy = std::malloc(_input_size);
+	Input dummy = (u8*)std::malloc(_input_size);
 
 	if(dummy)
 		std::memset(dummy, 0, _input_size);
 
 	for (u32 i = 0; i < BUFF_SIZE; i++) {
 		_inputs.push_back(GameInput());
-		_inputs[i].Init(GameInput::NULL_FRAME, &dummy, _input_size);
+		_inputs[i].Init(GameInput::NULL_FRAME, dummy, _input_size);
 	}
 
 	std::free(dummy);
@@ -28,7 +28,7 @@ void Gekko::InputBuffer::AddLocalInput(Frame frame, const Input input)
 {
 	if (_inputs[frame % BUFF_SIZE].frame == GameInput::NULL_FRAME && _input_delay > 0) {
 		for (i32 i = 0; i < _input_delay; i++) {
-			Input dummy = std::malloc(_input_size);
+			Input dummy = (u8*)std::malloc(_input_size);
 
 			if (dummy)
 				std::memset(dummy, 0, _input_size);
@@ -65,7 +65,7 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 		Frame last_input = _last_received_input;
 
 		for (i32 i = 1; i <= _input_delay; i++) {
-			Input dummy = std::malloc(_input_size);
+			Input dummy = (u8*)std::malloc(_input_size);
 
 			if (dummy)
 				std::memcpy(dummy,_inputs[last_input % BUFF_SIZE].input, _input_size);
@@ -99,6 +99,9 @@ std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame)
 		return inp;
 
 	if (_inputs[frame % BUFF_SIZE].frame == GameInput::NULL_FRAME)
+		return inp;
+
+	if (_inputs[frame % BUFF_SIZE].frame != frame)
 		return inp;
 
 	inp->Init(_inputs[frame % BUFF_SIZE]);
