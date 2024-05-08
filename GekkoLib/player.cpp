@@ -3,14 +3,11 @@
 Gekko::Player::Player(Handle phandle, PlayerType type, NetAddress* addr, u32 magic)
 {
 	handle = phandle;
-
+	sync_num = 0;
 	session_magic = magic;
 	address.Copy(addr);
 
-	sync_num = 0;
-
 	_type = type;
-
 	_stats = NetStats();
 	_status = _type == LocalPlayer ? Connected : Initiating;
 }

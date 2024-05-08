@@ -6,7 +6,7 @@ Gekko::u32 Gekko::NetAddress::GetSize()
 	return _size;
 }
 
-Gekko::NetAddress::NetAddress(u8* data, u32 size)
+Gekko::NetAddress::NetAddress(void* data, u32 size)
 {
 	_size = size;
 	_data = std::unique_ptr<u8[]>(new u8[_size]);

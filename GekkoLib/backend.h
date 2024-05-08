@@ -11,7 +11,7 @@ namespace Gekko {
 
 	struct NetAddress {
 		NetAddress();
-		NetAddress(u8* data, u32 size);
+		NetAddress(void* data, u32 size);
 
 		u8* GetAddress();
 		u32 GetSize();

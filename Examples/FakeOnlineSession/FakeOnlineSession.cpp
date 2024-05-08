@@ -215,10 +215,10 @@ int main(int argc, char* args[])
 	sess2.SetNetAdapter(&adapter);
 
 	char addrs1 = 1;
-	auto addr1 = Gekko::NetAddress((Gekko::u8*)&addrs1, sizeof(char));
+	auto addr1 = Gekko::NetAddress(&addrs1, sizeof(char));
 
 	char addrs2 = 2;
-	auto addr2 = Gekko::NetAddress((Gekko::u8*)&addrs2, sizeof(char));
+	auto addr2 = Gekko::NetAddress(&addrs2, sizeof(char));
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
