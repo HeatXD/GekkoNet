@@ -63,8 +63,9 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 	for (u8 i = 0; i < _num_players; i++) {
 		auto inp = _input_buffers[i].GetInput(_current_frame);
 	
-		if (inp->frame == GameInput::NULL_FRAME)
+		if (inp->frame == GameInput::NULL_FRAME) {
 			return false;
+		}
 
 		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
 	}

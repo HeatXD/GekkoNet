@@ -50,7 +50,7 @@ void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
 
 Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 {
-	if (type == PlayerType::Spectator) {
+	if (type == Spectator) {
 		if (_msg.spectators.size() >= _max_spectators)
 			return 0;
 
@@ -98,10 +98,14 @@ void Gekko::Session::AddLocalInput(Handle player, void* input)
 std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 {
 	auto ev = std::vector<Event>();
+
 	// Connection Handling
 	Poll();
+
 	// Gameplay
 	if (AllPlayersValid()) {
+		// add inputs so we can continue the session.
+		AddDisconnectedPlayerInputs();
 
 		// check whether we have all the inputs needed to proceed
 		Frame frame = GameInput::NULL_FRAME;
@@ -129,6 +133,15 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 		_sync.IncrementFrame();
 	}
 	return ev;
+}
+
+void Gekko::Session::AddDisconnectedPlayerInputs()
+{
+	for (auto player : _msg.remotes) {
+		if (player->GetStatus() == Disconnected) {
+			_sync.AddRemoteInput(player->handle, 0, _sync.GetCurrentFrame());
+		}
+	}
 }
 
 void Gekko::Session::Poll()
@@ -162,7 +175,7 @@ bool Gekko::Session::AllPlayersValid()
 			}
 		}
 		// on session start we care that all spectators start with the players.
-		// when the session started and someone wants to join midway 
+		// TODO when the session started and someone wants to join midway 
 		// we should send an initiation packet with state.
 		for (u32 i = 0; i < _msg.spectators.size(); i++) {
 			if (_msg.spectators[i]->GetStatus() == Initiating) {
@@ -192,12 +205,14 @@ void Gekko::Session::HandleReceivedInputs()
 			const u32 count = current->input.input_count;
 			const u32 inp_len_per_frame = current->input.total_size / count;
 			const Frame start = current->input.start_frame;
+			const Handle handle = _msg.remotes[0]->handle;
 
 			for (u32 i = 1; i <= count; i++) {
 				for (u32 j = 0; j < _num_players; j++) {
 					Frame frame = start + i;
 					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _input_size)];
 					_sync.AddRemoteInput(j + 1, input, frame);
+					_msg.SendInputAck(handle, frame);
 				}
 			}
 		}
@@ -213,6 +228,7 @@ void Gekko::Session::HandleReceivedInputs()
 					Handle handle = current->handles[j];
 					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _input_size)];
 					_sync.AddRemoteInput(handle, input, frame);
+					_msg.SendInputAck(handle, frame);
 				}
 			}
 		}
@@ -231,7 +247,7 @@ void Gekko::Session::SendLocalInputs()
 			handles.push_back(_msg.locals[i]->handle);
 		}
 
-		const u32 delay = GetMinLocalDelay();
+		const i32 delay = GetMinLocalDelay();
 		const Frame current = _sync.GetCurrentFrame();
 
 		std::unique_ptr<u8[]> inputs;

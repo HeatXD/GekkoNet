@@ -72,7 +72,15 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
 		std::memcpy(_player_input_send_list.back(), input, _input_size * locals.size());
 	}
 
-	if (_player_input_send_list.size() > MAX_PLAYER_SEND_SIZE) {
+	const Frame min_ack = GetMinLastAckedFrame(false);
+	const u32 diff = _last_added_input - min_ack;
+
+	if (diff > MAX_PLAYER_SEND_SIZE) {
+		// disconnect the offending players
+		HandleTooFarBehindActors(false);
+	}
+
+	if (_player_input_send_list.size() > std::min(MAX_PLAYER_SEND_SIZE, diff)) {
 		delete _player_input_send_list.front();
 		_player_input_send_list.pop_front();
 	}
@@ -86,7 +94,15 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 		std::memcpy(_spectator_input_send_list.back(), input, _input_size * (locals.size() + remotes.size()));
 	}
 
-	if (_spectator_input_send_list.size() > MAX_SPECTATOR_SEND_SIZE) {
+	const Frame min_ack = GetMinLastAckedFrame(true);
+	const u32 diff = _last_added_spectator_input - min_ack;
+
+	if (diff > MAX_SPECTATOR_SEND_SIZE) {
+		// disconnect the offending spectators
+		HandleTooFarBehindActors(true);
+	}
+
+	if (_spectator_input_send_list.size() > std::min(MAX_SPECTATOR_SEND_SIZE, diff)) {
 		delete _spectator_input_send_list.front();
 		_spectator_input_send_list.pop_front();
 	}
@@ -109,7 +125,7 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	// handle messages
 	for (u32 i = 0; i < _pending_output.size(); i++) {
 		auto pkt = _pending_output.front();
-		if (pkt->pkt.type == PacketType::Inputs) {
+		if (pkt->pkt.type == Inputs) {
 			for (size_t i = 0; i < remotes.size(); i++) {
 				if (remotes[i]->address.GetSize() != 0) {
 					// copy addr, set magic and send it off!
@@ -121,7 +137,7 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 			// now when done we can cleanup the inputs since we used malloc
 			std::free(pkt->pkt.x.input.inputs);
 		}
-		else if (pkt->pkt.type == PacketType::SpectatorInputs) {
+		else if (pkt->pkt.type == SpectatorInputs) {
 			for (size_t i = 0; i < spectators.size(); i++) {
 				if (spectators[i]->address.GetSize() != 0) {
 					// copy addr, set magic and send it off!
@@ -148,7 +164,7 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 	for (u32 i = 0; i < data.size(); i++) {
 		// handle connection events
 		auto type = data[i]->pkt.type;
-		if (type == PacketType::SyncRequest) {
+		if (type == SyncRequest) {
 			auto message = new NetData;
 			i32 should_send = 0;
 			// handle and set the peer its session magic
@@ -190,7 +206,7 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 		}
 
 		// handle other events
-		if (type == PacketType::SyncResponse) {
+		if (type == SyncResponse) {
 			auto message = new NetData;
 			i32 stop_sending = 0; 
 
@@ -253,7 +269,7 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 			continue;
 		}
 
-		if (type == PacketType::Inputs || type == PacketType::SpectatorInputs) {
+		if (type == Inputs || type == SpectatorInputs) {
 			// printf("recv inputs from netaddr:%d\n", *data[i]->addr.GetAddress());
 
 			auto net_input = new NetInputData;
@@ -273,6 +289,28 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 			std::free(data[i]->pkt.x.input.inputs);
 
 			_received_inputs.push(net_input);
+
+			delete data[i];
+			continue;
+		}
+
+		if(type == InputAck) {
+			// we should just update the ack frame for all handles where the address matches
+			const Frame ack_frame = data[i]->pkt.x.input_ack.ack_frame;
+
+			for (auto player: remotes) {
+				if (player->address.Equals(data[i]->addr)) {
+					if (player->stats.last_acked_frame < ack_frame)
+						player->stats.last_acked_frame = ack_frame;
+				}
+			}
+
+			for (auto player : spectators) {
+				if (player->address.Equals(data[i]->addr)) {
+					if (player->stats.last_acked_frame < ack_frame)
+						player->stats.last_acked_frame = ack_frame;
+				}
+			}
 
 			delete data[i];
 			continue;
@@ -304,14 +342,68 @@ std::queue<Gekko::NetInputData*>& Gekko::MessageSystem::LastReceivedInputs()
 	return _received_inputs;
 }
 
+void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
+{
+	auto plyr = GetPlayerByHandle(player);
+
+	if (!plyr) return;
+
+	auto message = new NetData;
+
+	message->addr.Copy(&plyr->address);
+	message->pkt.magic = plyr->session_magic;
+
+	message->pkt.type = InputAck;
+	message->pkt.x.input_ack.ack_frame = frame;
+	
+	_pending_output.push(message);
+}
+
 std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
 {
 	auto result = std::vector<Handle>();
 	for (auto player: remotes) {
-		if (player->address.Equals(*addr))
+		if (player->address.Equals(*addr)) {
 			result.push_back(player->handle);
+		}
 	}
 	return result;
+}
+
+Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle) 
+{
+	for (auto player: remotes) {
+		if (player->handle == handle)
+			return player;
+	}
+	return nullptr;
+}
+
+Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator) 
+{
+	Frame min = INT_MAX;
+	for (auto player : spectator ? spectators : remotes) {
+		if (player->GetStatus() == Connected) {
+			min = std::min(player->stats.last_acked_frame, min);
+		}
+	}
+	return min;
+}
+
+void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
+{
+	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
+	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
+
+	for (auto player : spectator ? spectators : remotes) {
+		if (player->GetStatus() == Connected) {
+			const u32 diff = last_added - player->stats.last_acked_frame;
+			if (diff > max_diff) {
+				player->SetStatus(Disconnected);
+				printf("handle:%d  disconnected!", player->handle);
+			}
+		}
+	}
 }
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
@@ -338,7 +430,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 
 	auto data = new NetData;
 
-	data->pkt.type = spectator ? PacketType::SpectatorInputs : PacketType::Inputs;
+	data->pkt.type = spectator ? SpectatorInputs : Inputs;
 	data->pkt.x.input.input_count = (u32)send_list.size();
 	data->pkt.x.input.start_frame = last_added - (u32)send_list.size();
 	data->pkt.x.input.inputs = (u8*)std::malloc(total_size);

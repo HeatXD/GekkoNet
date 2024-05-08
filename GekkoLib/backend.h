@@ -43,6 +43,9 @@ namespace Gekko {
 				u32 input_count;
 				u8* inputs;
 			} input;
+			struct InputAck {
+				Frame ack_frame;
+			} input_ack;
 			struct SyncRequest {
 				u32 rng_data;
 			} sync_request;
@@ -58,7 +61,7 @@ namespace Gekko {
 	};
 
 	struct NetStats {
-		
+		Frame last_acked_frame;
 	};
 
 	struct NetInputData {
@@ -95,17 +98,18 @@ namespace Gekko {
 
 		void SetStatus(PlayerStatus type);
 
-
 	public:
 		Handle handle;
-		u32 session_magic;
-		NetAddress address;
+
 		u8 sync_num;
+		u32 session_magic;
+
+		NetStats stats;
+		NetAddress address;
 
 	private:
 		PlayerType _type;
 		PlayerStatus _status;
-		NetStats _stats;
 	};
 
 	class MessageSystem {
@@ -128,6 +132,8 @@ namespace Gekko {
 
 		std::queue<NetInputData*>& LastReceivedInputs();
 
+		void SendInputAck(Handle player, Frame frame);
+
 	public:
 		std::vector<Player*> locals;
 		std::vector<Player*> remotes;
@@ -137,6 +143,12 @@ namespace Gekko {
 		void AddPendingInput(bool spectator = false);
 
 		std::vector<Handle> GetHandlesForAddress(NetAddress* addr);
+
+		Player* GetPlayerByHandle(Handle handle);
+
+		Frame GetMinLastAckedFrame(bool spectator = false);
+
+		void HandleTooFarBehindActors(bool spectator = false);
 
 	private:
 		static const u32 MAX_PLAYER_SEND_SIZE = 16;

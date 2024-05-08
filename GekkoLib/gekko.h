@@ -26,6 +26,8 @@ namespace Gekko {
 
 		std::vector<Event> UpdateSession();
 
+		void AddDisconnectedPlayerInputs();
+
 	private:
 		void Poll();
 
