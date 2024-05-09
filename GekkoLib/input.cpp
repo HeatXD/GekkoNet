@@ -4,11 +4,14 @@
 #include <cstring>
 #include <iostream>
 
-void Gekko::InputBuffer::Init(u8 delay, u32 input_size)
+void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
 {
 	_input_delay = delay;
 	_input_size = input_size;
+	_input_prediction_window = input_window;
+
 	_last_received_input = GameInput::NULL_FRAME;
+	_first_predicted_input = GameInput::NULL_FRAME;
 
 	// init GameInput array
 	Input dummy = (u8*)std::malloc(_input_size);
@@ -90,6 +93,11 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 Gekko::u8 Gekko::InputBuffer::GetDelay() 
 {
 	return _input_delay;
+}
+
+void Gekko::InputBuffer::SetInputPredictionWindow(u8 input_window)
+{
+	_input_prediction_window = input_window;
 }
 
 std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame)

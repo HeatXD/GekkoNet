@@ -24,7 +24,7 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 
 	// on creation setup input buffers
 	for (int i = 0; i < _num_players; i++) {
-		_input_buffers[i].Init(0, input_size);
+		_input_buffers[i].Init(0, 0, input_size);
 	}
 }
 
@@ -98,6 +98,11 @@ void Gekko::SyncSystem::SetLocalDelay(Handle player, u8 delay)
 Gekko::u8 Gekko::SyncSystem::GetLocalDelay(Handle player)
 {
 	return _input_buffers[player - 1].GetDelay();
+}
+
+void Gekko::SyncSystem::SetInputPredictionWindow(Handle player, u8 input_window)
+{
+	_input_buffers[player - 1].SetInputPredictionWindow(input_window);
 }
 
 Gekko::Frame Gekko::SyncSystem::GetCurrentFrame()

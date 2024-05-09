@@ -139,7 +139,15 @@ int main(int argc, char* args[])
 	int num_players = 2;
 
 	auto sess = Gekko::Session();
-	sess.Init(num_players, 0, sizeof(char));
+
+	auto conf = Gekko::Config();
+
+	conf.num_players = num_players;
+	conf.input_size = sizeof(char);
+	conf.max_spectators = 0;
+	conf.input_prediction_window = 0;
+
+	sess.Init(conf);
 
 	auto p1 = sess.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto p2 = sess.AddActor(Gekko::PlayerType::LocalPlayer);

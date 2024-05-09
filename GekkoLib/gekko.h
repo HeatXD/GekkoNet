@@ -8,13 +8,20 @@
 #include "sync.h"
 
 namespace Gekko {
+	struct Config {
+		u8 num_players;
+		u8 max_spectators;
+		u8 input_prediction_window;
+		u32 input_size;
+	};
+
 	class Session {
 	public:
 		static void Test();
 
 		Session();
 
-		void Init(u8 num_players, u8 max_spectators, u32 input_size);
+		void Init(Config& conf);
 
 		void SetLocalDelay(Handle player, u8 delay);
 
@@ -25,8 +32,6 @@ namespace Gekko {
 		void AddLocalInput(Handle player, void* input);
 
 		std::vector<Event> UpdateSession();
-
-		void AddDisconnectedPlayerInputs();
 
 	private:
 		void Poll();
@@ -39,13 +44,16 @@ namespace Gekko {
 
 		u8 GetMinLocalDelay();
 
+		void AddDisconnectedPlayerInputs();
+
 	private:
 		bool _started;
 
-		u32 _input_size;
-
 		u8 _num_players;
 		u8 _max_spectators;
+		u8 _input_prediction_window;
+
+		u32 _input_size;
 
 		SyncSystem _sync;
 

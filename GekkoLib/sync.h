@@ -27,6 +27,8 @@ namespace Gekko {
 		
 		u8 GetLocalDelay(Handle player);
 
+		void SetInputPredictionWindow(Handle player, u8 input_window);
+
 		Frame GetCurrentFrame();
 
 	private:

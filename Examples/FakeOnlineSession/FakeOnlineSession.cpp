@@ -208,8 +208,15 @@ int main(int argc, char* args[])
 	auto sess1 = Gekko::Session();
 	auto sess2 = Gekko::Session();
 
-	sess1.Init(num_players, 0, sizeof(char));
-	sess2.Init(num_players, 0, sizeof(char));
+	auto conf = Gekko::Config();
+
+	conf.num_players = num_players;
+	conf.input_size = sizeof(char);
+	conf.max_spectators = 0;
+	conf.input_prediction_window = 0;
+
+	sess1.Init(conf);
+	sess2.Init(conf);
 
 	sess1.SetNetAdapter(&adapter);
 	sess2.SetNetAdapter(&adapter);

@@ -21,19 +21,20 @@ void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
 	_host = adapter;
 }
 
-void Gekko::Session::Init(u8 num_players, u8 max_spectators, u32 input_size)
+void Gekko::Session::Init(Config& conf)
 {
 	_host = nullptr;
 	_started = false;
 
-	_num_players = num_players;
-	_max_spectators = max_spectators;
-	_input_size = input_size;
+	_num_players = conf.num_players;
+	_max_spectators = conf.max_spectators;
+	_input_size = conf.input_size;
+	_input_prediction_window = conf.input_prediction_window;
 
-	// setup input queues for the players
+	// setup input buffer for the players
 	_sync.Init(_num_players, _input_size);
 
-	//setup message system.
+	// setup message system.
 	_msg.Init(_input_size);
 }
 
@@ -73,6 +74,7 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 				return 0;
 
 			_msg.remotes.push_back(new Player(new_handle, type, addr));
+			_sync.SetInputPredictionWindow(new_handle, _input_prediction_window);
 		}
 
 		return new_handle;
