@@ -134,6 +134,8 @@ namespace Gekko {
 
 		void SendInputAck(Handle player, Frame frame);
 
+		Frame GetLastAddedInput(bool spectator = false);
+
 	public:
 		std::vector<Player*> locals;
 		std::vector<Player*> remotes;

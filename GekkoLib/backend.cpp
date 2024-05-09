@@ -390,6 +390,10 @@ Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator)
 	return min;
 }
 
+Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator) {
+	return spectator ? _last_added_spectator_input : _last_added_input;
+}
+
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
 	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;

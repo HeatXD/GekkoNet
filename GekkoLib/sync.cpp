@@ -57,11 +57,27 @@ void Gekko::SyncSystem::IncrementFrame()
 	_current_frame++;
 }
 
+bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame frame) 
+{
+	std::unique_ptr<u8[]> all_input(new u8[_input_size * _num_players]);
+	for (u8 i = 0; i < _num_players; i++) {
+		auto inp = _input_buffers[i].GetInput(frame, false);
+
+		if (inp->frame == GameInput::NULL_FRAME) {
+			return false;
+		}
+
+		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
+	}
+	inputs = std::move(all_input);
+	return true;
+}
+
 bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame)
 {
 	std::unique_ptr<u8[]> all_input(new u8[_input_size * _num_players]);
 	for (u8 i = 0; i < _num_players; i++) {
-		auto inp = _input_buffers[i].GetInput(_current_frame);
+		auto inp = _input_buffers[i].GetInput(_current_frame, true);
 	
 		if (inp->frame == GameInput::NULL_FRAME) {
 			return false;
@@ -79,10 +95,11 @@ bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique
 	inputs.reset();
 	std::unique_ptr<u8[]> all_input(new u8[_input_size * handles.size()]);
 	for (u8 i = 0; i < handles.size(); i++) {
-		auto inp = _input_buffers[handles[i] - 1].GetInput(frame);
+		auto inp = _input_buffers[handles[i] - 1].GetInput(frame, true);
 
-		if (inp->frame == GameInput::NULL_FRAME)
+		if (inp->frame == GameInput::NULL_FRAME) {	
 			return false;
+		}
 
 		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
 	}
@@ -108,4 +125,20 @@ void Gekko::SyncSystem::SetInputPredictionWindow(Handle player, u8 input_window)
 Gekko::Frame Gekko::SyncSystem::GetCurrentFrame()
 {
 	return _current_frame;
+}
+
+void Gekko::SyncSystem::SetCurrentFrame(Frame frame)
+{
+	_current_frame = frame;
+}
+
+Gekko::Frame Gekko::SyncSystem::GetMinIncorrectFrame()
+{
+	Frame min = INT_MAX;
+	for (i32 i = 0; i < _num_players; i++) {
+		Frame frame = _input_buffers[i].GetIncorrectPredictionFrame();
+		if (frame == GameInput::NULL_FRAME) continue;
+		min = std::min(frame, min);
+	}
+	return min == INT_MAX ? GameInput::NULL_FRAME : min;
 }

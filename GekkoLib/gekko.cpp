@@ -14,6 +14,7 @@ Gekko::Session::Session()
 	_max_spectators = 0;
 	_num_players = 0;
 	_started = false;
+	_input_prediction_window = 0;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -93,8 +94,9 @@ void Gekko::Session::AddLocalInput(Handle player, void* input)
 		}
 	}
 
-	if(is_local)
+	if (is_local) {
 		_sync.AddLocalInput(player, inp);
+	}
 }
 
 std::vector<Gekko::Event> Gekko::Session::UpdateSession()
@@ -109,30 +111,17 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 		// add inputs so we can continue the session.
 		AddDisconnectedPlayerInputs();
 
-		// check whether we have all the inputs needed to proceed
-		Frame frame = GameInput::NULL_FRAME;
-		std::unique_ptr<u8[]> inputs;
-		if (!_sync.GetCurrentInputs(inputs, frame))
-			return ev;
-
 		// send inputs to spectators 
-		_msg.AddSpectatorInput(frame, inputs.get());
-	
-		// we have the inputs lets create an event for the user
-		// to advance with the given inputs
-		Event event;
-		event.type = AdvanceEvent;
-		event.data.ev.adv.frame = frame;
-		event.data.ev.adv.input_len = _num_players * _input_size;
-		event.data.ev.adv.inputs = (u8*) std::malloc(event.data.ev.adv.input_len);
+		SendSpectatorInputs();
 
-		if (event.data.ev.adv.inputs)
-			std::memcpy(event.data.ev.adv.inputs, inputs.get(), event.data.ev.adv.input_len);
-		
-		ev.push_back(event);
+		// check if we need to rollback
+		HandleRollback(ev);
 
 		// then advance the session
-		_sync.IncrementFrame();
+		if (AddAdvanceEvent(ev)) {
+			_sync.IncrementFrame();
+			AddSaveEvent(ev);
+		}
 	}
 	return ev;
 }
@@ -144,6 +133,76 @@ void Gekko::Session::AddDisconnectedPlayerInputs()
 			_sync.AddRemoteInput(player->handle, 0, _sync.GetCurrentFrame());
 		}
 	}
+}
+
+void Gekko::Session::SendSpectatorInputs()
+{
+	const i32 delay = GetMinLocalDelay();
+	const u8 pred_window = _input_prediction_window;
+	const Frame current = _msg.GetLastAddedInput(true) + 1;
+
+	std::unique_ptr<u8[]> inputs;
+	for (Frame frame = current; frame <= current + delay + pred_window; frame++) {
+		if (!_sync.GetSpectatorInputs(inputs, frame)) {
+			break;
+		}
+		_msg.AddSpectatorInput(frame, inputs.get());
+	}
+}
+
+void Gekko::Session::HandleRollback(std::vector<Event>& ev)
+{
+	if (_input_prediction_window == 0)
+		return;
+
+	const Frame current = _sync.GetCurrentFrame();
+	if (current == GameInput::NULL_FRAME) {
+		AddSaveEvent(ev);
+	}
+
+	const Frame min = _sync.GetMinIncorrectFrame();
+	if (min == GameInput::NULL_FRAME)
+		return;
+
+	const Frame sync_frame = min - 1;
+
+	_sync.SetCurrentFrame(sync_frame);
+
+	AddLoadEvent(ev);
+
+	for (Frame frame = sync_frame; frame < current; frame++) {
+		AddAdvanceEvent(ev);
+		_sync.IncrementFrame();
+		AddSaveEvent(ev);
+	}
+}
+
+bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
+{
+	Frame frame = GameInput::NULL_FRAME;
+	std::unique_ptr<u8[]> inputs;
+	if (!_sync.GetCurrentInputs(inputs, frame))
+		return false;
+
+	Event event;
+	event.type = AdvanceEvent;
+	event.data.ev.adv.frame = frame;
+	event.data.ev.adv.input_len = _num_players * _input_size;
+	event.data.ev.adv.inputs = (u8*)std::malloc(event.data.ev.adv.input_len);
+
+	if (event.data.ev.adv.inputs)
+		std::memcpy(event.data.ev.adv.inputs, inputs.get(), event.data.ev.adv.input_len);
+
+	ev.push_back(event);
+	return true;
+}
+
+void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
+{
+}
+
+void Gekko::Session::AddLoadEvent(std::vector<Event>& ev)
+{
 }
 
 void Gekko::Session::Poll()
@@ -250,13 +309,15 @@ void Gekko::Session::SendLocalInputs()
 		}
 
 		const i32 delay = GetMinLocalDelay();
-		const Frame current = _sync.GetCurrentFrame();
+		const u8 pred_window = _input_prediction_window;
+		const Frame current = _msg.GetLastAddedInput(false) + 1;
 
 		std::unique_ptr<u8[]> inputs;
-		for (Frame frame = current; frame <= current + delay; frame++) {
-			if (_sync.GetLocalInputs(handles, inputs, frame)) {
-				_msg.AddInput(frame, inputs.get());
+		for (Frame frame = current; frame <= current + delay + pred_window; frame++) {
+			if (!_sync.GetLocalInputs(handles, inputs, frame)) {
+				break;
 			}
+			_msg.AddInput(frame, inputs.get());
 		}
 	}
 }

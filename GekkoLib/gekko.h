@@ -46,6 +46,16 @@ namespace Gekko {
 
 		void AddDisconnectedPlayerInputs();
 
+		void SendSpectatorInputs();
+
+		void HandleRollback(std::vector<Event>& ev);
+
+		bool AddAdvanceEvent(std::vector<Event>& ev);
+
+		void AddSaveEvent(std::vector<Event>& ev);
+
+		void AddLoadEvent(std::vector<Event>& ev);
+
 	private:
 		bool _started;
 
