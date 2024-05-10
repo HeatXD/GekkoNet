@@ -5,7 +5,15 @@
 #include <iostream>
 
 Gekko::InputBuffer::InputBuffer() {
+	_input_size = 0;
+	_input_delay = 0;
+	_input_prediction_window = 0;
 
+	_last_received_input = GameInput::NULL_FRAME;
+
+	_last_predicted_input = GameInput::NULL_FRAME;
+	_first_predicted_input = GameInput::NULL_FRAME;
+	_incorrent_predicted_input = GameInput::NULL_FRAME;
 }
 
 void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
