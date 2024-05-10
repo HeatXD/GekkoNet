@@ -223,7 +223,7 @@ int main(int argc, char* args[])
 	conf.num_players = num_players;
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 0;
-	conf.input_prediction_window = 0;
+	conf.input_prediction_window = 2;
 	conf.state_size = sizeof(GState);
 
 	sess1.Init(conf);
@@ -240,11 +240,11 @@ int main(int argc, char* args[])
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
-	sess1.SetLocalDelay(s1p1, 2);
+	sess1.SetLocalDelay(s1p1, 1);
 
 	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
 	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
-	sess2.SetLocalDelay(s2p2, 2);
+	sess2.SetLocalDelay(s2p2, 1);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;

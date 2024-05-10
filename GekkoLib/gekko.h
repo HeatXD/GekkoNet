@@ -10,11 +10,12 @@
 
 namespace Gekko {
 	struct Config {
-		u8 num_players;
-		u8 max_spectators;
-		u8 input_prediction_window;
-		u32 input_size;
-		u32 state_size;
+		u8 num_players = 0;
+		u8 max_spectators = 0;
+		u8 input_prediction_window = 0;
+		u32 input_size = 0;
+		u32 state_size = 0;
+		bool limited_saving = false;
 	};
 
 	class Session {
@@ -23,7 +24,7 @@ namespace Gekko {
 
 		Session();
 
-		void Init(Config& conf);
+		void Init(Config& config);
 
 		void SetLocalDelay(Handle player, u8 delay);
 
@@ -61,11 +62,7 @@ namespace Gekko {
 	private:
 		bool _started;
 
-		u8 _num_players;
-		u8 _max_spectators;
-		u8 _input_prediction_window;
-
-		u32 _input_size;
+		Config _config;
 
 		SyncSystem _sync;
 
