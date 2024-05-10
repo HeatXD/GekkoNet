@@ -214,7 +214,8 @@ int main(int argc, char* args[])
 	conf.num_players = num_players;
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 1;
-	conf.input_prediction_window = 0;
+	conf.input_prediction_window = 2;
+	conf.state_size = sizeof(GState);
 
 	sess1.Init(conf);
 	sess2.Init(conf);

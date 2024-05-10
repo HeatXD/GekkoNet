@@ -14,6 +14,7 @@ namespace Gekko {
 		u8 max_spectators;
 		u8 input_prediction_window;
 		u32 input_size;
+		u32 state_size;
 	};
 
 	class Session {

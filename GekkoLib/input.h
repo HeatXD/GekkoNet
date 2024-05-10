@@ -27,7 +27,7 @@ namespace Gekko {
 	struct InputBuffer {
 		static const u32 BUFF_SIZE = 128;
 
-		InputBuffer() = default;
+		InputBuffer();
 
 		void Init(u8 delay, u8 input_window, u32 input_size);
 

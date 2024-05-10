@@ -92,6 +92,16 @@ struct GState {
 	int py[2] = {0, 0};
 };
 
+void save_state(GState* gs, Gekko::Event* ev) {
+	*ev->data.ev.save.checksum = 22;
+	*ev->data.ev.save.state_len = sizeof(GState);
+	std::memcpy(ev->data.ev.save.state, gs, sizeof(GState));
+}
+
+void load_state(GState* gs, Gekko::Event& ev) {
+	std::memcpy(gs, ev.data.ev.load.state, sizeof(GState));
+}
+
 void update_state(GState& gs, GInput inputs[2], int num_players) {
 	for (int player = 0; player < num_players; player++) {
 		if (inputs[player].input.dir.up) gs.py[player] -= 2;
@@ -213,7 +223,8 @@ int main(int argc, char* args[])
 	conf.num_players = num_players;
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 0;
-	conf.input_prediction_window = 1;
+	conf.input_prediction_window = 0;
+	conf.state_size = sizeof(GState);
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -229,11 +240,11 @@ int main(int argc, char* args[])
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
-	sess1.SetLocalDelay(s1p1, 1);
+	sess1.SetLocalDelay(s1p1, 2);
 
 	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
 	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
-	sess2.SetLocalDelay(s2p2, 1);
+	sess2.SetLocalDelay(s2p2, 2);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
@@ -265,8 +276,12 @@ int main(int argc, char* args[])
 				switch (ev1[i].type)
 				{
 				case Gekko::SaveEvent:
+					printf("S1 Save frame:%d\n", ev1[i].data.ev.save.frame);
+					save_state(&state1, &ev1[i]);
 					break;
 				case Gekko::LoadEvent:
+					printf("S1 Load frame:%d\n", ev1[i].data.ev.load.frame);
+					load_state(&state1, ev1[i]);
 					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
@@ -291,8 +306,12 @@ int main(int argc, char* args[])
 				switch (ev2[i].type)
 				{
 				case Gekko::SaveEvent:
+					printf("S2 Save frame:%d\n", ev2[i].data.ev.save.frame);
+					save_state(&state2, &ev2[i]);
 					break;
 				case Gekko::LoadEvent:
+					printf("S2 Load frame:%d\n",ev2[i].data.ev.load.frame);
+					load_state(&state2, ev2[i]);
 					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs

@@ -8,6 +8,8 @@
 
 namespace Gekko {
 	struct StateEntry {
+		~StateEntry();
+
 		Frame frame = GameInput::NULL_FRAME;
 		u8* state = nullptr;
 		u32 state_len = 0;
@@ -18,7 +20,7 @@ namespace Gekko {
 	public:
 		StateStorage();
 
-		void Init(u32 num_states);
+		void Init(u32 num_states, u32 state_size);
 
 		StateEntry* GetState(Frame frame);
 

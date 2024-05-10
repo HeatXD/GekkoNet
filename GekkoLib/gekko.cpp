@@ -1,6 +1,8 @@
 #include "gekko.h"
-#include <iostream>
 #include "backend.h"
+
+#include <iostream>
+#include <cassert>
 
 void Gekko::Session::Test()
 {
@@ -39,7 +41,7 @@ void Gekko::Session::Init(Config& conf)
 	_msg.Init(_input_size);
 
 	// setup state storage
-	_storage.Init(std::max(_input_prediction_window, (u8)2));
+	_storage.Init(_input_prediction_window, conf.state_size);
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -165,22 +167,27 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 		return;
 
 	current = _sync.GetCurrentFrame();
-
 	const Frame min = _sync.GetMinIncorrectFrame();
+
+	// dont allow rollbacks starting before the null frame
 	if (min == GameInput::NULL_FRAME)
 		return;
 
 	const Frame sync_frame = min - 1;
 
+	// load the sync frame
 	_sync.SetCurrentFrame(sync_frame);
-
 	AddLoadEvent(ev);
+	_sync.IncrementFrame();
 
-	for (Frame frame = sync_frame; frame < current; frame++) {
+	for (Frame frame = sync_frame + 1; frame < current; frame++) {
 		AddAdvanceEvent(ev);
 		AddSaveEvent(ev);
 		_sync.IncrementFrame();
 	}
+
+	// make sure that we are back where we started.
+	assert(_sync.GetCurrentFrame() == current);
 }
 
 bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
@@ -209,6 +216,8 @@ void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
 	const Frame frame_to_save = _sync.GetCurrentFrame();
 
 	auto state = _storage.GetState(frame_to_save);
+
+	state->frame = frame_to_save;
 
 	Event event;
 	event.type = SaveEvent;

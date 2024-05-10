@@ -4,6 +4,10 @@
 #include <cstring>
 #include <iostream>
 
+Gekko::InputBuffer::InputBuffer() {
+
+}
+
 void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
 {
 	_input_delay = delay;
