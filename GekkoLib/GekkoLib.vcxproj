@@ -134,14 +134,15 @@
     <ClInclude Include="gekko.h" />
     <ClInclude Include="gekko_types.h" />
     <ClInclude Include="input.h" />
+    <ClInclude Include="storage.h" />
     <ClInclude Include="sync.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="backend.cpp" />
-    <ClCompile Include="event.cpp" />
     <ClCompile Include="gekko.cpp" />
     <ClCompile Include="input.cpp" />
     <ClCompile Include="player.cpp" />
+    <ClCompile Include="storage.cpp" />
     <ClCompile Include="sync.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

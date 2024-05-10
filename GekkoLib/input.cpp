@@ -57,7 +57,7 @@ void Gekko::InputBuffer::AddInput(Frame frame, Input input)
 
 				// then clear all the predictions made starting from the marked prediction 
 				// since theyre most likely also incorrect.
-				const u32 diff = _last_predicted_input - _first_predicted_input;
+				const Frame diff = _last_predicted_input - _first_predicted_input;
 				for (Frame i = 0; i <= diff; i++) {
 					_inputs[(_incorrent_predicted_input + i) % BUFF_SIZE].Clear();
 				}

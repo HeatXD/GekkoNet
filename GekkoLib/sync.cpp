@@ -18,7 +18,7 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 {
 	_input_size = input_size;
 	_num_players = num_players;
-	_current_frame = 0;
+	_current_frame = GameInput::NULL_FRAME + 1;
 
 	_input_buffers = new InputBuffer[_num_players];
 
@@ -137,7 +137,9 @@ Gekko::Frame Gekko::SyncSystem::GetMinIncorrectFrame()
 	Frame min = INT_MAX;
 	for (i32 i = 0; i < _num_players; i++) {
 		Frame frame = _input_buffers[i].GetIncorrectPredictionFrame();
-		if (frame == GameInput::NULL_FRAME) continue;
+		if (frame == GameInput::NULL_FRAME) {
+			continue;
+		}
 		min = std::min(frame, min);
 	}
 	return min == INT_MAX ? GameInput::NULL_FRAME : min;

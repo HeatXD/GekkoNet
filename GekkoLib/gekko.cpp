@@ -37,6 +37,9 @@ void Gekko::Session::Init(Config& conf)
 
 	// setup message system.
 	_msg.Init(_input_size);
+
+	// setup state storage
+	_storage.Init(std::max(_input_prediction_window, (u8)2));
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -102,7 +105,6 @@ void Gekko::Session::AddLocalInput(Handle player, void* input)
 std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 {
 	auto ev = std::vector<Event>();
-
 	// Connection Handling
 	Poll();
 
@@ -119,8 +121,8 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 		// then advance the session
 		if (AddAdvanceEvent(ev)) {
-			_sync.IncrementFrame();
 			AddSaveEvent(ev);
+			_sync.IncrementFrame();
 		}
 	}
 	return ev;
@@ -152,13 +154,17 @@ void Gekko::Session::SendSpectatorInputs()
 
 void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 {
+	Frame current = _sync.GetCurrentFrame();
+	if (current - 1 == GameInput::NULL_FRAME) {
+		_sync.SetCurrentFrame(current - 1);
+		AddSaveEvent(ev);
+		_sync.IncrementFrame();
+	}
+
 	if (_input_prediction_window == 0)
 		return;
 
-	const Frame current = _sync.GetCurrentFrame();
-	if (current == GameInput::NULL_FRAME) {
-		AddSaveEvent(ev);
-	}
+	current = _sync.GetCurrentFrame();
 
 	const Frame min = _sync.GetMinIncorrectFrame();
 	if (min == GameInput::NULL_FRAME)
@@ -172,8 +178,8 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 
 	for (Frame frame = sync_frame; frame < current; frame++) {
 		AddAdvanceEvent(ev);
-		_sync.IncrementFrame();
 		AddSaveEvent(ev);
+		_sync.IncrementFrame();
 	}
 }
 
@@ -194,15 +200,41 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
 		std::memcpy(event.data.ev.adv.inputs, inputs.get(), event.data.ev.adv.input_len);
 
 	ev.push_back(event);
+
 	return true;
 }
 
 void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
 {
+	const Frame frame_to_save = _sync.GetCurrentFrame();
+
+	auto state = _storage.GetState(frame_to_save);
+
+	Event event;
+	event.type = SaveEvent;
+	event.data.ev.save.frame = frame_to_save;
+
+	event.data.ev.save.state = state->state;
+	event.data.ev.save.checksum = &state->checksum;
+	event.data.ev.save.state_len = &state->state_len;
+
+	ev.push_back(event);
 }
 
 void Gekko::Session::AddLoadEvent(std::vector<Event>& ev)
 {
+	const Frame frame_to_load = _sync.GetCurrentFrame();
+
+	auto state = _storage.GetState(frame_to_load);
+
+	Event event;
+	event.type = LoadEvent;
+	event.data.ev.load.frame = frame_to_load;
+
+	event.data.ev.load.state = state->state;
+	event.data.ev.load.state_len = &state->state_len;
+
+	ev.push_back(event);
 }
 
 void Gekko::Session::Poll()

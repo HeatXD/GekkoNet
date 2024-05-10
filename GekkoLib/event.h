@@ -13,45 +13,31 @@ namespace Gekko {
 		LoadEvent
 	};
 
-	struct Advance
-	{
-		Frame frame;
-		u32 input_len;
-		u8* inputs;
-	};
-
-	struct Save
-	{
-		Frame frame;
-		u64 checksum;
-		u32 state_len;
-		u8* state;
-	};
-
-	struct Load
-	{
-		Frame frame;
-		u32 state_len;
-		u8* state;
-	};
-
 	struct EventData {
-		EventData();
-		union data{
-			data();
-
+		union data {
 			// events 
-			Advance adv;
-			Save save;
-			Load load;
-			
-			u32 x;
+			struct Advance {
+				Frame frame;
+				u32 input_len;
+				u8* inputs;
+			} adv;
+			struct Save {
+				Frame frame;
+				u32* checksum;
+				u32* state_len;
+				u8* state;
+			} save;
+			struct Load {
+				Frame frame;
+				u32* state_len;
+				u8* state;
+			} load;
+			u32 x = 0;
 		} ev;
 	};
 
 	struct Event {
-		Event();
-		EventType type;
+		EventType type = None;
 		EventData data;
 	};
 }

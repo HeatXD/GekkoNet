@@ -213,7 +213,7 @@ int main(int argc, char* args[])
 	conf.num_players = num_players;
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 0;
-	conf.input_prediction_window = 2;
+	conf.input_prediction_window = 1;
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -229,11 +229,11 @@ int main(int argc, char* args[])
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
-	//sess1.SetLocalDelay(s1p1, 1);
+	sess1.SetLocalDelay(s1p1, 1);
 
 	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
 	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
-	//sess2.SetLocalDelay(s2p2, 3);
+	sess2.SetLocalDelay(s2p2, 1);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
@@ -255,7 +255,7 @@ int main(int argc, char* args[])
 
 			//add local inputs to the session
 			sess1.AddLocalInput(s1p1, &inputs[0].input.value);
-			// sess2.AddLocalInput(s2p2, &inputs[1].input.value);
+			sess2.AddLocalInput(s2p2, &inputs[1].input.value);
 
 			int frame = 0;
 
@@ -264,6 +264,10 @@ int main(int argc, char* args[])
 			{
 				switch (ev1[i].type)
 				{
+				case Gekko::SaveEvent:
+					break;
+				case Gekko::LoadEvent:
+					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev1[i].data.ev.adv.inputs[0];
@@ -276,6 +280,7 @@ int main(int argc, char* args[])
 					update_state(state1, inputs, num_players);
 					break;
 				default:
+					printf("S1 Unkown Event: %d\n", ev1[i].type);
 					break;
 				}
 			}
@@ -285,6 +290,10 @@ int main(int argc, char* args[])
 			{
 				switch (ev2[i].type)
 				{
+				case Gekko::SaveEvent:
+					break;
+				case Gekko::LoadEvent:
+					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev2[i].data.ev.adv.inputs[0];
@@ -297,6 +306,7 @@ int main(int argc, char* args[])
 					update_state(state2, inputs, num_players);
 					break;
 				default:
+					printf("S2 Unkown Event: %d\n", ev2[i].type);
 					break;
 				}
 			}

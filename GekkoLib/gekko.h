@@ -6,6 +6,7 @@
 #include "gekko_types.h"
 #include "event.h"
 #include "sync.h"
+#include "storage.h"
 
 namespace Gekko {
 	struct Config {
@@ -68,6 +69,8 @@ namespace Gekko {
 		SyncSystem _sync;
 
 		MessageSystem _msg;
+
+		StateStorage _storage;
 
 		NetAdapter* _host;
 	};
