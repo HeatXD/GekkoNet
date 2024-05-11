@@ -158,12 +158,11 @@ void Gekko::Session::AddDisconnectedPlayerInputs()
 
 void Gekko::Session::SendSpectatorInputs()
 {
-	const i32 delay = GetMinLocalDelay();
-	const u8 pred_window = _config.input_prediction_window;
 	const Frame current = _msg.GetLastAddedInput(true) + 1;
+	const Frame confirmed = _sync.GetMinReceivedFrame();
 
 	std::unique_ptr<u8[]> inputs;
-	for (Frame frame = current; frame <= current + delay + pred_window; frame++) {
+	for (Frame frame = current; frame <= confirmed; frame++) {
 		if (!_sync.GetSpectatorInputs(inputs, frame)) {
 			break;
 		}
@@ -384,7 +383,7 @@ void Gekko::Session::SendLocalInputs()
 			handles.push_back(_msg.locals[i]->handle);
 		}
 
-		const i32 delay = GetMinLocalDelay();
+		const u8 delay = GetMinLocalDelay();
 		const u8 pred_window = _config.input_prediction_window;
 		const Frame current = _msg.GetLastAddedInput(false) + 1;
 
