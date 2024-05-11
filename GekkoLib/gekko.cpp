@@ -13,6 +13,7 @@ Gekko::Session::Session()
 {
 	_host = nullptr;
 	_started = false;
+	_last_saved_frame = GameInput::NULL_FRAME - 1;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -126,6 +127,26 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 	return ev;
 }
 
+void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev, Frame confirmed_frame, Frame current)
+{
+	const Frame sync_frame = _last_saved_frame;
+
+	_sync.SetCurrentFrame(sync_frame);
+	AddLoadEvent(ev);
+	_sync.IncrementFrame();
+
+	for (Frame frame = sync_frame + 1; frame < current; frame++) {
+		AddAdvanceEvent(ev);
+		if (frame == confirmed_frame) {
+			AddSaveEvent(ev);
+		}
+		_sync.IncrementFrame();
+	}
+
+	// make sure that we are back where we started.
+	assert(_sync.GetCurrentFrame() == current);
+}
+
 void Gekko::Session::AddDisconnectedPlayerInputs()
 {
 	for (auto player : _msg.remotes) {
@@ -169,7 +190,7 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 	if (min == GameInput::NULL_FRAME)
 		return;
 
-	const Frame sync_frame = min - 1;
+	const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
 
 	// load the sync frame
 	_sync.SetCurrentFrame(sync_frame);
@@ -209,7 +230,23 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
 
 void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
 {
+	const Frame confirmed_frame = _sync.GetMinReceivedFrame();
 	const Frame frame_to_save = _sync.GetCurrentFrame();
+
+	if (_config.limited_saving) {
+		bool save = false;
+
+		if (frame_to_save == confirmed_frame) {
+			save = true;
+		}
+
+		if (!save && frame_to_save - _last_saved_frame >= _config.input_prediction_window) {
+			assert(_last_saved_frame <= confirmed_frame);
+			HandleSavingConfirmedFrame(ev, confirmed_frame, frame_to_save);
+		} 
+
+		if (!save) return;
+	}
 
 	auto state = _storage.GetState(frame_to_save);
 
@@ -224,6 +261,8 @@ void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
 	event.data.ev.save.state_len = &state->state_len;
 
 	ev.push_back(event);
+
+	_last_saved_frame = frame_to_save;
 }
 
 void Gekko::Session::AddLoadEvent(std::vector<Event>& ev)

@@ -59,8 +59,12 @@ namespace Gekko {
 
 		void AddLoadEvent(std::vector<Event>& ev);
 
+		void HandleSavingConfirmedFrame(std::vector<Event>& ev, Frame confirmed_frame, Frame current);
+
 	private:
 		bool _started;
+
+		Frame _last_saved_frame;
 
 		Config _config;
 
