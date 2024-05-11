@@ -20,7 +20,7 @@ namespace Gekko {
 	public:
 		StateStorage();
 
-		void Init(u32 num_states, u32 state_size);
+		void Init(u32 num_states, u32 state_size, bool limited);
 
 		StateEntry* GetState(Frame frame);
 

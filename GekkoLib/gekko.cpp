@@ -35,7 +35,7 @@ void Gekko::Session::Init(Config& config)
 	_msg.Init(_config.input_size);
 
 	// setup state storage
-	_storage.Init(_config.input_prediction_window, _config.state_size);
+	_storage.Init(_config.input_prediction_window, _config.state_size, _config.limited_saving);
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)

@@ -37,6 +37,8 @@ namespace Gekko {
 
 		Frame GetMinIncorrectFrame();
 
+		Frame GetMinReceivedFrame();
+
 	private:
 		u8 _num_players;
 		u32 _input_size;

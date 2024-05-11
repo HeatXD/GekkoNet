@@ -157,6 +157,11 @@ void Gekko::InputBuffer::ResetPrediction()
 	_last_predicted_input = GameInput::NULL_FRAME;
 }
 
+Gekko::Frame Gekko::InputBuffer::GetLastReceivedFrame()
+{
+	return _last_received_input;
+}
+
 bool Gekko::InputBuffer::HandleInputPrediction(Frame frame)
 {
 	const u32 prev_input = PreviousFrame(frame);

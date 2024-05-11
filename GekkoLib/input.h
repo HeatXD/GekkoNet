@@ -45,6 +45,8 @@ namespace Gekko {
 
 		std::unique_ptr<GameInput> GetInput(Frame frame, bool prediction = true);
 
+		Frame GetLastReceivedFrame();
+	
 	private:
 		void ResetPrediction();
 
