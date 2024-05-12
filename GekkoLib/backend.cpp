@@ -1,5 +1,6 @@
 #include "backend.h"
 #include "input.h"
+#include <chrono>
 
 Gekko::u32 Gekko::NetAddress::GetSize()
 {
@@ -126,7 +127,7 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	for (u32 i = 0; i < _pending_output.size(); i++) {
 		auto pkt = _pending_output.front();
 		if (pkt->pkt.type == Inputs) {
-			for (size_t i = 0; i < remotes.size(); i++) {
+			for (u32 i = 0; i < remotes.size(); i++) {
 				if (remotes[i]->address.GetSize() != 0) {
 					// copy addr, set magic and send it off!
 					pkt->addr.Copy(&remotes[i]->address);
@@ -138,7 +139,7 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 			std::free(pkt->pkt.x.input.inputs);
 		}
 		else if (pkt->pkt.type == SpectatorInputs) {
-			for (size_t i = 0; i < spectators.size(); i++) {
+			for (u32 i = 0; i < spectators.size(); i++) {
 				if (spectators[i]->address.GetSize() != 0) {
 					// copy addr, set magic and send it off!
 					pkt->addr.Copy(&spectators[i]->address);
@@ -173,7 +174,11 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 				for (u32 j = 0; j < remotes.size(); j++) {
 					if (remotes[j]->address.Equals(data[i]->addr)) {
 						remotes[j]->session_magic = data[i]->pkt.x.sync_request.rng_data;
-						if (remotes[j]->sync_num == 0) should_send++; else should_send--;
+						if (remotes[j]->sync_num == 0) {
+							should_send++;
+						} else {
+							should_send--;
+						}
 					}
 				}
 			}
@@ -181,7 +186,11 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 			for (u32 j = 0; j < spectators.size(); j++) {
 				if (spectators[j]->address.Equals(data[i]->addr)) {
 					spectators[j]->session_magic = data[i]->pkt.x.sync_request.rng_data;
-					if (spectators[j]->sync_num == 0) should_send++; else should_send--;
+					if (spectators[j]->sync_num == 0) {
+						should_send++;
+					} else {
+						should_send--;
+					}
 				}
 			}
 
@@ -300,15 +309,17 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 
 			for (auto player: remotes) {
 				if (player->address.Equals(data[i]->addr)) {
-					if (player->stats.last_acked_frame < ack_frame)
+					if (player->stats.last_acked_frame < ack_frame) {
 						player->stats.last_acked_frame = ack_frame;
+					}
 				}
 			}
 
 			for (auto player : spectators) {
 				if (player->address.Equals(data[i]->addr)) {
-					if (player->stats.last_acked_frame < ack_frame)
+					if (player->stats.last_acked_frame < ack_frame) {
 						player->stats.last_acked_frame = ack_frame;
+					}
 				}
 			}
 
@@ -373,8 +384,9 @@ std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress
 Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle) 
 {
 	for (auto player: remotes) {
-		if (player->handle == handle)
+		if (player->handle == handle) {
 			return player;
+		}
 	}
 	return nullptr;
 }
@@ -394,6 +406,32 @@ Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator) {
 	return spectator ? _last_added_spectator_input : _last_added_input;
 }
 
+bool Gekko::MessageSystem::CheckStatusActors()
+{
+	i32 result = 0;
+	u64 now = TimeSinceEpoch();
+
+	auto actors = remotes;
+	for (i32 i = 0; i < 2; i++) {
+		if (i == 1) {
+			actors = spectators;
+		}
+		for (auto player : actors) {
+			if (player->GetStatus() == Initiating) {
+				if (player->sync_num == 0) {
+					if (player->stats.last_sent_sync_request + NetStats::SYNC_REQ_DELAY < now) {
+						SendSyncRequest(&player->address);
+						player->stats.last_sent_sync_request = now;
+					}
+				}
+				result--;
+			}
+		}
+	}
+
+	return result == 0;
+}
+
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
 	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
@@ -404,10 +442,16 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 			const u32 diff = last_added - player->stats.last_acked_frame;
 			if (diff > max_diff) {
 				player->SetStatus(Disconnected);
-				printf("handle:%d  disconnected!", player->handle);
+				printf("handle:%d  disconnected!\n", player->handle);
 			}
 		}
 	}
+}
+
+Gekko::u64 Gekko::MessageSystem::TimeSinceEpoch()
+{
+	using namespace std::chrono;
+	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)

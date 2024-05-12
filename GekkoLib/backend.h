@@ -6,6 +6,7 @@
 #include <list>
 #include <vector>
 #include <queue>
+#include <chrono>
 
 namespace Gekko {
 
@@ -61,7 +62,11 @@ namespace Gekko {
 	};
 
 	struct NetStats {
+		static const u64 SYNC_REQ_DELAY = std::chrono::microseconds(200).count();
+
 		Frame last_acked_frame;
+
+		u64 last_sent_sync_request;
 	};
 
 	struct NetInputData {
@@ -126,8 +131,6 @@ namespace Gekko {
 
 		void HandleData(std::vector<NetData*>& data, bool session_started);
 
-		void SendSyncRequest(NetAddress* addr);
-
 		u32 GetMagic();
 
 		std::queue<NetInputData*>& LastReceivedInputs();
@@ -136,12 +139,16 @@ namespace Gekko {
 
 		Frame GetLastAddedInput(bool spectator = false);
 
+		bool CheckStatusActors();
+
 	public:
 		std::vector<Player*> locals;
 		std::vector<Player*> remotes;
 		std::vector<Player*> spectators;
 
 	private:
+		void SendSyncRequest(NetAddress* addr);
+
 		void AddPendingInput(bool spectator = false);
 
 		std::vector<Handle> GetHandlesForAddress(NetAddress* addr);
@@ -152,9 +159,11 @@ namespace Gekko {
 
 		void HandleTooFarBehindActors(bool spectator = false);
 
+		u64 TimeSinceEpoch();
+
 	private:
-		static const u32 MAX_PLAYER_SEND_SIZE = 16;
-		static const u32 MAX_SPECTATOR_SEND_SIZE = 32;
+		static const u32 MAX_PLAYER_SEND_SIZE = 32;
+		static const u32 MAX_SPECTATOR_SEND_SIZE = 48;
 		static const u32 NUM_TO_SYNC = 4;
 
 		u32 _input_size;

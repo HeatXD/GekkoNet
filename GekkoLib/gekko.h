@@ -16,6 +16,7 @@ namespace Gekko {
 		u32 input_size = 0;
 		u32 state_size = 0;
 		bool limited_saving = false;
+		bool post_sync_joining = false;
 	};
 
 	class Session {

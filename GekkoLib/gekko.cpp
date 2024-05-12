@@ -192,7 +192,7 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 	const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
 
 	// load the sync frame
-	_sync.SetCurrentFrame(sync_frame);
+ 	_sync.SetCurrentFrame(sync_frame);
 	AddLoadEvent(ev);
 	_sync.IncrementFrame();
 
@@ -233,16 +233,13 @@ void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
 	const Frame frame_to_save = _sync.GetCurrentFrame();
 
 	if (_config.limited_saving) {
-		bool save = false;
-
-		if (frame_to_save == confirmed_frame) {
-			save = true;
-		}
+		bool save = frame_to_save == confirmed_frame;
 
 		if (!save && frame_to_save - _last_saved_frame >= _config.input_prediction_window) {
-			assert(_last_saved_frame <= confirmed_frame);
+			assert(_last_saved_frame < confirmed_frame);
 			HandleSavingConfirmedFrame(ev, confirmed_frame, frame_to_save);
-		} 
+			return;
+		}
 
 		if (!save) return;
 	}
@@ -302,29 +299,18 @@ void Gekko::Session::Poll()
 bool Gekko::Session::AllPlayersValid()
 {
 	if (!_started) {
-		for (u32 i = 0; i < _msg.remotes.size(); i++) {
-			if (_msg.remotes[i]->GetStatus() == Initiating) {
-				if (_msg.remotes[i]->sync_num == 0) {
-					_msg.SendSyncRequest(&_msg.remotes[i]->address);
-				}
-				return false;
-			}
-		}
-		// on session start we care that all spectators start with the players.
-		// TODO when the session started and someone wants to join midway 
-		// we should send an initiation packet with state.
-		for (u32 i = 0; i < _msg.spectators.size(); i++) {
-			if (_msg.spectators[i]->GetStatus() == Initiating) {
-				if (_msg.spectators[i]->sync_num == 0) {
-					_msg.SendSyncRequest(&_msg.spectators[i]->address);
-				}
-				return false;
-			}
+		if (!_msg.CheckStatusActors()) {
+			return false;
 		}
 		// if none returned that the session is ready!
 		_started = true;
 		printf("__ session started __\n");
 	}
+
+	if (_config.post_sync_joining) {
+		_msg.CheckStatusActors();
+	}
+
 	return true;
 }
 

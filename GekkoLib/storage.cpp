@@ -8,8 +8,8 @@ Gekko::StateStorage::StateStorage()
 
 void Gekko::StateStorage::Init(u32 num_states, u32 state_size, bool limited)
 {
-	const u32 num = limited ? 0 : num_states;
-	_max_num_states = num + 2;
+	const u32 num = limited ? 1 : num_states;
+	_max_num_states = num;
 
 	for (u32 i = 0; i < _max_num_states; i++) {
 		_states.push_back(std::unique_ptr<StateEntry>(new StateEntry));
