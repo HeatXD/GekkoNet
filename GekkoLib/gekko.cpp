@@ -132,9 +132,7 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev, Frame co
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
 		AddAdvanceEvent(ev);
-		if (frame == confirmed_frame) {
-			AddSaveEvent(ev);
-		}
+		AddSaveEvent(ev, true);
 		_sync.IncrementFrame();
 	}
 
@@ -193,7 +191,7 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
 		AddAdvanceEvent(ev);
-		AddSaveEvent(ev);
+		AddSaveEvent(ev, true);
 		_sync.IncrementFrame();
 	}
 
@@ -222,14 +220,15 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
 	return true;
 }
 
-void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
+void Gekko::Session::AddSaveEvent(std::vector<Event>& ev, bool rollingback)
 {
 	const Frame confirmed_frame = _sync.GetMinReceivedFrame();
 	const Frame frame_to_save = _sync.GetCurrentFrame();
 
 	if (_config.limited_saving) {
-		bool save = frame_to_save == confirmed_frame;
-
+		bool save = rollingback && frame_to_save == confirmed_frame || 
+			frame_to_save == GameInput::NULL_FRAME;
+		
 		if (!save && frame_to_save - _last_saved_frame >= _config.input_prediction_window) {
 			assert(_last_saved_frame < confirmed_frame);
 			HandleSavingConfirmedFrame(ev, confirmed_frame, frame_to_save);

@@ -56,7 +56,7 @@ namespace Gekko {
 
 		bool AddAdvanceEvent(std::vector<Event>& ev);
 
-		void AddSaveEvent(std::vector<Event>& ev);
+		void AddSaveEvent(std::vector<Event>& ev, bool rollingback = false);
 
 		void AddLoadEvent(std::vector<Event>& ev);
 
