@@ -85,17 +85,12 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 void Gekko::Session::AddLocalInput(Handle player, void* input)
 {
 	Input inp = (u8*)input;
-	bool is_local = false;
 
-	for (i32 i = 0; i < _msg.locals.size(); i++) {
+	for (u32 i = 0; i < _msg.locals.size(); i++) {
 		if (_msg.locals[i]->handle == player) {
-			is_local = true;
+			_sync.AddLocalInput(player, inp);
 			break;
 		}
-	}
-
-	if (is_local) {
-		_sync.AddLocalInput(player, inp);
 	}
 }
 
