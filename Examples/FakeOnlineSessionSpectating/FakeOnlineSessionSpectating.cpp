@@ -92,6 +92,16 @@ struct GState {
 	int py[2] = { 0, 0 };
 };
 
+void save_state(GState* gs, Gekko::Event* ev) {
+	*ev->data.ev.save.checksum = 0;
+	*ev->data.ev.save.state_len = sizeof(GState);
+	std::memcpy(ev->data.ev.save.state, gs, sizeof(GState));
+}
+
+void load_state(GState* gs, Gekko::Event& ev) {
+	std::memcpy(gs, ev.data.ev.load.state, sizeof(GState));
+}
+
 void update_state(GState& gs, GInput inputs[2], int num_players) {
 	for (int player = 0; player < num_players; player++) {
 		if (inputs[player].input.dir.up) gs.py[player] -= 2;
@@ -214,8 +224,9 @@ int main(int argc, char* args[])
 	conf.num_players = num_players;
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 1;
-	conf.input_prediction_window = 2;
+	conf.input_prediction_window = 8;
 	conf.state_size = sizeof(GState);
+	conf.limited_saving = true;
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -264,6 +275,14 @@ int main(int argc, char* args[])
 			{
 				switch (ev1[i].type)
 				{
+				case Gekko::SaveEvent:
+					printf("S1 Save frame:%d\n", ev1[i].data.ev.save.frame);
+					save_state(&state2, &ev1[i]);
+					break;
+				case Gekko::LoadEvent:
+					printf("S1 Load frame:%d\n", ev1[i].data.ev.load.frame);
+					load_state(&state2, ev1[i]);
+					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev1[i].data.ev.adv.inputs[0];
@@ -285,6 +304,14 @@ int main(int argc, char* args[])
 			{
 				switch (ev2[i].type)
 				{
+				case Gekko::SaveEvent:
+					printf("S2 Save frame:%d\n", ev2[i].data.ev.save.frame);
+					save_state(&state2, &ev2[i]);
+					break;
+				case Gekko::LoadEvent:
+					printf("S2 Load frame:%d\n", ev2[i].data.ev.load.frame);
+					load_state(&state2, ev2[i]);
+					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev2[i].data.ev.adv.inputs[0];

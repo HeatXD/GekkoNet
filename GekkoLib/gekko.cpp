@@ -126,7 +126,7 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
 {
-	if (!_config.limited_saving) {
+	if (!_config.limited_saving || _msg.remotes.empty()) {
 		return;
 	}
 
@@ -191,7 +191,7 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 		_sync.IncrementFrame();
 	}
 
-	if (_config.input_prediction_window == 0)
+	if (_config.input_prediction_window == 0 || _msg.remotes.empty())
 		return;
 
 	current = _sync.GetCurrentFrame();

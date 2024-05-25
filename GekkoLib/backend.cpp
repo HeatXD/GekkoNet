@@ -212,32 +212,47 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 		if (type == SyncResponse) {
 			i32 stop_sending = 0; 
 
-			std::vector<Player*>* actors = &remotes;
-			for (i32 i = 0; i < 2; i++) {
-				if (i == 1) {
-					actors = &spectators;
+			for (u32 j = 0; j < remotes.size(); j++) {
+				if (remotes[j]->GetStatus() == Connected) continue;
+
+				if (remotes[j]->address.Equals(data[i]->addr)) {
+					remotes[j]->session_magic = data[i]->pkt.x.sync_request.rng_data;
+
+					if (remotes[j]->sync_num < NUM_TO_SYNC) {
+						remotes[j]->sync_num++;
+						stop_sending--;
+						printf("handle:%d syncing:(%d/%d)\n", remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
+						continue;
+					}
+
+					if (remotes[j]->sync_num == NUM_TO_SYNC) {
+						remotes[j]->SetStatus(Connected);
+						stop_sending++;
+						printf("handle:%d connected!\n", remotes[j]->handle);
+						continue;
+					}
 				}
+			}
 
-				for (auto player: *actors) {
-					if (player->GetStatus() == Connected) continue;
+			for (u32 j = 0; j < spectators.size(); j++) {
+				if (spectators[j]->GetStatus() == Connected) continue;
 
-					if (player->address.Equals(data[i]->addr)) {
-						player->session_magic = data[i]->pkt.x.sync_request.rng_data;
+				if (spectators[j]->address.Equals(data[i]->addr)) {
+					spectators[j]->session_magic = data[i]->pkt.x.sync_request.rng_data;
 
-						if (player->sync_num < NUM_TO_SYNC) {
-							player->stats.last_sent_sync_message = now;
-							player->sync_num++;
-							stop_sending--;
-							printf("handle:%d syncing:(%d/%d)\n", player->handle, player->sync_num, NUM_TO_SYNC);
-							continue;
-						}
+					if (spectators[j]->sync_num < NUM_TO_SYNC) {
+						spectators[j]->sync_num++;
+						stop_sending--;
+						printf("handle:%d syncing:(%d/%d)\n", spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
+						continue;
+					}
 
-						if (player->sync_num == NUM_TO_SYNC) {
-							player->SetStatus(Connected);
-							stop_sending++;
-							printf("handle:%d connected!\n", player->handle);
-							continue;
-						}
+					if (spectators[j]->sync_num == NUM_TO_SYNC) {
+						spectators[j]->SetStatus(Connected);
+						stop_sending++;
+						printf("handle:%d connected!\n", spectators[j]->handle);
+						// TODO SEND CONNECT INIT MESSAGE WITH GAMESTATE IF NEEDED
+						continue;
 					}
 				}
 			}
