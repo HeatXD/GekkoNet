@@ -107,24 +107,41 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 		// add inputs so we can continue the session.
 		AddDisconnectedPlayerInputs();
 
-		// send inputs to spectators 
-		SendSpectatorInputs();
-
 		// check if we need to rollback
 		HandleRollback(ev);
 
+		// check if we need to save the confirmed frame
+		HandleSavingConfirmedFrame(ev);
+
 		// then advance the session
 		if (AddAdvanceEvent(ev)) {
-			AddSaveEvent(ev);
+			if(!_config.limited_saving) {
+				AddSaveEvent(ev);
+			}
 			_sync.IncrementFrame();
 		}
 	}
 	return ev;
 }
 
-void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev, Frame confirmed_frame, Frame current)
+void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
 {
+	if (!_config.limited_saving) {
+		return;
+	}
+
+	const Frame confirmed_frame = _sync.GetMinReceivedFrame();
+	const Frame current = _sync.GetCurrentFrame();
+	const Frame diff = current - (_last_saved_frame + 1);
+
+	if (diff <= _config.input_prediction_window) {
+		return;
+	}
+
+	assert(_last_saved_frame < confirmed_frame);
+
 	const Frame sync_frame = _last_saved_frame;
+	const Frame frame_to_save = std::min(current - 1, confirmed_frame);
 
 	_sync.SetCurrentFrame(sync_frame);
 	AddLoadEvent(ev);
@@ -132,7 +149,9 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev, Frame co
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
 		AddAdvanceEvent(ev);
-		AddSaveEvent(ev, true);
+		if (frame == frame_to_save) {
+			AddSaveEvent(ev);
+		}
 		_sync.IncrementFrame();
 	}
 
@@ -166,7 +185,7 @@ void Gekko::Session::SendSpectatorInputs()
 void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 {
 	Frame current = _sync.GetCurrentFrame();
-	if (current - 1 == GameInput::NULL_FRAME) {
+	if (_last_saved_frame == GameInput::NULL_FRAME - 1) {
 		_sync.SetCurrentFrame(current - 1);
 		AddSaveEvent(ev);
 		_sync.IncrementFrame();
@@ -183,6 +202,7 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 		return;
 
 	const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
+	const Frame frame_to_save = std::min(current - 1, min);
 
 	// load the sync frame
  	_sync.SetCurrentFrame(sync_frame);
@@ -191,7 +211,9 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
 		AddAdvanceEvent(ev);
-		AddSaveEvent(ev, true);
+		if (!_config.limited_saving || frame == frame_to_save) {
+			AddSaveEvent(ev);
+		}
 		_sync.IncrementFrame();
 	}
 
@@ -220,23 +242,9 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
 	return true;
 }
 
-void Gekko::Session::AddSaveEvent(std::vector<Event>& ev, bool rollingback)
+void Gekko::Session::AddSaveEvent(std::vector<Event>& ev)
 {
-	const Frame confirmed_frame = _sync.GetMinReceivedFrame();
 	const Frame frame_to_save = _sync.GetCurrentFrame();
-
-	if (_config.limited_saving) {
-		bool save = rollingback && frame_to_save == confirmed_frame || 
-			frame_to_save == GameInput::NULL_FRAME;
-		
-		if (!save && frame_to_save - _last_saved_frame >= _config.input_prediction_window) {
-			assert(_last_saved_frame < confirmed_frame);
-			HandleSavingConfirmedFrame(ev, confirmed_frame, frame_to_save);
-			return;
-		}
-
-		if (!save) return;
-	}
 
 	auto state = _storage.GetState(frame_to_save);
 
@@ -286,6 +294,9 @@ void Gekko::Session::Poll()
 	// add local input for the network
 	SendLocalInputs();
 
+	// send inputs to spectators 
+	SendSpectatorInputs();
+
 	// now send data
 	_msg.SendPendingOutput(_host);
 }
@@ -299,6 +310,7 @@ bool Gekko::Session::AllPlayersValid()
 		// if none returned that the session is ready!
 		_started = true;
 		printf("__ session started __\n");
+		return true;
 	}
 
 	if (_config.post_sync_joining) {
@@ -364,11 +376,10 @@ void Gekko::Session::SendLocalInputs()
 		}
 
 		const u8 delay = GetMinLocalDelay();
-		const u8 pred_window = _config.input_prediction_window;
 		const Frame current = _msg.GetLastAddedInput(false) + 1;
 
 		std::unique_ptr<u8[]> inputs;
-		for (Frame frame = current; frame <= current + delay + pred_window; frame++) {
+		for (Frame frame = current; frame <= current + delay; frame++) {
 			if (!_sync.GetLocalInputs(handles, inputs, frame)) {
 				break;
 			}

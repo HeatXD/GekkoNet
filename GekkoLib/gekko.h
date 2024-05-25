@@ -56,11 +56,11 @@ namespace Gekko {
 
 		bool AddAdvanceEvent(std::vector<Event>& ev);
 
-		void AddSaveEvent(std::vector<Event>& ev, bool rollingback = false);
+		void AddSaveEvent(std::vector<Event>& ev);
 
 		void AddLoadEvent(std::vector<Event>& ev);
 
-		void HandleSavingConfirmedFrame(std::vector<Event>& ev, Frame confirmed_frame, Frame current);
+		void HandleSavingConfirmedFrame(std::vector<Event>& ev);
 
 	private:
 		bool _started;

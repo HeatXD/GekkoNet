@@ -54,6 +54,8 @@ namespace Gekko {
 
 		bool HandleInputPrediction(Frame frame);
 
+		bool CanPredictInput();
+
 	private:
 		u8 _input_delay;
 		u8 _input_prediction_window;
