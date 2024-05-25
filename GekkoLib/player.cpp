@@ -10,7 +10,7 @@ Gekko::Player::Player(Handle phandle, PlayerType type, NetAddress* addr, u32 mag
 	stats = NetStats();
 
 	stats.last_acked_frame = -1;
-	stats.last_sent_sync_request = 0;
+	stats.last_sent_sync_message = 0;
 
 	_type = type;
 	_status = _type == LocalPlayer ? Connected : Initiating;

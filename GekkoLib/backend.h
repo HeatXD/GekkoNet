@@ -62,11 +62,11 @@ namespace Gekko {
 	};
 
 	struct NetStats {
-		static const u64 SYNC_REQ_DELAY = std::chrono::microseconds(200).count();
+		static const u64 SYNC_MSG_DELAY = std::chrono::microseconds(200).count();
 
 		Frame last_acked_frame;
 
-		u64 last_sent_sync_request;
+		u64 last_sent_sync_message;
 	};
 
 	struct NetInputData {
@@ -148,6 +148,8 @@ namespace Gekko {
 
 	private:
 		void SendSyncRequest(NetAddress* addr);
+
+		void SendSyncResponse(NetAddress* addr, u32 magic);
 
 		void AddPendingInput(bool spectator = false);
 

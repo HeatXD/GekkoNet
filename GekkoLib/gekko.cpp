@@ -314,6 +314,7 @@ bool Gekko::Session::AllPlayersValid()
 	}
 
 	if (_config.post_sync_joining) {
+		// TODO ACTUALLY HANDLE POST SYNC JOINING
 		_msg.CheckStatusActors();
 	}
 
@@ -340,7 +341,9 @@ void Gekko::Session::HandleReceivedInputs()
 					Frame frame = start + i;
 					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _config.input_size)];
 					_sync.AddRemoteInput(j + 1, input, frame);
-					_msg.SendInputAck(handle, frame);
+					if (i == count) {
+						_msg.SendInputAck(handle, frame);
+					}
 				}
 			}
 		}
@@ -356,7 +359,9 @@ void Gekko::Session::HandleReceivedInputs()
 					Handle handle = current->handles[j];
 					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _config.input_size)];
 					_sync.AddRemoteInput(handle, input, frame);
-					_msg.SendInputAck(handle, frame);
+					if (i == count) {
+						_msg.SendInputAck(handle, frame);
+					}
 				}
 			}
 		}
