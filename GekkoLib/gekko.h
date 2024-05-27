@@ -37,6 +37,8 @@ namespace Gekko {
 
 		std::vector<Event> UpdateSession();
 
+		f32 FramesAhead();
+
 	private:
 		void Poll();
 
@@ -65,6 +67,8 @@ namespace Gekko {
 		void AddLoadEvent(std::vector<Event>& ev);
 
 		void HandleSavingConfirmedFrame(std::vector<Event>& ev);
+
+		void UpdateLocalFrameAdvantage();
 
 	private:
 		bool _started;

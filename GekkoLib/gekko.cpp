@@ -126,6 +126,14 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 	return ev;
 }
 
+Gekko::f32 Gekko::Session::FramesAhead()
+{
+	if (!_started)
+		return 0;
+
+	return _msg.history.GetAverageAdvantage();
+}
+
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
 {
 	if (!_config.limited_saving || IsSpectating() || IsPlayingLocally()) {
@@ -159,6 +167,18 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
 
 	// make sure that we are back where we started.
 	assert(_sync.GetCurrentFrame() == current);
+}
+
+void Gekko::Session::UpdateLocalFrameAdvantage()
+{
+	if (!_started)
+		return;
+
+	const Frame min = _sync.GetMinReceivedFrame();
+	const Frame current = _sync.GetCurrentFrame();
+	const i32 local_advantage = current - min;
+
+	_msg.history.SetLocalAdvantage(local_advantage);
 }
 
 void Gekko::Session::AddDisconnectedPlayerInputs()
@@ -292,6 +312,9 @@ void Gekko::Session::Poll()
 
 	// handle received inputs
 	HandleReceivedInputs();
+
+	// update local frame advantage
+	UpdateLocalFrameAdvantage();
 
 	// add local input for the network
 	SendLocalInputs();

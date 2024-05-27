@@ -48,8 +48,6 @@ Gekko::u8* Gekko::NetAddress::GetAddress()
 
 Gekko::MessageSystem::MessageSystem()
 {
-	history = AdvantageHistory();
-
 	_input_size = 0;
 	_last_added_input = GameInput::NULL_FRAME;
 	_last_added_spectator_input = GameInput::NULL_FRAME;
@@ -57,6 +55,8 @@ Gekko::MessageSystem::MessageSystem()
 	// gen magic for session
 	std::srand(std::time(nullptr));
 	_session_magic = std::rand();
+
+	history = AdvantageHistory();
 }
 
 void Gekko::MessageSystem::Init(u32 input_size)
@@ -75,6 +75,9 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
 		_last_added_input++;
 		_player_input_send_list.push_back(new u8[_input_size * locals.size()]);
 		std::memcpy(_player_input_send_list.back(), input, _input_size * locals.size());
+
+		// update history
+		history.Update(input_frame);
 	}
 
 	const Frame min_ack = GetMinLastAckedFrame(false);
@@ -315,6 +318,9 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 				}
 			}
 
+			const i32 remote_advantage = data[i]->pkt.x.input_ack.frame_advantage;
+			history.AddRemoteAdvantage(remote_advantage);
+
 			delete data[i];
 			continue;
 		}
@@ -372,6 +378,7 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
 
 	message->pkt.type = InputAck;
 	message->pkt.x.input_ack.ack_frame = frame;
+	message->pkt.x.input_ack.frame_advantage = history.GetLocalAdvantage();
 	
 	_pending_output.push(message);
 }
@@ -417,25 +424,35 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	i32 result = 0;
 	u64 now = TimeSinceEpoch();
 
-	bool spec_time = false;
-	for (i32 i = 0; i < 2; i++) {
-		if (i == 1) {
-			spec_time = true;
-		}
-		for (Player* player : spec_time ? spectators : remotes) {
-			if (player->GetStatus() == Initiating) {
-				if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
-					if (player->sync_num == 0) {
-						SendSyncRequest(&player->address);
-						player->stats.last_sent_sync_message = now;
-					}
-					else if (player->sync_num < NUM_TO_SYNC) {
-						SendSyncResponse(&player->address, player->session_magic);
-						player->stats.last_sent_sync_message = now;
-					}
+	for (Player* player : remotes) {
+		if (player->GetStatus() == Initiating) {
+			if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
+				if (player->sync_num == 0) {
+					SendSyncRequest(&player->address);
+					player->stats.last_sent_sync_message = now;
 				}
-				result--;
+				else if (player->sync_num < NUM_TO_SYNC) {
+					SendSyncResponse(&player->address, player->session_magic);
+					player->stats.last_sent_sync_message = now;
+				}
 			}
+			result--;
+		}
+	}
+
+	for (Player* player : spectators) {
+		if (player->GetStatus() == Initiating) {
+			if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
+				if (player->sync_num == 0) {
+					SendSyncRequest(&player->address);
+					player->stats.last_sent_sync_message = now;
+				}
+				else if (player->sync_num < NUM_TO_SYNC) {
+					SendSyncResponse(&player->address, player->session_magic);
+					player->stats.last_sent_sync_message = now;
+				}
+			}
+			result--;
 		}
 	}
 
@@ -503,19 +520,32 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 
 void Gekko::AdvantageHistory::Init()
 {
+	_local_frame_adv = 0;
+	_remote_frame_adv.clear();
+
 	std::memset(_local, 0, HISTORY_SIZE * sizeof(i32));
 	std::memset(_remote, 0, HISTORY_SIZE * sizeof(i32));
 }
 
-void Gekko::AdvantageHistory::Update(Frame frame, i32 local, i32 remote)
+void Gekko::AdvantageHistory::Update(Frame frame)
 {
 	const u32 update_frame = std::max(frame, 0);
 
-	_local[update_frame % HISTORY_SIZE] = local;
-	_remote[update_frame % HISTORY_SIZE] = remote;
+	_local[update_frame % HISTORY_SIZE] = _local_frame_adv;
+
+	if (!_remote_frame_adv.empty()) {
+		i32 max = INT_MIN;
+		for (i32 num : _remote_frame_adv) {
+			max = std::max(max, num);
+		}
+		_remote[update_frame % HISTORY_SIZE] = max == INT_MIN ? 0 : max;
+	}
+	else {
+		_remote[update_frame % HISTORY_SIZE] = 0;
+	}
 }
 
-Gekko::i32 Gekko::AdvantageHistory::GetAverageAdvantage()
+Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 {
 	f32 sum_local = 0.f;
 	f32 sum_remote = 0.f;
@@ -528,6 +558,24 @@ Gekko::i32 Gekko::AdvantageHistory::GetAverageAdvantage()
 	f32 avg_local = sum_local / HISTORY_SIZE;
 	f32 avg_remote = sum_remote / HISTORY_SIZE;
 
-	// return the average by meeting in the middle
-	return (i32)((avg_remote - avg_local) / 2.f);
+	// return the average frames ahead
+	return avg_local - avg_remote;
+}
+
+void Gekko::AdvantageHistory::SetLocalAdvantage(i32 adv) {
+	_local_frame_adv = adv;
+}
+
+void Gekko::AdvantageHistory::AddRemoteAdvantage(i32 adv) {
+	_remote_frame_adv.push_front(adv);
+	// clean up
+	if (_remote_frame_adv.size() > 48) {
+		for (i32 i = 0; i < 12; i++) {
+			_remote_frame_adv.pop_back();
+		}
+	}
+}
+
+Gekko::i32 Gekko::AdvantageHistory::GetLocalAdvantage() {
+	return _local_frame_adv;
 }

@@ -241,11 +241,11 @@ int main(int argc, char* args[])
 
 	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
 	auto s1p2 = sess1.AddActor(Gekko::PlayerType::RemotePlayer, &addr2);
-	sess1.SetLocalDelay(s1p1, 1);
+	// sess1.SetLocalDelay(s1p1, 1);
 
 	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
 	auto s2p2 = sess2.AddActor(Gekko::PlayerType::LocalPlayer);
-	sess2.SetLocalDelay(s2p2, 1);
+	// sess2.SetLocalDelay(s2p2, 1);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
@@ -272,6 +272,7 @@ int main(int argc, char* args[])
 			int frame = 0;
 
 			auto ev1 = sess1.UpdateSession();
+			printf("S1 FA:%.2f\n", sess1.FramesAhead());
 			for (int i = 0; i < ev1.size(); i++)
 			{
 				switch (ev1[i].type)
@@ -302,6 +303,7 @@ int main(int argc, char* args[])
 			}
 
 			auto ev2 = sess2.UpdateSession();
+			printf("S2 FA:%.2f\n", sess2.FramesAhead());
 			for (int i = 0; i < ev2.size(); i++)
 			{
 				switch (ev2[i].type)
