@@ -146,7 +146,7 @@ int main(int argc, char* args[])
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 0;
 	conf.input_prediction_window = 0;
-
+	
 	sess.Init(conf);
 
 	auto p1 = sess.AddActor(Gekko::PlayerType::LocalPlayer);

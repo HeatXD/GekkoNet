@@ -115,7 +115,9 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 		// then advance the session
 		if (AddAdvanceEvent(ev)) {
-			if(!_config.limited_saving) {
+			if (!_config.limited_saving ||
+				(IsSpectating() || IsPlayingLocally()) &&
+				_sync.GetCurrentFrame() % _config.input_prediction_window == 0) {
 				AddSaveEvent(ev);
 			}
 			_sync.IncrementFrame();
@@ -126,7 +128,7 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
 {
-	if (!_config.limited_saving || _msg.remotes.empty()) {
+	if (!_config.limited_saving || IsSpectating() || IsPlayingLocally()) {
 		return;
 	}
 
@@ -191,7 +193,7 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 		_sync.IncrementFrame();
 	}
 
-	if (_config.input_prediction_window == 0 || _msg.remotes.empty())
+	if (_config.input_prediction_window == 0 || IsSpectating() || IsPlayingLocally())
 		return;
 
 	current = _sync.GetCurrentFrame();
@@ -330,7 +332,7 @@ void Gekko::Session::HandleReceivedInputs()
 		received_inputs.pop();
 
 		// handle it as a spectator input if there are no local players.
-		if (_msg.locals.size() == 0) {
+		if (IsSpectating()) {
 			const u32 count = current->input.input_count;
 			const u32 inp_len_per_frame = current->input.total_size / count;
 			const Frame start = current->input.start_frame;
@@ -374,7 +376,7 @@ void Gekko::Session::HandleReceivedInputs()
 
 void Gekko::Session::SendLocalInputs()
 {
-	if (_msg.locals.size() > 0 && _started) {
+	if (!_msg.locals.empty() && _started) {
 		std::vector<Handle> handles;
 		for (u32 i = 0; i < _msg.locals.size(); i++) {
 			handles.push_back(_msg.locals[i]->handle);
@@ -400,4 +402,13 @@ Gekko::u8 Gekko::Session::GetMinLocalDelay()
 		min = std::min(_sync.GetLocalDelay(player->handle), min);
 	}
 	return min;
+}
+
+bool Gekko::Session::IsSpectating() {
+	return _msg.remotes.size() == 1 && _msg.locals.empty();
+}
+
+
+bool Gekko::Session::IsPlayingLocally() {
+	return _msg.remotes.empty() && !_msg.locals.empty();
 }

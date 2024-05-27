@@ -48,6 +48,10 @@ namespace Gekko {
 
 		u8 GetMinLocalDelay();
 
+		bool IsSpectating();
+
+		bool IsPlayingLocally();
+
 		void AddDisconnectedPlayerInputs();
 
 		void SendSpectatorInputs();

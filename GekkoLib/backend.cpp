@@ -413,12 +413,12 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	i32 result = 0;
 	u64 now = TimeSinceEpoch();
 
-	std::vector<Player *>* actors = &remotes;
+	bool spec_time = false;
 	for (i32 i = 0; i < 2; i++) {
 		if (i == 1) {
-			actors = &spectators;
+			spec_time = true;
 		}
-		for (auto player : *actors) {
+		for (Player* player : spec_time ? spectators : remotes) {
 			if (player->GetStatus() == Initiating) {
 				if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
 					if (player->sync_num == 0) {
@@ -448,6 +448,7 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 			const u32 diff = last_added - player->stats.last_acked_frame;
 			if (diff > max_diff) {
 				player->SetStatus(Disconnected);
+				player->sync_num = 0;
 				printf("handle:%d  disconnected!\n", player->handle);
 			}
 		}
