@@ -18,7 +18,7 @@ bool init_windows(void) {
 		return false;
 	}
 	window1 = SDL_CreateWindow(
-		"GekkoNet Example: Fake Online Session 1",
+		"GekkoNet Example: Fake Online Session P1",
 		0,
 		50,
 		400,
@@ -27,7 +27,7 @@ bool init_windows(void) {
 	);
 
 	window2 = SDL_CreateWindow(
-		"GekkoNet Example: Fake Online Session 2",
+		"GekkoNet Example: Fake Online Session P2",
 		400,
 		50,
 		400,
