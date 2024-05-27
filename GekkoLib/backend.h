@@ -107,14 +107,33 @@ namespace Gekko {
 		Handle handle;
 
 		u8 sync_num;
+
 		u32 session_magic;
 
 		NetStats stats;
+
 		NetAddress address;
 
 	private:
 		PlayerType _type;
+
 		PlayerStatus _status;
+	};
+
+	struct AdvantageHistory {
+	public:
+		void Init();
+
+		void Update(Frame frame, i32 local, i32 remote);
+
+		i32 GetAverageAdvantage();
+
+	private:
+		static const i32 HISTORY_SIZE = 32;
+
+		Frame _local[HISTORY_SIZE];
+
+		Frame _remote[HISTORY_SIZE];
 	};
 
 	class MessageSystem {
@@ -143,8 +162,12 @@ namespace Gekko {
 
 	public:
 		std::vector<Player*> locals;
+
 		std::vector<Player*> remotes;
+
 		std::vector<Player*> spectators;
+
+		AdvantageHistory history;
 
 	private:
 		void SendSyncRequest(NetAddress* addr);
@@ -169,12 +192,15 @@ namespace Gekko {
 		static const u32 NUM_TO_SYNC = 4;
 
 		u32 _input_size;
+
 		u32 _session_magic;
 
 		Frame _last_added_input;
+
 		Frame _last_added_spectator_input;
 
 		std::list<u8*> _player_input_send_list;
+
 		std::list<u8*> _spectator_input_send_list;
 
 		std::queue<NetData*> _pending_output;

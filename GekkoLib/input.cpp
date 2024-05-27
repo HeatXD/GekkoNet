@@ -10,7 +10,6 @@ Gekko::InputBuffer::InputBuffer() {
 	_input_prediction_window = 0;
 
 	_last_received_input = GameInput::NULL_FRAME;
-
 	_last_predicted_input = GameInput::NULL_FRAME;
 	_first_predicted_input = GameInput::NULL_FRAME;
 	_incorrent_predicted_input = GameInput::NULL_FRAME;

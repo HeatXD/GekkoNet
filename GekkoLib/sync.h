@@ -6,6 +6,7 @@
 #include "input.h"
 
 namespace Gekko {
+
 	class SyncSystem {
 	public:
 		SyncSystem();
@@ -41,8 +42,12 @@ namespace Gekko {
 
 	private:
 		u8 _num_players;
+
 		u32 _input_size;
+
 		Frame _current_frame;
+
 		InputBuffer* _input_buffers;
+
 	};
 }

@@ -48,6 +48,8 @@ Gekko::u8* Gekko::NetAddress::GetAddress()
 
 Gekko::MessageSystem::MessageSystem()
 {
+	history = AdvantageHistory();
+
 	_input_size = 0;
 	_last_added_input = GameInput::NULL_FRAME;
 	_last_added_spectator_input = GameInput::NULL_FRAME;
@@ -62,6 +64,8 @@ void Gekko::MessageSystem::Init(u32 input_size)
 	_input_size = input_size;
 	_last_added_input = GameInput::NULL_FRAME;
 	_last_added_spectator_input = GameInput::NULL_FRAME;
+
+	history.Init();
 }
 
 
@@ -495,4 +499,35 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 		std::memcpy(data->pkt.x.input.inputs, inputs.get(), total_size);
 
 	_pending_output.push(data);
+}
+
+void Gekko::AdvantageHistory::Init()
+{
+	std::memset(_local, 0, HISTORY_SIZE * sizeof(i32));
+	std::memset(_remote, 0, HISTORY_SIZE * sizeof(i32));
+}
+
+void Gekko::AdvantageHistory::Update(Frame frame, i32 local, i32 remote)
+{
+	const u32 update_frame = std::max(frame, 0);
+
+	_local[update_frame % HISTORY_SIZE] = local;
+	_remote[update_frame % HISTORY_SIZE] = remote;
+}
+
+Gekko::i32 Gekko::AdvantageHistory::GetAverageAdvantage()
+{
+	f32 sum_local = 0.f;
+	f32 sum_remote = 0.f;
+
+	for (i32 i = 0; i < HISTORY_SIZE; i++) {
+		sum_local += _local[i];
+		sum_remote += _remote[i];
+	}
+
+	f32 avg_local = sum_local / HISTORY_SIZE;
+	f32 avg_remote = sum_remote / HISTORY_SIZE;
+
+	// return the average by meeting in the middle
+	return (i32)((avg_remote - avg_local) / 2.f);
 }

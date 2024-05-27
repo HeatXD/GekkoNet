@@ -6,7 +6,9 @@
 
 namespace Gekko {
 	struct GameInput {
-		static const i32 NULL_FRAME = -1;
+	public:
+		GameInput();
+		~GameInput();
 
 		void Init(GameInput& other);
 
@@ -16,11 +18,13 @@ namespace Gekko {
 
 		void Clear();
 
-		GameInput();
-		~GameInput();
+	public:
+		static const i32 NULL_FRAME = -1;
 
 		Frame frame;
+
 		Input input;
+
 		u32 input_len;
 	};
 
@@ -58,6 +62,7 @@ namespace Gekko {
 
 	private:
 		u8 _input_delay;
+
 		u8 _input_prediction_window;
 
 		u32 _input_size;
@@ -65,7 +70,9 @@ namespace Gekko {
 		Frame _last_received_input;
 
 		Frame _last_predicted_input;
+
 		Frame _first_predicted_input;
+
 		Frame _incorrent_predicted_input;
 
 		std::deque<GameInput> _inputs;
