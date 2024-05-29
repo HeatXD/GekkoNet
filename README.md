@@ -1,7 +1,7 @@
 # GekkoNet
-## C++ Peer To Peer Game Networking Framework
+### C++ Peer To Peer Game Networking Framework
 
-### Why?
+## Why?
 I built this because I wanted a framework to plug into my C++ projects, in the past I have created a wrapper around GGRS for C++ but after having to deal with Rust FFI I decided to build a native alternative instead to more easily fit my projects. 
 This framework is heavily inspired by the GGPO Rust port GGRS.
 
@@ -21,6 +21,7 @@ I am personally not a big fan of the callback based control flow of GGPO hence w
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
 
 ### Work in progress
+- Event System for notifications such and players being done with syncing.
 - Desync Detection
 - Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
