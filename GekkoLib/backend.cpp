@@ -23,13 +23,15 @@ Gekko::NetAddress::NetAddress()
 
 void Gekko::NetAddress::Copy(NetAddress* other)
 {
-	if (!other)
-		return;
+	if (!other) {
+        return;
+    }
 
 	_size = other->_size;
 
-	if (_data) 
-		_data.reset();
+    if (_data) {
+        _data.reset();
+    }
 
 	_data = std::unique_ptr<u8[]>(new u8[_size]);
 	// copy address data
@@ -118,8 +120,6 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 
 void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 {
-	if (!host) return;
-
 	// add input packet
 	if (!_player_input_send_list.empty() && !remotes.empty()) {
 		AddPendingInput(false);
@@ -301,11 +301,18 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 		if(type == InputAck) {
 			// we should just update the ack frame for all handles where the address matches
 			const Frame ack_frame = data[i]->pkt.x.input_ack.ack_frame;
+            const i32 remote_advantage = data[i]->pkt.x.input_ack.frame_advantage;
+            bool added_advantage = false;
 
 			for (auto player : remotes) {
 				if (player->address.Equals(data[i]->addr)) {
 					if (player->stats.last_acked_frame < ack_frame) {
 						player->stats.last_acked_frame = ack_frame;
+                        // only add remote advantages once
+                        if (!added_advantage) {
+                            history.AddRemoteAdvantage(remote_advantage);
+                            added_advantage = true;
+                        }
 					}
 				}
 			}
@@ -318,9 +325,6 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 				}
 			}
 
-			const i32 remote_advantage = data[i]->pkt.x.input_ack.frame_advantage;
-			history.AddRemoteAdvantage(remote_advantage);
-
 			delete data[i];
 			continue;
 		}
@@ -329,7 +333,9 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 
 void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
 {
-	if (!addr) return;
+    if (!addr) {
+        return;
+    }
 
 	auto message = new NetData;
 
@@ -343,7 +349,9 @@ void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
 
 void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u32 magic)
 {
-	if (!addr || magic == 0) return;
+    if (!addr || magic == 0) {
+        return;
+    }
 
 	auto message = new NetData;
 
@@ -369,7 +377,9 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
 {
 	auto plyr = GetPlayerByHandle(player);
 
-	if (!plyr) return;
+    if (!plyr) {
+        return;
+    }
 
 	auto message = new NetData;
 
@@ -512,8 +522,9 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 	data->pkt.x.input.inputs = (u8*)std::malloc(total_size);
 	data->pkt.x.input.total_size = total_size;
 	
-	if(data->pkt.x.input.inputs)
-		std::memcpy(data->pkt.x.input.inputs, inputs.get(), total_size);
+    if (data->pkt.x.input.inputs) {
+        std::memcpy(data->pkt.x.input.inputs, inputs.get(), total_size);
+    }
 
 	_pending_output.push(data);
 }

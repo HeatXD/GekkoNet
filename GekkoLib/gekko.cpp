@@ -46,11 +46,13 @@ void Gekko::Session::Init(Config& config)
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
 {
-	if (player - 1 >= 0) {
-		for (u32 i = 0; i < _msg.locals.size(); i++) {
-			if (_msg.locals[i]->handle == player) {
-				_sync.SetLocalDelay(player, delay);
-			}
+    if (player - 1 < 0) {
+        return;
+    }
+
+	for (u32 i = 0; i < _msg.locals.size(); i++) {
+		if (_msg.locals[i]->handle == player) {
+			_sync.SetLocalDelay(player, delay);
 		}
 	}
 }
@@ -58,8 +60,9 @@ void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
 Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 {
 	if (type == Spectator) {
-		if (_msg.spectators.size() >= _config.max_spectators)
-			return 0;
+		if (_msg.spectators.size() >= _config.max_spectators) {
+            return 0;
+        }
 
 		u32 new_handle = _config.num_players + (u32)_msg.spectators.size() + 1;
 		_msg.spectators.push_back(new Player(new_handle, type, addr));
@@ -76,8 +79,9 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 			_msg.locals.push_back(new Player(new_handle, type, addr));
 		} else {
 			// require an address when specifing a remote player
-			if (addr == nullptr)
-				return 0;
+            if (addr == nullptr) {
+                return 0;
+            }
 
 			_msg.remotes.push_back(new Player(new_handle, type, addr));
 			_sync.SetInputPredictionWindow(new_handle, _config.input_prediction_window);
@@ -133,8 +137,9 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 Gekko::i8 Gekko::Session::FramesAhead()
 {
-	if (!_started)
-		return 0;
+    if (!_started) {
+        return 0;
+    }
 
 	return (i8)_msg.history.GetAverageAdvantage();
 }
@@ -176,8 +181,9 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
 
 void Gekko::Session::UpdateLocalFrameAdvantage()
 {
-	if (!_started)
-		return;
+    if (!_started) {
+        return;
+    }
 
 	const Frame min = _sync.GetMinReceivedFrame();
 	const Frame current = _sync.GetCurrentFrame();
@@ -218,15 +224,17 @@ void Gekko::Session::HandleRollback(std::vector<Event>& ev)
 		_sync.IncrementFrame();
 	}
 
-	if (_config.input_prediction_window == 0 || IsSpectating() || IsPlayingLocally())
-		return;
+	if (_config.input_prediction_window == 0 || IsSpectating() || IsPlayingLocally()) {
+        return;
+    }
 
 	current = _sync.GetCurrentFrame();
 	const Frame min = _sync.GetMinIncorrectFrame();
 
 	// dont allow rollbacks starting before the null frame
-	if (min == GameInput::NULL_FRAME)
-		return;
+    if (min == GameInput::NULL_FRAME) {
+        return;
+    }
 
 	const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
 	const Frame frame_to_save = std::min(current - 1, min);
@@ -252,8 +260,9 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
 {
 	Frame frame = GameInput::NULL_FRAME;
 	std::unique_ptr<u8[]> inputs;
-	if (!_sync.GetCurrentInputs(inputs, frame))
-		return false;
+	if (!_sync.GetCurrentInputs(inputs, frame)) {
+        return false;
+    }
 
 	Event event;
 	event.type = AdvanceEvent;
@@ -261,8 +270,9 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<Event>& ev)
 	event.data.ev.adv.input_len = _config.num_players * _config.input_size;
 	event.data.ev.adv.inputs = (u8*)std::malloc(event.data.ev.adv.input_len);
 
-	if (event.data.ev.adv.inputs)
-		std::memcpy(event.data.ev.adv.inputs, inputs.get(), event.data.ev.adv.input_len);
+    if (event.data.ev.adv.inputs) {
+        std::memcpy(event.data.ev.adv.inputs, inputs.get(), event.data.ev.adv.input_len);
+    }
 
 	ev.push_back(event);
 
@@ -309,8 +319,9 @@ void Gekko::Session::AddLoadEvent(std::vector<Event>& ev)
 void Gekko::Session::Poll()
 {
 	// return if no host is defined.
-	if (!_host)
-		return;
+    if (!_host) {
+        return;
+    }
 
 	auto data = _host->ReceiveData();
 	_msg.HandleData(data, _started);

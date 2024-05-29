@@ -34,8 +34,9 @@ void Gekko::SyncSystem::AddLocalInput(Handle player, Input input)
 	i32 plyr = player - 1;
 
 	// drop inputs from incorrect handles
-	if (plyr >= _num_players|| plyr < 0)
-		return;
+    if (plyr >= _num_players || plyr < 0) {
+        return;
+    }
 
 	_input_buffers[plyr].AddLocalInput(_current_frame, input);
 }
@@ -46,8 +47,9 @@ void Gekko::SyncSystem::AddRemoteInput(Handle player, Input input, Frame frame)
 	i32 plyr = player - 1;
 
 	// drop inputs from incorrect handles
-	if (plyr >= _num_players || plyr < 0)
-		return;
+    if (plyr >= _num_players || plyr < 0) {
+        return;
+    }
 
 	_input_buffers[plyr].AddInput(frame, input);
 }

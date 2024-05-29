@@ -30,8 +30,9 @@ void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
 	// init GameInput array
 	Input dummy = (u8*)std::malloc(_input_size);
 
-	if(dummy)
-		std::memset(dummy, 0, _input_size);
+    if (dummy) {
+        std::memset(dummy, 0, _input_size);
+    }
 
 	for (u32 i = 0; i < BUFF_SIZE; i++) {
 		_inputs.push_back(GameInput());
@@ -47,8 +48,9 @@ void Gekko::InputBuffer::AddLocalInput(Frame frame, const Input input)
 		for (i32 i = 0; i < _input_delay; i++) {
 			Input dummy = (u8*)std::malloc(_input_size);
 
-			if (dummy)
-				std::memset(dummy, 0, _input_size);
+            if (dummy) {
+                std::memset(dummy, 0, _input_size);
+            }
 
 			AddInput(i,  dummy);
 
@@ -112,8 +114,9 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 		for (i32 i = 1; i <= _input_delay; i++) {
 			Input dummy = (u8*)std::malloc(_input_size);
 
-			if (dummy)
-				std::memcpy(dummy,_inputs[last_input % BUFF_SIZE].input, _input_size);
+            if (dummy) {
+                std::memcpy(dummy, _inputs[last_input % BUFF_SIZE].input, _input_size);
+            }
 
 			AddInput(last_input + i, dummy);
 
@@ -223,9 +226,10 @@ std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool
 		return inp;
 	}
 
-	if (_inputs[frame % BUFF_SIZE].frame != frame || 
-		_inputs[frame % BUFF_SIZE].frame == GameInput::NULL_FRAME)
-		return inp;
+    if (_inputs[frame % BUFF_SIZE].frame != frame ||
+        _inputs[frame % BUFF_SIZE].frame == GameInput::NULL_FRAME) {
+        return inp;
+    }
 
 	inp->Init(_inputs[frame % BUFF_SIZE]);
 	return inp;
@@ -243,8 +247,9 @@ void Gekko::GameInput::Init(GameInput& other)
 
 	input = (Input) std::malloc(input_len);
 
-	if (input)
-		std::memcpy(input, other.input, input_len);
+    if (input) {
+        std::memcpy(input, other.input, input_len);
+    }
 }
 
 void Gekko::GameInput::Init(Frame frame_num, Input inp, u32 inp_len)
@@ -259,8 +264,9 @@ void Gekko::GameInput::Init(Frame frame_num, Input inp, u32 inp_len)
 
 	input = (Input) std::malloc(input_len);
 
-	if (input)
-		std::memcpy(input, inp, input_len);
+    if (input) {
+        std::memcpy(input, inp, input_len);
+    }
 }
 
 bool Gekko::GameInput::IsEqualTo(Input other)
