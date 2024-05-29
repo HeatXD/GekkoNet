@@ -35,5 +35,5 @@ Todo
 Todo
 
 ## License
-GekkoNet is licensed under the BSD-2-Clause License
+GekkoNet is licensed under the BSD-2-Clause license
 [Read about it here](https://opensource.org/license/bsd-2-clause).
