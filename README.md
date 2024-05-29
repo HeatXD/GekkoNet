@@ -23,7 +23,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Abstracted socket manager. Plug GekkoNet into existing networking solutions such as Steamworks or default sockets by inheriting and overriding the socket manager.
 
 ### Work in progress
-- Event System for notifications such and players being done with syncing.
+- Event System for notifications for eg. specific players being done with syncing.
 - Desync Detection
 - Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
