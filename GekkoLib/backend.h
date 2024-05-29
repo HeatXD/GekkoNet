@@ -46,7 +46,7 @@ namespace Gekko {
 			} input;
 			struct InputAck {
 				Frame ack_frame;
-				i32 frame_advantage;
+				i8 frame_advantage;
 			} input_ack;
 			struct SyncRequest {
 				u32 rng_data;
@@ -127,24 +127,24 @@ namespace Gekko {
 
 		void Update(Frame frame);
 
-		f32 GetAverageAdvantage();
+		i8 GetAverageAdvantage();
 
-		i32 GetLocalAdvantage();
+		i8 GetLocalAdvantage();
 
-		void SetLocalAdvantage(i32 adv);
+		void SetLocalAdvantage(i8 adv);
 
-		void AddRemoteAdvantage(i32 adv);
+		void AddRemoteAdvantage(i8 adv);
 
 	private:
 		static const i32 HISTORY_SIZE = 32;
 
-		Frame _local[HISTORY_SIZE];
+		i8 _local[HISTORY_SIZE];
 
-		Frame _remote[HISTORY_SIZE];
+		i8 _remote[HISTORY_SIZE];
 
-		i32 _local_frame_adv;
+		i8 _local_frame_adv;
 
-		std::list<i32> _remote_frame_adv;
+		std::list<i8> _remote_frame_adv;
 	};
 
 	class MessageSystem {

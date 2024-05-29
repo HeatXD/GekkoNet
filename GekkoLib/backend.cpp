@@ -523,8 +523,8 @@ void Gekko::AdvantageHistory::Init()
 	_local_frame_adv = 0;
 	_remote_frame_adv.clear();
 
-	std::memset(_local, 0, HISTORY_SIZE * sizeof(i32));
-	std::memset(_remote, 0, HISTORY_SIZE * sizeof(i32));
+	std::memset(_local, 0, HISTORY_SIZE * sizeof(i8));
+	std::memset(_remote, 0, HISTORY_SIZE * sizeof(i8));
 }
 
 void Gekko::AdvantageHistory::Update(Frame frame)
@@ -534,18 +534,18 @@ void Gekko::AdvantageHistory::Update(Frame frame)
 	_local[update_frame % HISTORY_SIZE] = _local_frame_adv;
 
 	if (!_remote_frame_adv.empty()) {
-		i32 max = INT_MIN;
-		for (i32 num : _remote_frame_adv) {
+		i8 max = INT8_MIN;
+		for (i8 num : _remote_frame_adv) {
 			max = std::max(max, num);
 		}
-		_remote[update_frame % HISTORY_SIZE] = max == INT_MIN ? 0 : max;
+		_remote[update_frame % HISTORY_SIZE] = max == INT8_MIN ? 0 : max;
 	}
 	else {
 		_remote[update_frame % HISTORY_SIZE] = 0;
 	}
 }
 
-Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
+Gekko::i8 Gekko::AdvantageHistory::GetAverageAdvantage()
 {
 	f32 sum_local = 0.f;
 	f32 sum_remote = 0.f;
@@ -559,14 +559,14 @@ Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 	f32 avg_remote = sum_remote / HISTORY_SIZE;
 
 	// return the average frames ahead
-	return avg_local - avg_remote;
+	return (i8)(avg_local - avg_remote);
 }
 
-void Gekko::AdvantageHistory::SetLocalAdvantage(i32 adv) {
+void Gekko::AdvantageHistory::SetLocalAdvantage(i8 adv) {
 	_local_frame_adv = adv;
 }
 
-void Gekko::AdvantageHistory::AddRemoteAdvantage(i32 adv) {
+void Gekko::AdvantageHistory::AddRemoteAdvantage(i8 adv) {
 	_remote_frame_adv.push_front(adv);
 	// clean up
 	if (_remote_frame_adv.size() > 48) {
@@ -576,6 +576,6 @@ void Gekko::AdvantageHistory::AddRemoteAdvantage(i32 adv) {
 	}
 }
 
-Gekko::i32 Gekko::AdvantageHistory::GetLocalAdvantage() {
+Gekko::i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
 	return _local_frame_adv;
 }

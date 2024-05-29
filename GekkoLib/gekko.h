@@ -13,10 +13,10 @@ namespace Gekko {
 		u8 num_players = 0;
 		u8 max_spectators = 0;
 		u8 input_prediction_window = 0;
-		u32 input_size = 0;
-		u32 state_size = 0;
 		bool limited_saving = false;
 		bool post_sync_joining = false;
+		u32 input_size = 0;
+		u32 state_size = 0;
 	};
 
 	class Session {
@@ -37,7 +37,7 @@ namespace Gekko {
 
 		std::vector<Event> UpdateSession();
 
-		f32 FramesAhead();
+		i8 FramesAhead();
 
 	private:
 		void Poll();
@@ -74,6 +74,8 @@ namespace Gekko {
 		bool _started;
 
 		Frame _last_saved_frame;
+
+		std::unique_ptr<u8[]> _disconnected_input;
 
 		Config _config;
 

@@ -14,6 +14,7 @@ Gekko::Session::Session()
 	_host = nullptr;
 	_started = false;
 	_last_saved_frame = GameInput::NULL_FRAME - 1;
+	_disconnected_input = nullptr;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -37,6 +38,10 @@ void Gekko::Session::Init(Config& config)
 
 	// setup state storage
 	_storage.Init(_config.input_prediction_window, _config.state_size, _config.limited_saving);
+
+	// setup disconnected input for disconnected player within the session
+	_disconnected_input = std::unique_ptr<u8[]>(new u8[_config.input_size]);
+	std::memset(_disconnected_input.get(), 0, _config.input_size);
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -126,12 +131,12 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 	return ev;
 }
 
-Gekko::f32 Gekko::Session::FramesAhead()
+Gekko::i8 Gekko::Session::FramesAhead()
 {
 	if (!_started)
 		return 0;
 
-	return _msg.history.GetAverageAdvantage();
+	return (i8)_msg.history.GetAverageAdvantage();
 }
 
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)
@@ -185,7 +190,7 @@ void Gekko::Session::AddDisconnectedPlayerInputs()
 {
 	for (auto player : _msg.remotes) {
 		if (player->GetStatus() == Disconnected) {
-			_sync.AddRemoteInput(player->handle, 0, _sync.GetCurrentFrame());
+			_sync.AddRemoteInput(player->handle, _disconnected_input.get(), _sync.GetCurrentFrame());
 		}
 	}
 }
