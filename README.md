@@ -6,7 +6,7 @@ I built this because I wanted a framework to plug into my C++ projects, in the p
 This framework is heavily inspired by the [GGPO](https://github.com/pond3r/ggpo) Rust reimplementation [GGRS](https://github.com/gschup/ggrs).
 
 #### Why not use GGPO?
-I am personally not a big fan of the callback based control flow of GGPO hence why I am more of fond of how GGRS handles its control flow. And I might be addicted to reinventing the wheel :sweat_smile:
+I am personally not a big fan of the callback based approach of GGPO hence why I am more of fond of how GGRS handles its control flow. And I might be addicted to reinventing the wheel :sweat_smile:
 
 ## Project Goals
 ### Done
