@@ -28,6 +28,7 @@ I am personally not a big fan of the callback based control flow of GGPO hence w
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
 - Replays
 - Add xmake for building.
+- Add some sort of linting to the project.
 - Commission an artist to create a logo for GekkoNet
 
 ## Getting Started
