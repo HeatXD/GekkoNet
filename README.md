@@ -3,7 +3,7 @@
 
 ## Why?
 I built this because I wanted a framework to plug into my C++ projects, in the past I have created a wrapper around GGRS for C++ but after having to deal with Rust FFI I decided to build a native alternative instead to more easily fit my projects. 
-This framework is heavily inspired by the [GGPO](https://github.com/pond3r/ggpo) Rust Reimplementation [GGRS](https://github.com/gschup/ggrs).
+This framework is heavily inspired by the [GGPO](https://github.com/pond3r/ggpo) Rust reimplementation [GGRS](https://github.com/gschup/ggrs).
 
 #### Why not use GGPO?
 I am personally not a big fan of the callback based control flow of GGPO hence why I am more of fond of how GGRS handles its control flow. And I might be addicted to reinventing the wheel :sweat_smile:
