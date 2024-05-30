@@ -10,7 +10,6 @@ namespace Gekko {
 	class SyncSystem {
 	public:
 		SyncSystem();
-		~SyncSystem();
 
 		void Init(u8 num_players, u32 input_size);
 
@@ -47,7 +46,7 @@ namespace Gekko {
 
 		Frame _current_frame;
 
-		InputBuffer* _input_buffers;
+		std::unique_ptr<InputBuffer[]> _input_buffers;
 
 	};
 }

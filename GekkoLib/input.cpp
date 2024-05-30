@@ -98,19 +98,14 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 	if (_input_delay < delay)
 	{
 		_input_delay = delay;
+
 		Frame last_input = _last_received_input;
+        Input prev = _inputs[last_input % BUFF_SIZE].input;
 
 		for (i32 i = 1; i <= _input_delay; i++) {
-			Input dummy = (u8*)std::malloc(_input_size);
-
-            if (dummy) {
-                std::memcpy(dummy, _inputs[last_input % BUFF_SIZE].input, _input_size);
-            }
-
-			AddInput(last_input + i, dummy);
-
-			std::free(dummy);
+			AddInput(last_input + i, prev);
 		}
+
 		return;
 	}
 

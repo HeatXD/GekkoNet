@@ -9,18 +9,13 @@ Gekko::SyncSystem::SyncSystem()
 	_input_buffers = nullptr;
 }
 
-Gekko::SyncSystem::~SyncSystem()
-{
-	delete _input_buffers;
-}
-
 void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 {
 	_input_size = input_size;
 	_num_players = num_players;
 	_current_frame = GameInput::NULL_FRAME + 1;
 
-	_input_buffers = new InputBuffer[_num_players];
+	_input_buffers = std::unique_ptr<InputBuffer[]>(new InputBuffer[_num_players]);
 
 	// on creation setup input buffers
 	for (int i = 0; i < _num_players; i++) {
