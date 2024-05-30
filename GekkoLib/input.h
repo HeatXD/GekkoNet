@@ -67,6 +67,8 @@ namespace Gekko {
 
 		u32 _input_size;
 
+        std::unique_ptr<u8[]> _empty_input;
+
 		Frame _last_received_input;
 
 		Frame _last_predicted_input;

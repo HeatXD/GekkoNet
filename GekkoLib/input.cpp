@@ -5,6 +5,8 @@
 #include <iostream>
 
 Gekko::InputBuffer::InputBuffer() {
+    _empty_input = nullptr;
+
 	_input_size = 0;
 	_input_delay = 0;
 	_input_prediction_window = 0;
@@ -28,33 +30,20 @@ void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
 	_incorrent_predicted_input = GameInput::NULL_FRAME;
 
 	// init GameInput array
-	Input dummy = (u8*)std::malloc(_input_size);
-
-    if (dummy) {
-        std::memset(dummy, 0, _input_size);
-    }
+    _empty_input = std::unique_ptr<u8[]>(new u8[_input_size]);
+    std::memset(_empty_input.get(), 0, _input_size);
 
 	for (u32 i = 0; i < BUFF_SIZE; i++) {
 		_inputs.push_back(GameInput());
-		_inputs[i].Init(GameInput::NULL_FRAME, dummy, _input_size);
+		_inputs[i].Init(GameInput::NULL_FRAME, _empty_input.get(), _input_size);
 	}
-
-	std::free(dummy);
 }
 
 void Gekko::InputBuffer::AddLocalInput(Frame frame, const Input input)
 {
 	if (_inputs[frame % BUFF_SIZE].frame == GameInput::NULL_FRAME && _input_delay > 0) {
 		for (i32 i = 0; i < _input_delay; i++) {
-			Input dummy = (u8*)std::malloc(_input_size);
-
-            if (dummy) {
-                std::memset(dummy, 0, _input_size);
-            }
-
-			AddInput(i,  dummy);
-
-			std::free(dummy);
+			AddInput(i,  _empty_input.get());
 		}
 	}
 	AddInput(frame + _input_delay, input);
@@ -170,12 +159,7 @@ bool Gekko::InputBuffer::HandleInputPrediction(Frame frame)
 	if (_first_predicted_input == GameInput::NULL_FRAME) {
 		// if the prev frame happends to be an empty frame add a dummy input
 		if (_inputs[prev_input % BUFF_SIZE].frame == GameInput::NULL_FRAME) {
-			Input dummy = (u8*)std::malloc(_input_size);
-			if (dummy) {
-				std::memset(dummy, 0, _input_size);
-				_inputs[frame % BUFF_SIZE].Init(frame, dummy, _input_size);
-				std::free(dummy);
-			}
+			_inputs[frame % BUFF_SIZE].Init(frame, _empty_input.get(), _input_size);
 		}
 		else {
 			// predict by copying the previous input
