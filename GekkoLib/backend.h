@@ -138,13 +138,15 @@ namespace Gekko {
 	private:
 		static const i32 HISTORY_SIZE = 32;
 
+        u8 _adv_index;
+
+        i8 _local_frame_adv;
+
 		i8 _local[HISTORY_SIZE];
 
 		i8 _remote[HISTORY_SIZE];
 
-		i8 _local_frame_adv;
-
-		std::list<i8> _remote_frame_adv;
+        i8 _remote_frame_adv[HISTORY_SIZE];
 	};
 
 	class MessageSystem {

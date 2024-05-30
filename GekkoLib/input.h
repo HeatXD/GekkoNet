@@ -10,7 +10,7 @@ namespace Gekko {
 		GameInput();
 		~GameInput();
 
-		void Init(GameInput& other);
+		void Init(GameInput* other);
 
 		void Init(Frame frame_num, Input inp, u32 inp_len);
 
@@ -77,6 +77,6 @@ namespace Gekko {
 
 		Frame _incorrent_predicted_input;
 
-		std::deque<GameInput> _inputs;
+		std::deque<std::unique_ptr<GameInput>> _inputs;
 	};
 }
