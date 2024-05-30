@@ -260,13 +260,8 @@ bool Gekko::GameInput::IsEqualTo(Input other)
 
 void Gekko::GameInput::Clear()
 {
-	if (input) {
-		std::free(input);
-	}
-
+    std::memset(input, 0, input_len);
 	frame = NULL_FRAME;
-	input_len = 0;
-	input = nullptr;
 }
 
 Gekko::GameInput::GameInput()
