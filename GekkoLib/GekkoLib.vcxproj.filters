@@ -36,6 +36,9 @@
     <ClInclude Include="storage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="net.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="gekko.cpp">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

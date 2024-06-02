@@ -134,6 +134,7 @@
     <ClInclude Include="gekko.h" />
     <ClInclude Include="gekko_types.h" />
     <ClInclude Include="input.h" />
+    <ClInclude Include="net.h" />
     <ClInclude Include="storage.h" />
     <ClInclude Include="sync.h" />
   </ItemGroup>
@@ -141,6 +142,7 @@
     <ClCompile Include="backend.cpp" />
     <ClCompile Include="gekko.cpp" />
     <ClCompile Include="input.cpp" />
+    <ClCompile Include="net.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="storage.cpp" />
     <ClCompile Include="sync.cpp" />

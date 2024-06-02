@@ -2,52 +2,6 @@
 #include "input.h"
 #include <chrono>
 
-Gekko::u32 Gekko::NetAddress::GetSize()
-{
-	return _size;
-}
-
-Gekko::NetAddress::NetAddress(void* data, u32 size)
-{
-	_size = size;
-	_data = std::unique_ptr<u8[]>(new u8[_size]);
-	// copy address data
-	std::memcpy(_data.get(), data, _size);
-}
-
-Gekko::NetAddress::NetAddress()
-{
-	_size = 0;
-	_data = nullptr;
-}
-
-void Gekko::NetAddress::Copy(NetAddress* other)
-{
-	if (!other) {
-        return;
-    }
-
-	_size = other->_size;
-
-    if (_data) {
-        _data.reset();
-    }
-
-	_data = std::unique_ptr<u8[]>(new u8[_size]);
-	// copy address data
-	std::memcpy(_data.get(), other->GetAddress(), _size);
-}
-
-bool Gekko::NetAddress::Equals(NetAddress& other)
-{
-	return _size == other._size && std::memcmp(_data.get(), other._data.get(), _size) == 0;
-}
-
-Gekko::u8* Gekko::NetAddress::GetAddress()
-{
-	return _data.get();
-}
-
 Gekko::MessageSystem::MessageSystem()
 {
 	_input_size = 0;
@@ -552,7 +506,7 @@ void Gekko::AdvantageHistory::Update(Frame frame)
 	_remote[update_frame % HISTORY_SIZE] = max == INT8_MIN ? 0 : max;
 }
 
-Gekko::i8 Gekko::AdvantageHistory::GetAverageAdvantage()
+Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 {
 	f32 sum_local = 0.f;
 	f32 sum_remote = 0.f;
@@ -565,8 +519,8 @@ Gekko::i8 Gekko::AdvantageHistory::GetAverageAdvantage()
 	f32 avg_local = sum_local / HISTORY_SIZE;
 	f32 avg_remote = sum_remote / HISTORY_SIZE;
 
-	// return the average frames ahead
-	return (i8)(avg_local - avg_remote);
+	// return the frames ahead
+	return (avg_local - avg_remote) / 2.f;
 }
 
 void Gekko::AdvantageHistory::SetLocalAdvantage(i8 adv) {

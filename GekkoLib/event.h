@@ -1,9 +1,9 @@
 #pragma once
 
+#include "gekko_types.h"
+
 #include <vector>
 #include <memory>
-
-#include "gekko_types.h"
 
 namespace Gekko {
 	enum EventType {
@@ -40,4 +40,27 @@ namespace Gekko {
 		EventType type = None;
 		EventData data;
 	};
+
+    struct SysEvent {
+        enum Type {
+            None = 0,
+            Syncing,
+            Connected,
+            Disconnected
+        } type = None;
+
+        union Data {
+            struct Syncing {
+                Handle handle;
+                u8 current;
+                u8 max;
+            } syncing;
+            struct Connected {
+                Handle handle;
+            } connected;
+            struct Disconnected {
+                Handle handle;
+            } disconnected;
+        } data;
+    };
 }

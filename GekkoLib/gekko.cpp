@@ -135,13 +135,13 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 	return ev;
 }
 
-Gekko::i8 Gekko::Session::FramesAhead()
+Gekko::f32 Gekko::Session::FramesAhead()
 {
     if (!_started) {
         return 0;
     }
 
-	return (i8)_msg.history.GetAverageAdvantage();
+	return _msg.history.GetAverageAdvantage();
 }
 
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<Event>& ev)

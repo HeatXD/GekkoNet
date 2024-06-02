@@ -64,7 +64,7 @@ bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame 
 			return false;
 		}
 
-		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
+		std::memcpy(all_input.get() + (i * _input_size), inp->input, _input_size);
 	}
 	inputs = std::move(all_input);
 	return true;
@@ -80,7 +80,7 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 			return false;
 		}
 
-		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
+		std::memcpy(all_input.get() + (i * _input_size), inp->input, _input_size);
 	}
 	frame = _current_frame;
 	inputs = std::move(all_input);
@@ -98,7 +98,7 @@ bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique
 			return false;
 		}
 
-		std::memcpy(all_input.get() + (i * _input_size), inp.get()->input, _input_size);
+		std::memcpy(all_input.get() + (i * _input_size), inp->input, _input_size);
 	}
 	inputs = std::move(all_input);
 	return true;

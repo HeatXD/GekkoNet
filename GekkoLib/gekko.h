@@ -37,7 +37,7 @@ namespace Gekko {
 
 		std::vector<Event> UpdateSession();
 
-		i8 FramesAhead();
+		f32 FramesAhead();
 
 	private:
 		void Poll();
