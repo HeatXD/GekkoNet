@@ -258,7 +258,7 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
             const i32 remote_advantage = data[i]->pkt.x.input_ack.frame_advantage;
             bool added_advantage = false;
 
-			for (auto player : remotes) {
+			for (auto& player : remotes) {
 				if (player->address.Equals(data[i]->addr)) {
 					if (player->stats.last_acked_frame < ack_frame) {
 						player->stats.last_acked_frame = ack_frame;
@@ -271,7 +271,7 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 				}
 			}
 
-			for (auto player : spectators) {
+			for (auto& player : spectators) {
 				if (player->address.Equals(data[i]->addr)) {
 					if (player->stats.last_acked_frame < ack_frame) {
 						player->stats.last_acked_frame = ack_frame;
@@ -350,7 +350,7 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
 std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
 {
 	auto result = std::vector<Handle>();
-	for (auto player: remotes) {
+	for (auto& player: remotes) {
 		if (player->address.Equals(*addr)) {
 			result.push_back(player->handle);
 		}
@@ -360,9 +360,9 @@ std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress
 
 Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle) 
 {
-	for (auto player: remotes) {
+	for (auto& player: remotes) {
 		if (player->handle == handle) {
-			return player;
+			return player.get();
 		}
 	}
 	return nullptr;
@@ -371,7 +371,7 @@ Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle)
 Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator) 
 {
 	Frame min = INT_MAX;
-	for (auto player : spectator ? spectators : remotes) {
+	for (auto& player : spectator ? spectators : remotes) {
 		if (player->GetStatus() == Connected) {
 			min = std::min(player->stats.last_acked_frame, min);
 		}
@@ -388,7 +388,7 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	i32 result = 0;
 	u64 now = TimeSinceEpoch();
 
-	for (Player* player : remotes) {
+	for (auto& player : remotes) {
 		if (player->GetStatus() == Initiating) {
 			if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
 				if (player->sync_num == 0) {
@@ -404,7 +404,7 @@ bool Gekko::MessageSystem::CheckStatusActors()
 		}
 	}
 
-	for (Player* player : spectators) {
+	for (auto& player : spectators) {
 		if (player->GetStatus() == Initiating) {
 			if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
 				if (player->sync_num == 0) {
@@ -428,7 +428,7 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
 
-	for (auto player : spectator ? spectators : remotes) {
+	for (auto& player : spectator ? spectators : remotes) {
 		if (player->GetStatus() == Connected) {
 			const u32 diff = last_added - player->stats.last_acked_frame;
 			if (diff > max_diff) {

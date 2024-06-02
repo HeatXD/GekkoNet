@@ -13,6 +13,7 @@ Gekko::Session::Session()
 {
 	_host = nullptr;
 	_started = false;
+    _delay_spectator = false;
 	_last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
 }
@@ -65,7 +66,7 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
         }
 
 		u32 new_handle = _config.num_players + (u32)_msg.spectators.size() + 1;
-		_msg.spectators.push_back(new Player(new_handle, type, addr));
+		_msg.spectators.push_back(std::make_unique<Player>(new_handle, type, addr));
 
 		return new_handle;
 	} 
@@ -76,14 +77,14 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 		u32 new_handle = (u32)(_msg.locals.size() + _msg.remotes.size()) + 1;
 
 		if (type == LocalPlayer) {
-			_msg.locals.push_back(new Player(new_handle, type, addr));
+			_msg.locals.push_back(std::make_unique<Player>(new_handle, type, addr));
 		} else {
 			// require an address when specifing a remote player
             if (addr == nullptr) {
                 return 0;
             }
 
-			_msg.remotes.push_back(new Player(new_handle, type, addr));
+			_msg.remotes.push_back(std::make_unique<Player>(new_handle, type, addr));
 			_sync.SetInputPredictionWindow(new_handle, _config.input_prediction_window);
 		}
 
@@ -121,6 +122,11 @@ std::vector<Gekko::Event> Gekko::Session::UpdateSession()
 
 		// check if we need to save the confirmed frame
 		HandleSavingConfirmedFrame(ev);
+
+        // Spectator session buffer
+        if (ShouldDelaySpectator()) {
+            return ev;
+        }
 
 		// then advance the session
 		if (AddAdvanceEvent(ev)) {
@@ -192,9 +198,39 @@ void Gekko::Session::UpdateLocalFrameAdvantage()
 	_msg.history.SetLocalAdvantage(local_advantage);
 }
 
+bool Gekko::Session::ShouldDelaySpectator()
+{
+    if (!IsSpectating() || _config.spectator_delay == 0) {
+        return false;
+    }
+
+    const u8 delay = std::min(_config.spectator_delay, _config.MAX_SPECTATOR_DELAY);
+    const Frame current = _sync.GetCurrentFrame();
+    const Frame min = _sync.GetMinReceivedFrame();
+    const u32 diff = std::abs(min - current);
+
+    if (_delay_spectator) {
+        if (diff >= delay) {
+            _delay_spectator = false;
+            return false;
+        }
+        return true;
+    }
+
+    if (current % 240 == 0) {
+        _delay_spectator = diff < delay;
+
+        if (_delay_spectator) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Gekko::Session::AddDisconnectedPlayerInputs()
 {
-	for (auto player : _msg.remotes) {
+	for (auto& player : _msg.remotes) {
 		if (player->GetStatus() == Disconnected) {
 			_sync.AddRemoteInput(player->handle, _disconnected_input.get(), _sync.GetCurrentFrame());
 		}
@@ -437,7 +473,7 @@ void Gekko::Session::SendLocalInputs()
 Gekko::u8 Gekko::Session::GetMinLocalDelay()
 {
 	u8 min = UINT8_MAX;
-	for (auto player : _msg.locals) {
+	for (auto& player : _msg.locals) {
 		min = std::min(_sync.GetLocalDelay(player->handle), min);
 	}
 	return min;

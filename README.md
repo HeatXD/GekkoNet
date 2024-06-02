@@ -17,6 +17,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Local Player Input Delay Settings
 	- Remote Player Input Prediction Settings
 - Spectator Sessions
+	- Spectator Delay Settings.
 	- The added ability to spectate spectators. This might be handy if you have a seperate spectating service which propegates the inputs to more spectators.
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.

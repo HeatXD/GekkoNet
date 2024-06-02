@@ -104,11 +104,11 @@ namespace Gekko {
 		bool CheckStatusActors();
 
 	public:
-		std::vector<Player*> locals;
+		std::vector<std::unique_ptr<Player>> locals;
 
-		std::vector<Player*> remotes;
+		std::vector<std::unique_ptr<Player>> remotes;
 
-		std::vector<Player*> spectators;
+		std::vector<std::unique_ptr<Player>> spectators;
 
 		AdvantageHistory history;
 

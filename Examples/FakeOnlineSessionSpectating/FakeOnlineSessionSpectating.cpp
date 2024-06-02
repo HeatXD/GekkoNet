@@ -227,6 +227,7 @@ int main(int argc, char* args[])
 	conf.input_prediction_window = 8;
 	conf.state_size = sizeof(GState);
 	conf.limited_saving = true;
+    conf.spectator_delay = 100;
 
 	sess1.Init(conf);
 	sess2.Init(conf);

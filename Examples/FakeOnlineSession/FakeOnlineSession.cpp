@@ -270,7 +270,7 @@ int main(int argc, char* args[])
 			sess2.AddLocalInput(s2p2, &inputs[1].input.value);
 
 			int frame = 0;
-			printf("S1 FA:%d\n", sess1.FramesAhead());
+			printf("S1 FA:%f\n", sess1.FramesAhead());
 			auto ev1 = sess1.UpdateSession();
 			for (int i = 0; i < ev1.size(); i++)
 			{
@@ -301,7 +301,7 @@ int main(int argc, char* args[])
 				}
 			}
 
-			printf("S2 FA:%d\n", sess2.FramesAhead());
+			printf("S2 FA:%f\n", sess2.FramesAhead());
 			auto ev2 = sess2.UpdateSession();
 			for (int i = 0; i < ev2.size(); i++)
 			{
