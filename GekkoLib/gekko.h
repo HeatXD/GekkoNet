@@ -20,6 +20,7 @@ namespace Gekko {
 		u32 state_size = 0;
         bool limited_saving = false;
         bool post_sync_joining = false;
+        bool desync_detection = false;
 	};
 
 	class Session {
@@ -95,7 +96,5 @@ namespace Gekko {
         GameEventBuffer _game_events;
 
 		NetAdapter* _host;
-
-        std::shared_ptr<SessionEventSystem> _session_events;
 	};
 }

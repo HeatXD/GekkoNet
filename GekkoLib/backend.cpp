@@ -10,13 +10,12 @@ Gekko::MessageSystem::MessageSystem()
 	_last_added_input = GameInput::NULL_FRAME;
 	_last_added_spectator_input = GameInput::NULL_FRAME;
 
-    _session_events = SessionEventSystem::Get();
-
 	// gen magic for session
 	std::srand(std::time(nullptr));
 	_session_magic = std::rand();
 
 	history = AdvantageHistory();
+    session_events = SessionEventSystem();
 }
 
 void Gekko::MessageSystem::Init(u32 input_size)
@@ -186,14 +185,14 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 					if (remotes[j]->sync_num < NUM_TO_SYNC) {
 						remotes[j]->sync_num++;
 						stop_sending--;
-                        _session_events->AddPlayerSyncingEvent(remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
+                        session_events.AddPlayerSyncingEvent(remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
 						continue;
 					}
 
 					if (remotes[j]->sync_num == NUM_TO_SYNC) {
 						remotes[j]->SetStatus(Connected);
 						stop_sending++;
-                        _session_events->AddPlayerConnectedEvent(remotes[j]->handle);
+                        session_events.AddPlayerConnectedEvent(remotes[j]->handle);
 						continue;
 					}
 				}
@@ -208,14 +207,14 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 					if (spectators[j]->sync_num < NUM_TO_SYNC) {
 						spectators[j]->sync_num++;
 						stop_sending--;
-                        _session_events->AddPlayerSyncingEvent(spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
+                        session_events.AddPlayerSyncingEvent(spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
 						continue;
 					}
 
 					if (spectators[j]->sync_num == NUM_TO_SYNC) {
 						spectators[j]->SetStatus(Connected);
 						stop_sending++;
-                        _session_events->AddPlayerConnectedEvent(spectators[j]->handle);
+                        session_events.AddPlayerConnectedEvent(spectators[j]->handle);
 						// TODO SEND CONNECT INIT MESSAGE WITH GAMESTATE IF NEEDED
 						continue;
 					}
@@ -439,7 +438,7 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 			if (diff > max_diff) {
 				player->SetStatus(Disconnected);
 				player->sync_num = 0;
-                _session_events->AddPlayerDisconnectedEvent(player->handle);
+                session_events.AddPlayerDisconnectedEvent(player->handle);
 			}
 		}
 	}

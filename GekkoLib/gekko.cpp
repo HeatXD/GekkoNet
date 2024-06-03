@@ -10,7 +10,6 @@ Gekko::Session::Session()
     _delay_spectator = false;
 	_last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
-    _session_events = SessionEventSystem::Get();
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -42,9 +41,6 @@ void Gekko::Session::Init(Config& config)
 	// setup disconnected input for disconnected player within the session
 	_disconnected_input = std::unique_ptr<u8[]>(new u8[_config.input_size]);
 	std::memset(_disconnected_input.get(), 0, _config.input_size);
-
-    // session events
-    _session_events = SessionEventSystem::Get();
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -149,7 +145,7 @@ std::vector<Gekko::GameEvent*> Gekko::Session::UpdateSession()
 
 std::vector<Gekko::SessionEvent*> Gekko::Session::Events()
 {
-    return _session_events->GetRecentEvents();
+    return _msg.session_events.GetRecentEvents();
 }
 
 Gekko::f32 Gekko::Session::FramesAhead()
@@ -223,7 +219,7 @@ bool Gekko::Session::ShouldDelaySpectator()
     if (_delay_spectator) {
         if (diff >= delay) {
             _delay_spectator = false;
-            _session_events->AddSpectatorUnpausedEvent();
+            _msg.session_events.AddSpectatorUnpausedEvent();
             return false;
         }
         return true;
@@ -234,7 +230,7 @@ bool Gekko::Session::ShouldDelaySpectator()
         _delay_spectator = diff < delay;
 
         if (_delay_spectator) {
-            _session_events->AddSpectatorPausedEvent();
+            _msg.session_events.AddSpectatorPausedEvent();
             return true;
         }
     }
@@ -376,7 +372,7 @@ void Gekko::Session::Poll()
 	auto data = _host->ReceiveData();
 
     // reset session events
-    _session_events->Reset();
+    _msg.session_events.Reset();
 
     // process the data we received
     _msg.HandleData(data, _started);
@@ -405,7 +401,7 @@ bool Gekko::Session::AllPlayersValid()
 		}
 
 		// if none returned that the session is ready!
-        _session_events->AddSessionStartedEvent();
+        _msg.session_events.AddSessionStartedEvent();
 
         _started = true;
 

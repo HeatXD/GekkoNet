@@ -113,6 +113,7 @@ namespace Gekko {
 
     struct SessionEventSystem {
     public:
+
         void Reset();
 
         std::vector<SessionEvent*> GetRecentEvents();
@@ -129,14 +130,7 @@ namespace Gekko {
 
         void AddSpectatorUnpausedEvent();
 
-    public:
-        SessionEventSystem(SessionEventSystem const&) = delete;
-        SessionEventSystem& operator=(SessionEventSystem const&) = delete;
-
-        static std::shared_ptr<Gekko::SessionEventSystem> Get();
-
     private:
-        SessionEventSystem() {};
 
         void AddEvent(SessionEvent* ev);
 

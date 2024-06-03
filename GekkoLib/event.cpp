@@ -186,9 +186,3 @@ void Gekko::SessionEventSystem::AddSpectatorUnpausedEvent()
 
     AddEvent(ev);
 }
-
-std::shared_ptr<Gekko::SessionEventSystem> Gekko::SessionEventSystem::Get()
-{
-    static std::shared_ptr<SessionEventSystem> _system{ new SessionEventSystem() };
-    return _system;
-}

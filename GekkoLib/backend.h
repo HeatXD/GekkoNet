@@ -67,7 +67,7 @@ namespace Gekko {
 		void AddRemoteAdvantage(i8 adv);
 
 	private:
-		static const i32 HISTORY_SIZE = 32;
+		static const i32 HISTORY_SIZE = 26;
 
         u8 _adv_index;
 
@@ -113,6 +113,8 @@ namespace Gekko {
 
 		AdvantageHistory history;
 
+        SessionEventSystem session_events;
+
 	private:
 		void SendSyncRequest(NetAddress* addr);
 
@@ -150,7 +152,5 @@ namespace Gekko {
 		std::queue<NetData*> _pending_output;
 
 		std::queue<NetInputData*> _received_inputs;
-
-        std::shared_ptr<SessionEventSystem> _session_events;
 	};
 }
