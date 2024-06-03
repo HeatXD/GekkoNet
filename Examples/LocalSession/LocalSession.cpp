@@ -134,8 +134,6 @@ int main(int argc, char* args[])
 	GState state = {};
 	GInput inputs[2] = {};
 
-	Gekko::Session::Test();
-
 	int num_players = 2;
 
 	auto sess = Gekko::Session();
@@ -172,6 +170,10 @@ int main(int argc, char* args[])
 			//add local inputs to the session
 			sess.AddLocalInput(p1, &inputs[0].input.value);
 			sess.AddLocalInput(p2, &inputs[1].input.value);
+
+            for (auto event : sess.Events()) {
+                printf("ev: %d", event->type);
+            }
 
 			auto ev = sess.UpdateSession();
 

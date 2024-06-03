@@ -210,8 +210,6 @@ int main(int argc, char* args[])
 
 	GInput inputs[2] = {};
 
-	Gekko::Session::Test();
-
 	auto adapter = FakeNetAdapter();
 
 	int num_players = 2;
@@ -270,6 +268,11 @@ int main(int argc, char* args[])
 			sess1.AddLocalInput(s1p2, &inputs[1].input.value);
 
 			int frame = 0;
+
+            for (auto event : sess1.Events()) {
+                printf("S1 EV: %d\n", event->type);
+            }
+
             auto ev1 = sess1.UpdateSession();
             for (int i = 0; i < ev1.size(); i++)
             {
@@ -298,7 +301,10 @@ int main(int argc, char* args[])
                 }
             }
 
-            printf("S2 FA:%f\n", sess2.FramesAhead());
+            for (auto event : sess2.Events()) {
+                printf("S2 EV: %d\n", event->type);
+            }
+
             auto ev2 = sess2.UpdateSession();
             for (int i = 0; i < ev2.size(); i++)
             {

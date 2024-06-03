@@ -22,10 +22,10 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
 - Abstracted socket manager. Plug GekkoNet into existing networking solutions such as Steamworks or default sockets by inheriting and overriding the socket manager.
+- Event System for notifications for eg. specific players being done with syncing.
+- Desync Detection (Only when limited saving is disabled for now)
 
 ### Work in progress
-- Event System for notifications for eg. specific players being done with syncing.
-- Desync Detection
 - Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
 - Replays

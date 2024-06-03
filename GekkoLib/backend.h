@@ -2,6 +2,7 @@
 
 #include "gekko_types.h"
 #include "net.h"
+#include "event.h"
 
 #include <memory>
 #include <list>
@@ -149,5 +150,7 @@ namespace Gekko {
 		std::queue<NetData*> _pending_output;
 
 		std::queue<NetInputData*> _received_inputs;
+
+        std::shared_ptr<SessionEventSystem> _session_events;
 	};
 }

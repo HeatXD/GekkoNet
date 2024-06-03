@@ -1,4 +1,5 @@
 #include "sync.h"
+
 #include <memory>
 
 Gekko::SyncSystem::SyncSystem()

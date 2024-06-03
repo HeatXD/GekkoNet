@@ -2,7 +2,6 @@
 
 #include <cstdlib> 
 #include <cstring>
-#include <iostream>
 
 Gekko::InputBuffer::InputBuffer() {
     _empty_input = nullptr;

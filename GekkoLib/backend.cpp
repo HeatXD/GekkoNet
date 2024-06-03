@@ -1,5 +1,7 @@
 #include "backend.h"
 #include "input.h"
+#include "event.h"
+
 #include <chrono>
 
 Gekko::MessageSystem::MessageSystem()
@@ -7,6 +9,8 @@ Gekko::MessageSystem::MessageSystem()
 	_input_size = 0;
 	_last_added_input = GameInput::NULL_FRAME;
 	_last_added_spectator_input = GameInput::NULL_FRAME;
+
+    _session_events = SessionEventSystem::Get();
 
 	// gen magic for session
 	std::srand(std::time(nullptr));
@@ -182,14 +186,14 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 					if (remotes[j]->sync_num < NUM_TO_SYNC) {
 						remotes[j]->sync_num++;
 						stop_sending--;
-						printf("handle:%d syncing:(%d/%d)\n", remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
+                        _session_events->AddPlayerSyncingEvent(remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
 						continue;
 					}
 
 					if (remotes[j]->sync_num == NUM_TO_SYNC) {
 						remotes[j]->SetStatus(Connected);
 						stop_sending++;
-						printf("handle:%d connected!\n", remotes[j]->handle);
+                        _session_events->AddPlayerConnectedEvent(remotes[j]->handle);
 						continue;
 					}
 				}
@@ -204,14 +208,14 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 					if (spectators[j]->sync_num < NUM_TO_SYNC) {
 						spectators[j]->sync_num++;
 						stop_sending--;
-						printf("handle:%d syncing:(%d/%d)\n", spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
+                        _session_events->AddPlayerSyncingEvent(spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
 						continue;
 					}
 
 					if (spectators[j]->sync_num == NUM_TO_SYNC) {
 						spectators[j]->SetStatus(Connected);
 						stop_sending++;
-						printf("handle:%d connected!\n", spectators[j]->handle);
+                        _session_events->AddPlayerConnectedEvent(spectators[j]->handle);
 						// TODO SEND CONNECT INIT MESSAGE WITH GAMESTATE IF NEEDED
 						continue;
 					}
@@ -240,8 +244,9 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 
 			net_input->input.inputs = (u8*)std::malloc(net_input->input.total_size);
 
-			if (net_input->input.inputs)
-				std::memcpy(net_input->input.inputs, data[i]->pkt.x.input.inputs, net_input->input.total_size);
+            if (net_input->input.inputs) {
+                std::memcpy(net_input->input.inputs, data[i]->pkt.x.input.inputs, net_input->input.total_size);
+            }
 
 			// now when done we can cleanup the inputs since we used malloc
 			std::free(data[i]->pkt.x.input.inputs);
@@ -434,7 +439,7 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 			if (diff > max_diff) {
 				player->SetStatus(Disconnected);
 				player->sync_num = 0;
-				printf("handle:%d  disconnected!\n", player->handle);
+                _session_events->AddPlayerDisconnectedEvent(player->handle);
 			}
 		}
 	}

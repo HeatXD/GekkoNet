@@ -1,13 +1,7 @@
 #include "gekko.h"
 #include "backend.h"
 
-#include <iostream>
 #include <cassert>
-
-void Gekko::Session::Test()
-{
-	std::cout << "Hello Gekko!\n";
-}
 
 Gekko::Session::Session()
 {
@@ -16,6 +10,7 @@ Gekko::Session::Session()
     _delay_spectator = false;
 	_last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
+    _session_events = SessionEventSystem::Get();
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -26,6 +21,7 @@ void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
 void Gekko::Session::Init(Config& config)
 {
 	_host = nullptr;
+
 	_started = false;
 
 	// get given configs
@@ -46,6 +42,9 @@ void Gekko::Session::Init(Config& config)
 	// setup disconnected input for disconnected player within the session
 	_disconnected_input = std::unique_ptr<u8[]>(new u8[_config.input_size]);
 	std::memset(_disconnected_input.get(), 0, _config.input_size);
+
+    // session events
+    _session_events = SessionEventSystem::Get();
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -74,8 +73,9 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 		return new_handle;
 	} 
 	else {
-		if (_started || _msg.locals.size() + _msg.remotes.size() >= _config.num_players)
-			return 0;
+        if (_started || _msg.locals.size() + _msg.remotes.size() >= _config.num_players) {
+            return 0;
+        }
 
 		u32 new_handle = (u32)(_msg.locals.size() + _msg.remotes.size()) + 1;
 
@@ -145,6 +145,11 @@ std::vector<Gekko::GameEvent*> Gekko::Session::UpdateSession()
 		}
 	}
 	return ev;
+}
+
+std::vector<Gekko::SessionEvent*> Gekko::Session::Events()
+{
+    return _session_events->GetRecentEvents();
 }
 
 Gekko::f32 Gekko::Session::FramesAhead()
@@ -218,6 +223,7 @@ bool Gekko::Session::ShouldDelaySpectator()
     if (_delay_spectator) {
         if (diff >= delay) {
             _delay_spectator = false;
+            _session_events->AddSpectatorUnpausedEvent();
             return false;
         }
         return true;
@@ -228,6 +234,7 @@ bool Gekko::Session::ShouldDelaySpectator()
         _delay_spectator = diff < delay;
 
         if (_delay_spectator) {
+            _session_events->AddSpectatorPausedEvent();
             return true;
         }
     }
@@ -365,8 +372,14 @@ void Gekko::Session::Poll()
         return;
     }
 
+    // fetch data from network
 	auto data = _host->ReceiveData();
-	_msg.HandleData(data, _started);
+
+    // reset session events
+    _session_events->Reset();
+
+    // process the data we received
+    _msg.HandleData(data, _started);
 
 	// handle received inputs
 	HandleReceivedInputs();
@@ -390,9 +403,12 @@ bool Gekko::Session::AllPlayersValid()
 		if (!_msg.CheckStatusActors()) {
 			return false;
 		}
+
 		// if none returned that the session is ready!
-		_started = true;
-		printf("__ session started __\n");
+        _session_events->AddSessionStartedEvent();
+
+        _started = true;
+
 		return true;
 	}
 
@@ -493,3 +509,5 @@ bool Gekko::Session::IsSpectating() {
 bool Gekko::Session::IsPlayingLocally() {
 	return _msg.remotes.empty() && !_msg.locals.empty();
 }
+
+

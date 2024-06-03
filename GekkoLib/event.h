@@ -8,13 +8,14 @@
 namespace Gekko {
 
     enum GameEventType {
-        Empty,
+        EmptyGameEvent= -1,
         AdvanceEvent,
         SaveEvent,
         LoadEvent
     };
 
     enum SessionEventType {
+        EmptySessionEvent = -1,
         PlayerSyncing,
         PlayerConnected,
         PlayerDisconnected,
@@ -71,6 +72,8 @@ namespace Gekko {
     };
 
     struct SessionEvent {
+        ~SessionEvent();
+
         SessionEventType type;
 
         union Data {
@@ -93,4 +96,54 @@ namespace Gekko {
             } desynced;
         } data;
     };
+
+    struct SessionEventBuffer {
+    public:
+        SessionEventBuffer();
+
+        SessionEvent* GetEvent();
+
+        void Reset();
+
+    private:
+        u16 _index;
+
+        std::vector<std::unique_ptr<SessionEvent>> _buffer;
+    };
+
+    struct SessionEventSystem {
+    public:
+        void Reset();
+
+        std::vector<SessionEvent*> GetRecentEvents();
+
+        void AddPlayerSyncingEvent(Handle handle, u8 sync, u8 max);
+
+        void AddPlayerConnectedEvent(Handle handle);
+
+        void AddPlayerDisconnectedEvent(Handle handle);
+
+        void AddSessionStartedEvent();
+
+        void AddSpectatorPausedEvent();
+
+        void AddSpectatorUnpausedEvent();
+
+    public:
+        SessionEventSystem(SessionEventSystem const&) = delete;
+        SessionEventSystem& operator=(SessionEventSystem const&) = delete;
+
+        static std::shared_ptr<Gekko::SessionEventSystem> Get();
+
+    private:
+        SessionEventSystem() {};
+
+        void AddEvent(SessionEvent* ev);
+
+    private:
+        std::vector<SessionEvent*> _events;
+
+        SessionEventBuffer _event_buffer;
+    };
+
 }

@@ -24,8 +24,6 @@ namespace Gekko {
 
 	class Session {
 	public:
-		static void Test();
-
 		Session();
 
 		void Init(Config& config);
@@ -39,6 +37,8 @@ namespace Gekko {
 		void AddLocalInput(Handle player, void* input);
 
 		std::vector<GameEvent*> UpdateSession();
+
+        std::vector<SessionEvent*> Events();
 
 		f32 FramesAhead();
 
@@ -95,5 +95,7 @@ namespace Gekko {
         GameEventBuffer _game_events;
 
 		NetAdapter* _host;
+
+        std::shared_ptr<SessionEventSystem> _session_events;
 	};
 }
