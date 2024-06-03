@@ -140,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="backend.cpp" />
+    <ClCompile Include="event.cpp" />
     <ClCompile Include="gekko.cpp" />
     <ClCompile Include="input.cpp" />
     <ClCompile Include="net.cpp" />

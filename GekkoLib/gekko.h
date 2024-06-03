@@ -10,7 +10,7 @@
 
 namespace Gekko {
 	struct Config {
-        static const u8 MAX_SPECTATOR_DELAY = InputBuffer::BUFF_SIZE * 0.75; // max delay in frames
+        static const u8 MAX_SPECTATOR_DELAY = (u8)(InputBuffer::BUFF_SIZE * 0.75); // max delay in frames
 
 		u8 num_players = 0;
 		u8 max_spectators = 0;
@@ -38,7 +38,7 @@ namespace Gekko {
 
 		void AddLocalInput(Handle player, void* input);
 
-		std::vector<Event> UpdateSession();
+		std::vector<GameEvent*> UpdateSession();
 
 		f32 FramesAhead();
 
@@ -61,15 +61,15 @@ namespace Gekko {
 
 		void SendSpectatorInputs();
 
-		void HandleRollback(std::vector<Event>& ev);
+		void HandleRollback(std::vector<GameEvent*>& ev);
 
-		bool AddAdvanceEvent(std::vector<Event>& ev);
+		bool AddAdvanceEvent(std::vector<GameEvent*>& ev);
 
-		void AddSaveEvent(std::vector<Event>& ev);
+		void AddSaveEvent(std::vector<GameEvent*>& ev);
 
-		void AddLoadEvent(std::vector<Event>& ev);
+		void AddLoadEvent(std::vector<GameEvent*>& ev);
 
-		void HandleSavingConfirmedFrame(std::vector<Event>& ev);
+		void HandleSavingConfirmedFrame(std::vector<GameEvent*>& ev);
 
 		void UpdateLocalFrameAdvantage();
 
@@ -91,6 +91,8 @@ namespace Gekko {
 		MessageSystem _msg;
 
 		StateStorage _storage;
+
+        GameEventBuffer _game_events;
 
 		NetAdapter* _host;
 	};

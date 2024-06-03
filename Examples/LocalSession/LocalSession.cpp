@@ -177,14 +177,12 @@ int main(int argc, char* args[])
 
 			for (int i = 0; i < ev.size(); i++)
 			{
-				switch (ev[i].type)
+				switch (ev[i]->type)
 				{
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
-					inputs[0].input.value = ev[i].data.ev.adv.inputs[0];
-					inputs[1].input.value = ev[i].data.ev.adv.inputs[1];
-					// be sure to free the inputs when u have used or collected them.
-					std::free(ev[i].data.ev.adv.inputs);
+					inputs[0].input.value = ev[i]->data.adv.inputs[0];
+					inputs[1].input.value = ev[i]->data.adv.inputs[1];
 					// now we can use them to update state.
 					update_state(state, inputs, num_players);
 					break;

@@ -92,14 +92,14 @@ struct GState {
 	int py[2] = {0, 0};
 };
 
-void save_state(GState* gs, Gekko::Event* ev) {
-	*ev->data.ev.save.checksum = 0;
-	*ev->data.ev.save.state_len = sizeof(GState);
-	std::memcpy(ev->data.ev.save.state, gs, sizeof(GState));
+void save_state(GState* gs, Gekko::GameEvent* ev) {
+	*ev->data.save.checksum = 0;
+	*ev->data.save.state_len = sizeof(GState);
+	std::memcpy(ev->data.save.state, gs, sizeof(GState));
 }
 
-void load_state(GState* gs, Gekko::Event& ev) {
-	std::memcpy(gs, ev.data.ev.load.state, sizeof(GState));
+void load_state(GState* gs, Gekko::GameEvent* ev) {
+	std::memcpy(gs, ev->data.load.state, sizeof(GState));
 }
 
 void update_state(GState& gs, GInput inputs[2], int num_players) {
@@ -274,29 +274,27 @@ int main(int argc, char* args[])
 			auto ev1 = sess1.UpdateSession();
 			for (int i = 0; i < ev1.size(); i++)
 			{
-				switch (ev1[i].type)
+				switch (ev1[i]->type)
 				{
 				case Gekko::SaveEvent:
-					printf("S1 Save frame:%d\n", ev1[i].data.ev.save.frame);
-					save_state(&state1, &ev1[i]);
+					printf("S1 Save frame:%d\n", ev1[i]->data.save.frame);
+					save_state(&state1, ev1[i]);
 					break;
 				case Gekko::LoadEvent:
-					printf("S1 Load frame:%d\n", ev1[i].data.ev.load.frame);
+					printf("S1 Load frame:%d\n", ev1[i]->data.load.frame);
 					load_state(&state1, ev1[i]);
 					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
-					inputs[0].input.value = ev1[i].data.ev.adv.inputs[0];
-					inputs[1].input.value = ev1[i].data.ev.adv.inputs[1];
-					frame = ev1[i].data.ev.adv.frame;
+					inputs[0].input.value = ev1[i]->data.adv.inputs[0];
+					inputs[1].input.value = ev1[i]->data.adv.inputs[1];
+					frame = ev1[i]->data.adv.frame;
 					printf("S1, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
-					// be sure to free the inputs when u have used or collected them.
-					std::free(ev1[i].data.ev.adv.inputs);
 					// now we can use them to update state.
 					update_state(state1, inputs, num_players);
 					break;
 				default:
-					printf("S1 Unkown Event: %d\n", ev1[i].type);
+					printf("S1 Unkown Event: %d\n", ev1[i]->type);
 					break;
 				}
 			}
@@ -305,29 +303,27 @@ int main(int argc, char* args[])
 			auto ev2 = sess2.UpdateSession();
 			for (int i = 0; i < ev2.size(); i++)
 			{
-				switch (ev2[i].type)
+				switch (ev2[i]->type)
 				{
 				case Gekko::SaveEvent:
-					printf("S2 Save frame:%d\n", ev2[i].data.ev.save.frame);
-					save_state(&state2, &ev2[i]);
+					printf("S2 Save frame:%d\n", ev2[i]->data.save.frame);
+					save_state(&state2, ev2[i]);
 					break;
 				case Gekko::LoadEvent:
-					printf("S2 Load frame:%d\n",ev2[i].data.ev.load.frame);
+					printf("S2 Load frame:%d\n", ev2[i]->data.load.frame);
 					load_state(&state2, ev2[i]);
 					break;
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
-					inputs[0].input.value = ev2[i].data.ev.adv.inputs[0];
-					inputs[1].input.value = ev2[i].data.ev.adv.inputs[1];
-					frame = ev2[i].data.ev.adv.frame;
+					inputs[0].input.value = ev2[i]->data.adv.inputs[0];
+					inputs[1].input.value = ev2[i]->data.adv.inputs[1];
+					frame = ev2[i]->data.adv.frame;
 					printf("S2, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
-					// be sure to free the inputs when u have used or collected them.
-					std::free(ev2[i].data.ev.adv.inputs);
 					// now we can use them to update state.
 					update_state(state2, inputs, num_players);
 					break;
 				default:
-					printf("S2 Unkown Event: %d\n", ev2[i].type);
+					printf("S2 Unkown Event: %d\n", ev2[i]->type);
 					break;
 				}
 			}
