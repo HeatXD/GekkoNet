@@ -41,6 +41,9 @@ void Gekko::Session::Init(Config& config)
 	// setup disconnected input for disconnected player within the session
 	_disconnected_input = std::unique_ptr<u8[]>(new u8[_config.input_size]);
 	std::memset(_disconnected_input.get(), 0, _config.input_size);
+
+    // we only detect desyncs whenever we are not limited saving for now.
+    _config.desync_detection = _config.limited_saving ? false : _config.desync_detection;
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -497,13 +500,13 @@ Gekko::u8 Gekko::Session::GetMinLocalDelay()
 	return min;
 }
 
-bool Gekko::Session::IsSpectating() {
+bool Gekko::Session::IsSpectating()
+{
 	return _msg.remotes.size() == 1 && _msg.locals.empty();
 }
 
 
-bool Gekko::Session::IsPlayingLocally() {
+bool Gekko::Session::IsPlayingLocally()
+{
 	return _msg.remotes.empty() && !_msg.locals.empty();
 }
-
-

@@ -436,9 +436,9 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 		if (player->GetStatus() == Connected) {
 			const u32 diff = last_added - player->stats.last_acked_frame;
 			if (diff > max_diff) {
-				player->SetStatus(Disconnected);
-				player->sync_num = 0;
                 session_events.AddPlayerDisconnectedEvent(player->handle);
+                player->SetStatus(Disconnected);
+                player->sync_num = 0;
 			}
 		}
 	}

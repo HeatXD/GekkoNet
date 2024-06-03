@@ -131,58 +131,46 @@ std::vector<Gekko::SessionEvent*> Gekko::SessionEventSystem::GetRecentEvents()
 void Gekko::SessionEventSystem::AddPlayerSyncingEvent(Handle handle, u8 sync, u8 max)
 {
     auto ev = _event_buffer.GetEvent();
-
     ev->type = PlayerSyncing;
     ev->data.syncing.handle = handle;
     ev->data.syncing.current = sync;
     ev->data.syncing.max = max;
-
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddPlayerConnectedEvent(Handle handle)
 {
     auto ev = _event_buffer.GetEvent();
-
     ev->type = PlayerConnected;
     ev->data.connected.handle = handle;
-
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddPlayerDisconnectedEvent(Handle handle)
 {
     auto ev = _event_buffer.GetEvent();
-
     ev->type = PlayerDisconnected;
     ev->data.disconnected.handle = handle;
-
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddSessionStartedEvent()
 {
     auto ev = _event_buffer.GetEvent();
-
     ev->type = SessionStarted;
-
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddSpectatorPausedEvent()
 {
     auto ev = _event_buffer.GetEvent();
-
     ev->type = SpectatorPaused;
-
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddSpectatorUnpausedEvent()
 {
     auto ev = _event_buffer.GetEvent();
-
     ev->type = SpectatorUnpaused;
-
     AddEvent(ev);
 }
