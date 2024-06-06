@@ -26,6 +26,7 @@ namespace Gekko {
     };
 
 	struct GameEvent {
+    public:
         ~GameEvent();
 
         GameEventType type;
@@ -52,7 +53,7 @@ namespace Gekko {
 	};
 
     struct GameEventBuffer {
-
+    public:
         void Init(u32 input_size);
 
         GameEvent* GetEvent(bool advance);
@@ -72,8 +73,7 @@ namespace Gekko {
     };
 
     struct SessionEvent {
-        ~SessionEvent();
-
+    public:
         SessionEventType type;
 
         union Data {
@@ -89,10 +89,10 @@ namespace Gekko {
                 Handle handle;
             } disconnected;
             struct Desynced {
+                Frame frame;
                 u32 local_checksum;
-                u32 num_remote_handles;
-                Handle* remote_handles;
-                u32* remote_checksums;
+                u32 remote_checksum;
+                Handle remote_handle;
             } desynced;
         } data;
     };
@@ -113,7 +113,6 @@ namespace Gekko {
 
     struct SessionEventSystem {
     public:
-
         void Reset();
 
         std::vector<SessionEvent*> GetRecentEvents();
@@ -130,8 +129,9 @@ namespace Gekko {
 
         void AddSpectatorUnpausedEvent();
 
-    private:
+        void AddDesyncDetectedEvent(Frame frame, Handle remote, u32 check_local, u32 check_remote);
 
+    private:
         void AddEvent(SessionEvent* ev);
 
     private:

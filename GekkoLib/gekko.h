@@ -76,6 +76,8 @@ namespace Gekko {
 
         bool ShouldDelaySpectator();
 
+        void SendHealthCheck();
+
 	private:
 		bool _started;
 
@@ -83,18 +85,22 @@ namespace Gekko {
 
 		Frame _last_saved_frame;
 
+        Frame _last_sent_healthcheck;
+
 		std::unique_ptr<u8[]> _disconnected_input;
 
 		Config _config;
 
 		SyncSystem _sync;
 
+        NetAdapter* _host;
+
 		MessageSystem _msg;
 
 		StateStorage _storage;
 
-        GameEventBuffer _game_events;
+        GameEventBuffer _game_event_buffer;
 
-		NetAdapter* _host;
+        std::vector<GameEvent*> _current_game_events;
 	};
 }

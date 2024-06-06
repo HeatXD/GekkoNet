@@ -225,7 +225,7 @@ int main(int argc, char* args[])
 	conf.input_prediction_window = 8;
 	conf.state_size = sizeof(GState);
 	conf.limited_saving = true;
-    conf.spectator_delay = 100;
+    conf.spectator_delay = 10;
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -273,30 +273,29 @@ int main(int argc, char* args[])
                 printf("S1 EV: %d\n", event->type);
             }
 
-            auto ev1 = sess1.UpdateSession();
-            for (int i = 0; i < ev1.size(); i++)
+            for (auto ev : sess1.UpdateSession())
             {
-                switch (ev1[i]->type)
+                switch (ev->type)
                 {
                 case Gekko::SaveEvent:
-                    printf("S1 Save frame:%d\n", ev1[i]->data.save.frame);
-                    save_state(&state1, ev1[i]);
+                    printf("S1 Save frame:%d\n", ev->data.save.frame);
+                    save_state(&state1, ev);
                     break;
                 case Gekko::LoadEvent:
-                    printf("S1 Load frame:%d\n", ev1[i]->data.load.frame);
-                    load_state(&state1, ev1[i]);
+                    printf("S1 Load frame:%d\n", ev->data.load.frame);
+                    load_state(&state1, ev);
                     break;
                 case Gekko::AdvanceEvent:
                     // on advance event, advance the gamestate using the given inputs
-                    inputs[0].input.value = ev1[i]->data.adv.inputs[0];
-                    inputs[1].input.value = ev1[i]->data.adv.inputs[1];
-                    frame = ev1[i]->data.adv.frame;
+                    inputs[0].input.value = ev->data.adv.inputs[0];
+                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    frame = ev->data.adv.frame;
                     printf("S1, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
                     // now we can use them to update state.
                     update_state(state1, inputs, num_players);
                     break;
                 default:
-                    printf("S1 Unkown Event: %d\n", ev1[i]->type);
+                    printf("S1 Unkown Event: %d\n", ev->type);
                     break;
                 }
             }
@@ -305,30 +304,29 @@ int main(int argc, char* args[])
                 printf("S2 EV: %d\n", event->type);
             }
 
-            auto ev2 = sess2.UpdateSession();
-            for (int i = 0; i < ev2.size(); i++)
+            for (auto ev : sess2.UpdateSession())
             {
-                switch (ev2[i]->type)
+                switch (ev->type)
                 {
                 case Gekko::SaveEvent:
-                    printf("S2 Save frame:%d\n", ev2[i]->data.save.frame);
-                    save_state(&state2, ev2[i]);
+                    printf("S2 Save frame:%d\n", ev->data.save.frame);
+                    save_state(&state2, ev);
                     break;
                 case Gekko::LoadEvent:
-                    printf("S2 Load frame:%d\n", ev2[i]->data.load.frame);
-                    load_state(&state2, ev2[i]);
+                    printf("S2 Load frame:%d\n", ev->data.load.frame);
+                    load_state(&state2, ev);
                     break;
                 case Gekko::AdvanceEvent:
                     // on advance event, advance the gamestate using the given inputs
-                    inputs[0].input.value = ev2[i]->data.adv.inputs[0];
-                    inputs[1].input.value = ev2[i]->data.adv.inputs[1];
-                    frame = ev2[i]->data.adv.frame;
+                    inputs[0].input.value = ev->data.adv.inputs[0];
+                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    frame = ev->data.adv.frame;
                     printf("S2, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
                     // now we can use them to update state.
                     update_state(state2, inputs, num_players);
                     break;
                 default:
-                    printf("S2 Unkown Event: %d\n", ev2[i]->type);
+                    printf("S2 Unkown Event: %d\n", ev->type);
                     break;
                 }
             }

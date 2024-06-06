@@ -172,19 +172,17 @@ int main(int argc, char* args[])
 			sess.AddLocalInput(p2, &inputs[1].input.value);
 
             for (auto event : sess.Events()) {
-                printf("ev: %d", event->type);
+                printf("ev: %d\n", event->type);
             }
 
-			auto ev = sess.UpdateSession();
-
-			for (int i = 0; i < ev.size(); i++)
+			for (auto ev : sess.UpdateSession())
 			{
-				switch (ev[i]->type)
+				switch (ev->type)
 				{
 				case Gekko::AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
-					inputs[0].input.value = ev[i]->data.adv.inputs[0];
-					inputs[1].input.value = ev[i]->data.adv.inputs[1];
+					inputs[0].input.value = ev->data.adv.inputs[0];
+					inputs[1].input.value = ev->data.adv.inputs[1];
 					// now we can use them to update state.
 					update_state(state, inputs, num_players);
 					break;

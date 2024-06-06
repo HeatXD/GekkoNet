@@ -8,7 +8,7 @@ Gekko::StateStorage::StateStorage()
 
 void Gekko::StateStorage::Init(u32 num_states, u32 state_size, bool limited)
 {
-	const u32 num = limited ? 1 : num_states + 1;
+	const u32 num = limited ? 2 : num_states + 2;
 	_max_num_states = num;
 
 	for (u32 i = 0; i < _max_num_states; i++) {

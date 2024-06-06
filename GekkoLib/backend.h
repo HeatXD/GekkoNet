@@ -24,6 +24,11 @@ namespace Gekko {
 		Disconnected,
 	};
 
+    struct ChecksumEntry {
+        Frame frame = -1;
+        u32 checksum;
+    };
+
 	class Player
 	{
 	public:
@@ -35,6 +40,8 @@ namespace Gekko {
 
 		void SetStatus(PlayerStatus type);
 
+        void SetChecksum(Frame frame, u32 checksum);
+
 	public:
 		Handle handle;
 
@@ -45,6 +52,10 @@ namespace Gekko {
 		NetStats stats;
 
 		NetAddress address;
+
+        static const i32 NUM_CHECKSUMS = 16;
+
+        ChecksumEntry health[NUM_CHECKSUMS];
 
 	private:
 		PlayerType _type;
@@ -104,6 +115,8 @@ namespace Gekko {
 
 		bool CheckStatusActors();
 
+        void SendHealthCheck(Frame frame, u32 checksum);
+
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
 
@@ -114,6 +127,8 @@ namespace Gekko {
 		AdvantageHistory history;
 
         SessionEventSystem session_events;
+
+        ChecksumEntry local_health[Player::NUM_CHECKSUMS];
 
 	private:
 		void SendSyncRequest(NetAddress* addr);
@@ -131,6 +146,8 @@ namespace Gekko {
 		void HandleTooFarBehindActors(bool spectator = false);
 
 		u64 TimeSinceEpoch();
+
+        void SendDataToAll(NetData* pkt, NetAdapter* host, bool spectators_only = false);
 
 	private:
 		static const u32 MAX_PLAYER_SEND_SIZE = 32;

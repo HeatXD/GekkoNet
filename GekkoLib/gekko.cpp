@@ -8,8 +8,9 @@ Gekko::Session::Session()
 	_host = nullptr;
 	_started = false;
     _delay_spectator = false;
-	_last_saved_frame = GameInput::NULL_FRAME - 1;
+    _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
+    _last_sent_healthcheck = GameInput::NULL_FRAME;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
@@ -33,7 +34,7 @@ void Gekko::Session::Init(Config& config)
 	_msg.Init(_config.input_size);
 
     //setup game event system
-    _game_events.Init(_config.input_size * _config.num_players);
+    _game_event_buffer.Init(_config.input_size * _config.num_players);
 
 	// setup state storage
 	_storage.Init(_config.input_prediction_window, _config.state_size, _config.limited_saving);
@@ -111,39 +112,39 @@ std::vector<Gekko::GameEvent*> Gekko::Session::UpdateSession()
 	// connection Handling
 	Poll();
 
-	// setup GameEvents 
-	auto ev = std::vector<GameEvent*>();
+	// clear GameEvents 
+    _current_game_events.clear();
 
 	// gameplay
 	if (AllPlayersValid()) {
-        // Reset the game event buffer before doing anything else
-        _game_events.Reset();
+        // reset the game event buffer before doing anything else
+        _game_event_buffer.Reset();
 
 		// add inputs so we can continue the session.
 		AddDisconnectedPlayerInputs();
 
 		// check if we need to rollback
-		HandleRollback(ev);
+		HandleRollback(_current_game_events);
 
 		// check if we need to save the confirmed frame
-		HandleSavingConfirmedFrame(ev);
+		HandleSavingConfirmedFrame(_current_game_events);
 
-        // Spectator session buffer
+        // spectator session buffer
         if (ShouldDelaySpectator()) {
-            return ev;
+            return _current_game_events;
         }
 
 		// then advance the session
-		if (AddAdvanceEvent(ev)) {
+		if (AddAdvanceEvent(_current_game_events)) {
 			if (!_config.limited_saving ||
 				(IsSpectating() || IsPlayingLocally()) &&
 				_sync.GetCurrentFrame() % _config.input_prediction_window == 0) {
-				AddSaveEvent(ev);
+				AddSaveEvent(_current_game_events);
 			}
 			_sync.IncrementFrame();
 		}
 	}
-	return ev;
+	return _current_game_events;
 }
 
 std::vector<Gekko::SessionEvent*> Gekko::Session::Events()
@@ -154,7 +155,7 @@ std::vector<Gekko::SessionEvent*> Gekko::Session::Events()
 Gekko::f32 Gekko::Session::FramesAhead()
 {
     if (!_started) {
-        return 0;
+        return 0.f;
     }
 
 	return _msg.history.GetAverageAdvantage();
@@ -197,7 +198,7 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<GameEvent*>& ev)
 
 void Gekko::Session::UpdateLocalFrameAdvantage()
 {
-    if (!_started) {
+    if (!_started || IsSpectating()) {
         return;
     }
 
@@ -239,6 +240,31 @@ bool Gekko::Session::ShouldDelaySpectator()
     }
 
     return false;
+}
+
+void Gekko::Session::SendHealthCheck()
+{
+    if (!_config.desync_detection) {
+        return;
+    }
+
+    const Frame min = _sync.GetMinReceivedFrame();
+    const Frame sync = min - 1;
+
+    if (_last_saved_frame < sync ||
+        _last_sent_healthcheck >= sync) {
+        return;
+    }
+
+    auto sav = _storage.GetState(sync);
+
+    assert(sync == sav->frame);
+
+    _last_sent_healthcheck = sync;
+    _msg.SendHealthCheck(sync, sav->checksum);
+
+    _msg.local_health[sync % Player::NUM_CHECKSUMS].frame = sync;
+    _msg.local_health[sync % Player::NUM_CHECKSUMS].checksum = sav->checksum;
 }
 
 void Gekko::Session::AddDisconnectedPlayerInputs()
@@ -313,7 +339,7 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<GameEvent*>& ev)
         return false;
     }
 
-    ev.push_back(_game_events.GetEvent(true));
+    ev.push_back(_game_event_buffer.GetEvent(true));
 
     auto event = ev.back();
 
@@ -335,7 +361,7 @@ void Gekko::Session::AddSaveEvent(std::vector<GameEvent*>& ev)
 
 	state->frame = frame_to_save;
 
-    ev.push_back(_game_events.GetEvent(false));
+    ev.push_back(_game_event_buffer.GetEvent(false));
 
 	auto event = ev.back();
 	event->type = SaveEvent;
@@ -354,7 +380,7 @@ void Gekko::Session::AddLoadEvent(std::vector<GameEvent*>& ev)
 
 	auto state = _storage.GetState(frame_to_load);
 
-    ev.push_back(_game_events.GetEvent(false));
+    ev.push_back(_game_event_buffer.GetEvent(false));
 
 	auto event = ev.back();
 	event->type = LoadEvent;
@@ -366,6 +392,9 @@ void Gekko::Session::AddLoadEvent(std::vector<GameEvent*>& ev)
 
 void Gekko::Session::Poll()
 {
+    // reset session events
+    _msg.session_events.Reset();
+
 	// return if no host is defined.
     if (!_host) {
         return;
@@ -373,9 +402,6 @@ void Gekko::Session::Poll()
 
     // fetch data from network
 	auto data = _host->ReceiveData();
-
-    // reset session events
-    _msg.session_events.Reset();
 
     // process the data we received
     _msg.HandleData(data, _started);
@@ -392,6 +418,9 @@ void Gekko::Session::Poll()
 	// send inputs to spectators 
 	SendSpectatorInputs();
 
+    // send a healthcheck if applicable
+    SendHealthCheck();
+    
 	// now send data
 	_msg.SendPendingOutput(_host);
 }

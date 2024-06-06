@@ -90,30 +90,21 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	// handle messages
 	for (u32 i = 0; i < _pending_output.size(); i++) {
 		auto pkt = _pending_output.front();
-		if (pkt->pkt.type == Inputs) {
-			for (u32 i = 0; i < remotes.size(); i++) {
-				if (remotes[i]->address.GetSize() != 0) {
-					// copy addr, set magic and send it off!
-					pkt->addr.Copy(&remotes[i]->address);
-					pkt->pkt.magic = remotes[i]->session_magic;
-					host->SendData(pkt->addr, pkt->pkt);
-				}
-			}
+		if (pkt->pkt.type == Inputs || pkt->pkt.type == SpectatorInputs) {
+            if (pkt->pkt.type == Inputs) {
+                SendDataToAll(pkt, host);
+            } else {
+                SendDataToAll(pkt, host, true);
+            }
 			// now when done we can cleanup the inputs since we used malloc
 			std::free(pkt->pkt.x.input.inputs);
 		}
-		else if (pkt->pkt.type == SpectatorInputs) {
-			for (u32 i = 0; i < spectators.size(); i++) {
-				if (spectators[i]->address.GetSize() != 0) {
-					// copy addr, set magic and send it off!
-					pkt->addr.Copy(&spectators[i]->address);
-					pkt->pkt.magic = spectators[i]->session_magic;
-					host->SendData(pkt->addr, pkt->pkt);
-				}
-			}
-			// now when done we can cleanup the inputs since we used malloc
-			std::free(pkt->pkt.x.input.inputs);
-		}
+        else if (pkt->pkt.type == HealthCheck) {
+            // send to remotes
+            SendDataToAll(pkt, host);
+            // send to spectators
+            SendDataToAll(pkt, host, true);
+        }
 		else {
 			host->SendData(pkt->addr, pkt->pkt);
 		}
@@ -286,6 +277,28 @@ void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_
 			delete data[i];
 			continue;
 		}
+
+        if (type == HealthCheck) {
+            // printf("recv addr:%d, f: %d, check:%u\n", *data[i]->addr.GetAddress(), data[i]->pkt.x.health_check.frame, data[i]->pkt.x.health_check.checksum);
+            const Frame frame = data[i]->pkt.x.health_check.frame;
+            const u32 checksum = data[i]->pkt.x.health_check.checksum;
+
+            for (auto& player : remotes) {
+                if (player->address.Equals(data[i]->addr)) {
+                    player->SetChecksum(frame, checksum);
+                    for (auto& entry : local_health) {
+                        if (entry.frame == frame && entry.checksum != checksum) {
+                            session_events.AddDesyncDetectedEvent(
+                                frame,player->handle, entry.checksum, checksum);
+                        }
+                    }
+                    break;
+                }
+            }
+
+            delete data[i];
+            continue;
+        }
 	}
 }
 
@@ -427,6 +440,18 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	return result == 0;
 }
 
+void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
+{
+    auto data = new NetData;
+
+    // the address and magic is set later so dont worry about it now
+    data->pkt.type = HealthCheck;
+    data->pkt.x.health_check.frame = frame;
+    data->pkt.x.health_check.checksum = checksum;
+
+    _pending_output.push(data);
+}
+
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
 	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
@@ -448,6 +473,19 @@ Gekko::u64 Gekko::MessageSystem::TimeSinceEpoch()
 {
 	using namespace std::chrono;
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+void Gekko::MessageSystem::SendDataToAll(NetData* pkt, NetAdapter* host, bool spectators_only)
+{
+    auto& actors = spectators_only ? spectators : remotes;
+
+    for (auto& actor : actors) {
+        if (actor->address.GetSize() != 0) {
+            pkt->addr.Copy(&actor->address);
+            pkt->pkt.magic = actor->session_magic;
+            host->SendData(pkt->addr, pkt->pkt);
+        }
+    }
 }
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)

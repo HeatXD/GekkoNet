@@ -58,6 +58,29 @@ void del_windows(void) {
 	SDL_Quit();
 }
 
+// https://en.wikipedia.org/wiki/Fletcher%27s_checksum
+uint32_t fletcher32(const uint16_t* data, size_t len) {
+    uint32_t c0, c1;
+    len = (len + 1) & ~1;      /* Round up len to words */
+
+    /* We similarly solve for n > 0 and n * (n+1) / 2 * (2^16-1) < (2^32-1) here. */
+    /* On modern computers, using a 64-bit c0/c1 could allow a group size of 23726746. */
+    for (c0 = c1 = 0; len > 0; ) {
+        size_t blocklen = len;
+        if (blocklen > 360 * 2) {
+            blocklen = 360 * 2;
+        }
+        len -= blocklen;
+        do {
+            c0 = c0 + *data++;
+            c1 = c1 + c0;
+        } while ((blocklen -= 2));
+        c0 = c0 % 65535;
+        c1 = c1 % 65535;
+    }
+    return (c1 << 16 | c0);
+}
+
 struct GInput {
 	union inp {
 		struct dir {
@@ -90,11 +113,12 @@ void process_events() {
 struct GState {
 	int px[2] = {0, 0};
 	int py[2] = {0, 0};
+    int desync_test = 0; // changing this value for each state can trigger the desync system
 };
 
 void save_state(GState* gs, Gekko::GameEvent* ev) {
-	*ev->data.save.checksum = 0;
-	*ev->data.save.state_len = sizeof(GState);
+    *ev->data.save.state_len = sizeof(GState);
+	*ev->data.save.checksum = fletcher32((uint16_t*)gs, sizeof(GState));
 	std::memcpy(ev->data.save.state, gs, sizeof(GState));
 }
 
@@ -205,8 +229,9 @@ int main(int argc, char* args[])
 	running = init_windows();
 
 	GState state1 = {};
+    // state1.desync_test = 22;
 	GState state2 = {};
-
+    // state2.desync_test = 11;
 	GInput inputs[2] = {};
 
 	auto adapter = FakeNetAdapter();
@@ -223,7 +248,8 @@ int main(int argc, char* args[])
 	conf.max_spectators = 0;
 	conf.input_prediction_window = 8;
 	conf.state_size = sizeof(GState);
-	conf.limited_saving = true;
+	conf.limited_saving = false;
+    // conf.desync_detection = true;
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -270,71 +296,74 @@ int main(int argc, char* args[])
 			int frame = 0;
 
             for (auto event : sess1.Events()) {
-                printf("S1 Event: %d\n", event->type);
+                printf("S1 EV: %d\n", event->type);
+                if (event->type == 6) {
+                    auto desync = event->data.desynced;
+                    printf("desync detected, f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle, desync.local_checksum, desync.remote_checksum);
+                }
             }
 
-			printf("S1 FA:%f\n", sess1.FramesAhead());
-
-			auto ev1 = sess1.UpdateSession();
-			for (int i = 0; i < ev1.size(); i++)
-			{
-				switch (ev1[i]->type)
-				{
-				case Gekko::SaveEvent:
-					printf("S1 Save frame:%d\n", ev1[i]->data.save.frame);
-					save_state(&state1, ev1[i]);
-					break;
-				case Gekko::LoadEvent:
-					printf("S1 Load frame:%d\n", ev1[i]->data.load.frame);
-					load_state(&state1, ev1[i]);
-					break;
-				case Gekko::AdvanceEvent:
-					// on advance event, advance the gamestate using the given inputs
-					inputs[0].input.value = ev1[i]->data.adv.inputs[0];
-					inputs[1].input.value = ev1[i]->data.adv.inputs[1];
-					frame = ev1[i]->data.adv.frame;
-					printf("S1, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
-					// now we can use them to update state.
-					update_state(state1, inputs, num_players);
-					break;
-				default:
-					printf("S1 Unkown Event: %d\n", ev1[i]->type);
-					break;
-				}
-			}
+            for (auto ev : sess1.UpdateSession())
+            {
+                switch (ev->type)
+                {
+                case Gekko::SaveEvent:
+                    printf("S1 Save frame:%d\n", ev->data.save.frame);
+                    save_state(&state1, ev);
+                    break;
+                case Gekko::LoadEvent:
+                    printf("S1 Load frame:%d\n", ev->data.load.frame);
+                    load_state(&state1, ev);
+                    break;
+                case Gekko::AdvanceEvent:
+                    // on advance event, advance the gamestate using the given inputs
+                    inputs[0].input.value = ev->data.adv.inputs[0];
+                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    frame = ev->data.adv.frame;
+                    printf("S1, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
+                    // now we can use them to update state.
+                    update_state(state1, inputs, num_players);
+                    break;
+                default:
+                    printf("S1 Unkown Event: %d\n", ev->type);
+                    break;
+                }
+            }
 
             for (auto event : sess2.Events()) {
-                printf("S2 Event: %d\n", event->type);
+                printf("S2 EV: %d\n", event->type);
+                if (event->type == 6) {
+                    auto desync = event->data.desynced;
+                    printf("desync detected, f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle, desync.local_checksum, desync.remote_checksum);
+                }
             }
 
-			printf("S2 FA:%f\n", sess2.FramesAhead());
-			auto ev2 = sess2.UpdateSession();
-			for (int i = 0; i < ev2.size(); i++)
-			{
-				switch (ev2[i]->type)
-				{
-				case Gekko::SaveEvent:
-					printf("S2 Save frame:%d\n", ev2[i]->data.save.frame);
-					save_state(&state2, ev2[i]);
-					break;
-				case Gekko::LoadEvent:
-					printf("S2 Load frame:%d\n", ev2[i]->data.load.frame);
-					load_state(&state2, ev2[i]);
-					break;
-				case Gekko::AdvanceEvent:
-					// on advance event, advance the gamestate using the given inputs
-					inputs[0].input.value = ev2[i]->data.adv.inputs[0];
-					inputs[1].input.value = ev2[i]->data.adv.inputs[1];
-					frame = ev2[i]->data.adv.frame;
-					printf("S2, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
-					// now we can use them to update state.
-					update_state(state2, inputs, num_players);
-					break;
-				default:
-					printf("S2 Unkown Event: %d\n", ev2[i]->type);
-					break;
-				}
-			}
+            for (auto ev : sess2.UpdateSession())
+            {
+                switch (ev->type)
+                {
+                case Gekko::SaveEvent:
+                    printf("S2 Save frame:%d\n", ev->data.save.frame);
+                    save_state(&state2, ev);
+                    break;
+                case Gekko::LoadEvent:
+                    printf("S2 Load frame:%d\n", ev->data.load.frame);
+                    load_state(&state2, ev);
+                    break;
+                case Gekko::AdvanceEvent:
+                    // on advance event, advance the gamestate using the given inputs
+                    inputs[0].input.value = ev->data.adv.inputs[0];
+                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    frame = ev->data.adv.frame;
+                    printf("S2, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
+                    // now we can use them to update state.
+                    update_state(state2, inputs, num_players);
+                    break;
+                default:
+                    printf("S2 Unkown Event: %d\n", ev->type);
+                    break;
+                }
+            }
 		}
 
 		// draw the state every iteration

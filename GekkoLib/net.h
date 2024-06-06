@@ -28,6 +28,7 @@ namespace Gekko {
         InputAck,
         SyncRequest,
         SyncResponse,
+        HealthCheck,
     };
 
     struct NetPacket {
@@ -51,6 +52,10 @@ namespace Gekko {
             struct SyncResponse {
                 u32 rng_data;
             } sync_response;
+            struct HealthCheck {
+                Frame frame;
+                u32 checksum;
+            } health_check;
         }x;
     };
 

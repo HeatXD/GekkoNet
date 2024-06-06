@@ -30,3 +30,9 @@ void Gekko::Player::SetStatus(PlayerStatus type)
 {
 	_status = type;
 }
+
+void Gekko::Player::SetChecksum(Frame frame, u32 checksum)
+{
+    health[frame % NUM_CHECKSUMS].frame = frame;
+    health[frame % NUM_CHECKSUMS].frame = checksum;
+}

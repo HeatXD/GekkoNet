@@ -62,16 +62,6 @@ Gekko::GameEvent::~GameEvent()
     }
 }
 
-Gekko::SessionEvent::~SessionEvent()
-{
-    if (type == DesyncDetected && data.desynced.remote_checksums) {
-        std::free(data.desynced.remote_checksums);
-        std::free(data.desynced.remote_handles);
-        data.desynced.remote_checksums = nullptr;
-        data.desynced.remote_handles = nullptr;
-    }
-}
-
 Gekko::SessionEventBuffer::SessionEventBuffer()
 {
     _index = 0;
@@ -97,15 +87,6 @@ void Gekko::SessionEventBuffer::Reset()
     for (auto& ev : _buffer) {
         if (ev->type == EmptySessionEvent) {
             break;
-        }
-
-        if (ev->type == DesyncDetected) {
-            // clean the buffers since we cant really reuse them
-            // they might have differing lengths
-            std::free(ev->data.desynced.remote_checksums);
-            std::free(ev->data.desynced.remote_handles);
-            ev->data.desynced.remote_checksums = nullptr;
-            ev->data.desynced.remote_handles = nullptr;
         }
 
         ev->type = EmptySessionEvent;
@@ -172,5 +153,16 @@ void Gekko::SessionEventSystem::AddSpectatorUnpausedEvent()
 {
     auto ev = _event_buffer.GetEvent();
     ev->type = SpectatorUnpaused;
+    AddEvent(ev);
+}
+
+void Gekko::SessionEventSystem::AddDesyncDetectedEvent(Frame frame, Handle remote, u32 check_local, u32 check_remote)
+{
+    auto ev = _event_buffer.GetEvent();
+    ev->type = DesyncDetected;
+    ev->data.desynced.frame = frame;
+    ev->data.desynced.remote_handle = remote;
+    ev->data.desynced.local_checksum = check_local;
+    ev->data.desynced.remote_checksum = check_remote;
     AddEvent(ev);
 }
