@@ -15,54 +15,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="gekko.h">
+    <ClInclude Include="include\backend.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="gekko_types.h">
+    <ClInclude Include="include\event.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="event.h">
+    <ClInclude Include="include\gekko.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sync.h">
+    <ClInclude Include="include\gekko_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="input.h">
+    <ClInclude Include="include\input.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="backend.h">
+    <ClInclude Include="include\net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="storage.h">
+    <ClInclude Include="include\storage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="net.h">
+    <ClInclude Include="include\sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="gekko.cpp">
+    <ClCompile Include="src\backend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="player.cpp">
+    <ClCompile Include="src\event.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sync.cpp">
+    <ClCompile Include="src\gekko.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="input.cpp">
+    <ClCompile Include="src\input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="backend.cpp">
+    <ClCompile Include="src\net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="storage.cpp">
+    <ClCompile Include="src\player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="net.cpp">
+    <ClCompile Include="src\storage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="event.cpp">
+    <ClCompile Include="src\sync.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
