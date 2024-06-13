@@ -26,7 +26,7 @@ namespace Gekko {
 
     struct ChecksumEntry {
         Frame frame = -1;
-        u32 checksum;
+        u32 checksum {};
     };
 
 	class Player
@@ -47,7 +47,7 @@ namespace Gekko {
 
 		u8 sync_num;
 
-		u32 session_magic;
+		u16 session_magic;
 
 		NetStats stats;
 
@@ -103,11 +103,9 @@ namespace Gekko {
 
 		void SendPendingOutput(NetAdapter* host);
 
-		void HandleData(std::vector<NetData*>& data, bool session_started);
+		void HandleData(std::vector<std::unique_ptr<NetResult>>& data);
 
-		u32 GetMagic();
-
-		std::queue<NetInputData*>& LastReceivedInputs();
+        std::queue<std::unique_ptr<NetInputData>>& LastReceivedInputs();
 
 		void SendInputAck(Handle player, Frame frame);
 
@@ -133,7 +131,7 @@ namespace Gekko {
 	private:
 		void SendSyncRequest(NetAddress* addr);
 
-		void SendSyncResponse(NetAddress* addr, u32 magic);
+		void SendSyncResponse(NetAddress* addr, u16 magic);
 
 		void AddPendingInput(bool spectator = false);
 
@@ -151,6 +149,18 @@ namespace Gekko {
 
         void SendDataTo(NetData* pkt, NetAdapter* host);
 
+        void ParsePacket(NetAddress& addr, NetPacket& pkt);
+
+        void OnSyncRequest(NetAddress& addr, NetPacket& pkt);
+
+        void OnSyncResponse(NetAddress& addr, NetPacket& pkt);
+
+        void OnInputs(NetAddress& addr, NetPacket& pkt);
+
+        void OnInputAck(NetAddress& addr, NetPacket& pkt);
+
+        void OnHealthCheck(NetAddress& addr, NetPacket& pkt);
+
 	private:
 		static const u32 MAX_PLAYER_SEND_SIZE = 32;
 		static const u32 MAX_SPECTATOR_SEND_SIZE = 48;
@@ -158,7 +168,7 @@ namespace Gekko {
 
 		u32 _input_size;
 
-		u32 _session_magic;
+		u16 _session_magic;
 
 		Frame _last_added_input;
 
@@ -168,8 +178,10 @@ namespace Gekko {
 
 		std::list<u8*> _spectator_input_send_list;
 
-		std::queue<NetData*> _pending_output;
+		std::queue<std::unique_ptr<NetData>> _pending_output;
 
-		std::queue<NetInputData*> _received_inputs;
+		std::queue<std::unique_ptr<NetInputData>> _received_inputs;
+
+        std::vector<u8> _bin_buffer;
 	};
 }

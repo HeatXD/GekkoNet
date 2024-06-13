@@ -6,6 +6,8 @@
 #include <vector>
 #include <chrono>
 
+#include <zpp/serializer.h>
+
 namespace Gekko {
     struct NetAddress {
         NetAddress();
@@ -22,7 +24,7 @@ namespace Gekko {
         u32 _size;
     };
 
-    enum PacketType {
+    enum PacketType : u8 {
         Inputs = 1,
         SpectatorInputs,
         InputAck,
@@ -31,35 +33,64 @@ namespace Gekko {
         HealthCheck,
     };
 
+    struct MsgHeader {
+        PacketType type;
+        u16 magic;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.type, s.magic);
+        }
+    };
+
+    struct MsgBody : public zpp::serializer::polymorphic {
+    };
+
+    struct InputMsg : MsgBody {
+        Frame start_frame;
+        u8 input_count;
+        u16 total_size;
+
+        std::vector<u8> inputs;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.start_frame, s.input_count, s.total_size, s.inputs);
+        }
+    };
+
+    struct InputAckMsg : MsgBody {
+        Frame ack_frame;
+        i8 frame_advantage;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.ack_frame, s.frame_advantage);
+        }
+    };
+
+    struct SyncMsg : MsgBody {
+        u16 rng_data;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.rng_data);
+        }
+    };
+
+    struct HealthCheckMsg : MsgBody {
+        Frame frame;
+        u32 checksum;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.frame, s.checksum);
+        }
+    };
 
     struct NetPacket {
-        struct Header {
-            PacketType type;
-            u32 magic;
-        } header;
-
-        union Data {
-            struct Input {
-                u32 total_size;
-                Frame start_frame;
-                u32 input_count;
-                u8* inputs;
-            } input;
-            struct InputAck {
-                Frame ack_frame;
-                i8 frame_advantage;
-            } input_ack;
-            struct SyncRequest {
-                u32 rng_data;
-            } sync_request;
-            struct SyncResponse {
-                u32 rng_data;
-            } sync_response;
-            struct HealthCheck {
-                Frame frame;
-                u32 checksum;
-            } health_check;
-        } data;
+        MsgHeader header;
+        std::unique_ptr<MsgBody> body;
     };
 
     struct NetData {
@@ -75,13 +106,19 @@ namespace Gekko {
 
     struct NetInputData {
         std::vector<Handle> handles;
-        NetPacket::Data::Input input;
+        InputMsg input;
+    };
+
+    struct NetResult {
+        NetAddress addr;
+        u32 data_len {};
+        std::unique_ptr<char[]> data;
     };
 
     class NetAdapter {
     public:
-        virtual std::vector<NetData*> ReceiveData() = 0;
-        virtual void SendData(NetAddress& addr, void* data, u32 length) = 0;
+        virtual std::vector<std::unique_ptr<NetResult>> ReceiveData() = 0;
+        virtual void SendData(NetAddress& addr, const char* data, int length) = 0;
     };
 
 #define GEKKO_USE_DEFAULT_ASIO_SOCKET

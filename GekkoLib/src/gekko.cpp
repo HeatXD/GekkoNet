@@ -404,7 +404,7 @@ void Gekko::Session::Poll()
 	auto data = _host->ReceiveData();
 
     // process the data we received
-    _msg.HandleData(data, _started);
+    _msg.HandleData(data);
 
 	// handle received inputs
 	HandleReceivedInputs();
@@ -450,52 +450,33 @@ bool Gekko::Session::AllPlayersValid()
 
 void Gekko::Session::HandleReceivedInputs()
 {
-	NetInputData* current = nullptr;
+	std::unique_ptr<NetInputData> current = nullptr;
 	auto& received_inputs = _msg.LastReceivedInputs();
 	while (!received_inputs.empty()) {
-		current = received_inputs.front();
+        // fetch input to be processed
+		current = std::move(received_inputs.front());
+
+        // remove input from the queue
 		received_inputs.pop();
 
 		// handle it as a spectator input if there are no local players.
-		if (IsSpectating()) {
-			const u32 count = current->input.input_count;
-			const u32 inp_len_per_frame = current->input.total_size / count;
-			const Frame start = current->input.start_frame;
-			const Handle handle = _msg.remotes[0]->handle;
+        const bool spectating = IsSpectating();
+		const u32 count = current->input.input_count;
+		const u32 handles = spectating ? _config.num_players : (u32)current->handles.size();
+		const u32 player_offset = current->input.total_size / handles;
+		const Frame start = current->input.start_frame;
 
-			for (u32 i = 1; i <= count; i++) {
-				for (u32 j = 0; j < _config.num_players; j++) {
-					Frame frame = start + i;
-					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _config.input_size)];
-					_sync.AddRemoteInput(j + 1, input, frame);
-					if (i == count) {
-						_msg.SendInputAck(handle, frame);
-					}
-				}
-			}
-		}
-		else {
-			const u32 count = current->input.input_count;
-			const u32 handles = (u32)current->handles.size();
-			const u32 inp_len_per_frame = current->input.total_size / count;
-			const Frame start = current->input.start_frame;
-	
-			for (u32 i = 1; i <= count; i++) {
-				for (u32 j = 0; j < handles; j++) {
-					Frame frame = start + i;
-					Handle handle = current->handles[j];
-					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _config.input_size)];
-					_sync.AddRemoteInput(handle, input, frame);
-					if (i == count) {
-						_msg.SendInputAck(handle, frame);
-					}
-				}
-			}
-		}
-
-		// free the inputs since we used malloc.		
-		std::free(current->input.inputs);
-		delete current;
+        for (u32 i = 0; i < handles; i++) {
+            Handle handle = spectating ? i + 1 : current->handles[i];
+            for (u32 j = 1; j <= count; j++) {
+                Frame frame = start + j;
+                u8* input = &current->input.inputs[(player_offset * i) + ((j - 1) * _config.input_size)];
+                _sync.AddRemoteInput(handle, input, frame);
+                if (j == count) {
+                    _msg.SendInputAck(spectating ? current->handles[0] : handle, frame);
+                }
+            }
+        }
 	}
 }
 
