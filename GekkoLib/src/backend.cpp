@@ -55,11 +55,6 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
 	const Frame min_ack = GetMinLastAckedFrame(false);
 	const u32 diff = _last_added_input - min_ack;
 
-	if (diff > MAX_PLAYER_SEND_SIZE && min_ack != INT_MAX) {
-		// disconnect the offending players
-		HandleTooFarBehindActors(false);
-	}
-
 	if (_player_input_send_list.size() > std::min(MAX_PLAYER_SEND_SIZE, diff)) {
 		delete _player_input_send_list.front();
 		_player_input_send_list.pop_front();
@@ -77,11 +72,6 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 	const Frame min_ack = GetMinLastAckedFrame(true);
 	const u32 diff = _last_added_spectator_input - min_ack;
 
-	if (diff > MAX_SPECTATOR_SEND_SIZE && min_ack != INT_MAX) {
-		// disconnect the offending spectators
-		HandleTooFarBehindActors(true);
-	}
-
 	if (_spectator_input_send_list.size() > std::min(MAX_SPECTATOR_SEND_SIZE, diff)) {
 		delete _spectator_input_send_list.front();
 		_spectator_input_send_list.pop_front();
@@ -93,11 +83,15 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	// add input packet
 	if (!_player_input_send_list.empty() && !remotes.empty()) {
 		AddPendingInput(false);
+        // check for disconnects
+        HandleTooFarBehindActors(false);
 	}
 
 	// add spectator input packet
 	if (!_spectator_input_send_list.empty() && !spectators.empty()) {
 		AddPendingInput(true);
+        // check for disconnects
+        HandleTooFarBehindActors(true);
 	}
 
 	// handle messages
@@ -142,32 +136,6 @@ void Gekko::MessageSystem::HandleData(std::vector<std::unique_ptr<NetResult>>& d
             printf("failed to deserialize packet\n");
         }
     }
-
-	//	if (type == Inputs || type == SpectatorInputs) {
-	//		// printf("recv inputs from netaddr:%d\n", *data[i]->addr.GetAddress());
-
-	//		auto net_input = new NetInputData;
-
-	//		net_input->handles = GetHandlesForAddress(&data[i]->addr);
-
-	//		net_input->input.total_size = data[i]->pkt.data.input.total_size;
-	//		net_input->input.input_count = data[i]->pkt.data.input.input_count;
-	//		net_input->input.start_frame = data[i]->pkt.data.input.start_frame;
-
-	//		net_input->input.inputs = (u8*)std::malloc(net_input->input.total_size);
-
- //           if (net_input->input.inputs) {
- //               std::memcpy(net_input->input.inputs, data[i]->pkt.data.input.inputs, net_input->input.total_size);
- //           }
-
-	//		// now when done we can cleanup the inputs since we used malloc
-	//		std::free(data[i]->pkt.data.input.inputs);
-
-	//		_received_inputs.push(net_input);
-
-	//		delete data[i];
-	//		continue;
-	//	}
 }
 
 void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
@@ -295,6 +263,11 @@ bool Gekko::MessageSystem::CheckStatusActors()
                         SendSyncResponse(&player->address, player->session_magic);
                         player->stats.last_sent_sync_message = now;
                     }
+                    else {
+                        player->SetStatus(Connected);
+                        session_events.AddPlayerConnectedEvent(player->handle);
+                        result++;
+                    }
                 }
                 result--;
             }
@@ -321,13 +294,17 @@ void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
 
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
+    const u64 now = TimeSinceEpoch();
+
 	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
 
 	for (auto& player : spectator ? spectators : remotes) {
 		if (player->GetStatus() == Connected) {
 			const u32 diff = last_added - player->stats.last_acked_frame;
-			if (diff > max_diff) {
+            const u64 msg_diff = now - player->stats.last_received_message;
+
+			if (diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
                 session_events.AddPlayerDisconnectedEvent(player->handle);
                 player->SetStatus(Disconnected);
                 player->sync_num = 0;
@@ -361,7 +338,8 @@ void Gekko::MessageSystem::SendDataToAll(NetData* pkt, NetAdapter* host, bool sp
 
     for (auto& actor : actors) {
         _bin_buffer.clear();
-        if (actor->address.GetSize() != 0) {
+        if (actor->address.GetSize() != 0 && actor->GetStatus() != Disconnected) {
+
             pkt->addr.Copy(&actor->address);
             pkt->pkt.header.magic = actor->session_magic;
 
@@ -400,14 +378,30 @@ void Gekko::MessageSystem::SendDataTo(NetData* pkt, NetAdapter* host)
         return;
     }
 
-    printf("Send Size: %d\n", (int)_bin_buffer.size());
-    Compression::PrintArray(_bin_buffer.data(), (u32)_bin_buffer.size());
-
+    // printf("Send Size: %d\n", (int)_bin_buffer.size());
+    // Compression::PrintArray(_bin_buffer.data(), (u32)_bin_buffer.size());
     host->SendData(pkt->addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
 }
 
 void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
 {
+    u64 now = TimeSinceEpoch();
+    // update receive timers.
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& player : *current) {
+            if (player->address.Equals(addr)) {
+                player->stats.last_received_message = now;
+            }
+        }
+    }
+
+    // handle packet.
     if (pkt.header.magic != _session_magic) {
         if (pkt.header.type == SyncRequest) {
             OnSyncRequest(addr, pkt);
@@ -501,7 +495,7 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
                     continue;
                 }
 
-                if (player->sync_num == NUM_TO_SYNC) {
+                if (player->sync_num >= NUM_TO_SYNC) {
                     player->SetStatus(Connected);
                     session_events.AddPlayerConnectedEvent(player->handle);
                     continue;
@@ -571,14 +565,13 @@ void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
     for (auto& player : remotes) {
         if (player->address.Equals(addr)) {
             player->SetChecksum(frame, checksum);
-            for (auto& entry : local_health) {
-                if (entry.frame == frame && entry.checksum != checksum) {
-                    session_events.AddDesyncDetectedEvent(
-                        frame,
-                        player->handle,
-                        entry.checksum,
-                        checksum
-                    );
+
+            for (auto iter = player->health.begin();
+                iter != player->health.end(); ) {
+                if (iter->first < (_last_added_input - 100)) {
+                    iter = player->health.erase(iter);
+                } else {
+                    ++iter;
                 }
             }
             break;
@@ -588,9 +581,33 @@ void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
 {
+    u64 now = TimeSinceEpoch();
+
 	const auto& send_list = spectator ? _spectator_input_send_list : _player_input_send_list;
 
+    auto& cache = spectator ? _last_sent_spectator_input : _last_sent_input;
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
+
+    // just copy and resend the same data instead of doing calculations
+    if (cache.frame != GameInput::NULL_FRAME && last_added == cache.frame) {
+        // only resend if enough time has passed. we dont want to spam.
+        if (cache.last_send_time + InputSendCache::INPUT_RESEND_DELAY > now) {
+            return;
+        }
+
+        _pending_output.push(std::make_unique<NetData>());
+        auto& message = _pending_output.back();
+
+        message->pkt.header.type = spectator ? SpectatorInputs : Inputs;
+
+        auto body = std::make_unique<InputMsg>();
+        body->Copy(&cache.data);
+
+        message->pkt.body = std::move(body);
+
+        cache.last_send_time = now;
+        return;
+    }
 
 	const u32 num_players = spectator ? (u32)(locals.size() + remotes.size()) : (u32)locals.size();
 	const u32 total_input_size = _input_size * num_players;
@@ -634,7 +651,12 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 	body->start_frame = last_added - (u32)send_list.size();
 
     body->inputs = std::move(comp);
-	
+
+    // save to the cache for later use.
+    cache.frame = last_added;
+    cache.data.Copy(body.get());
+    cache.last_send_time = now;
+
     message->pkt.body = std::move(body);
 }
 

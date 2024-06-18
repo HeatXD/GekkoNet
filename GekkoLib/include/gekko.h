@@ -16,7 +16,6 @@ namespace Gekko {
 		u8 max_spectators = 0;
 		u8 input_prediction_window = 0;
         u8 spectator_delay = 0;
-        u16 local_port = 0;
 		u32 input_size = 0;
 		u32 state_size = 0;
         bool limited_saving = false;
@@ -79,10 +78,14 @@ namespace Gekko {
 
         void SendHealthCheck();
 
+        void SessionIntegrityCheck();
+
 	private:
 		bool _started;
 
         bool _delay_spectator;
+
+        Frame _sync_frame;
 
 		Frame _last_saved_frame;
 

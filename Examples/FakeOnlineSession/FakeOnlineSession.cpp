@@ -1,8 +1,6 @@
 #include <iostream>
-#include <windows.h>
 #include "SDL2/SDL.h"
 #include "gekko.h"
-#include "compression.h"
 #include <chrono>
 
 SDL_Window* window1 = nullptr;
@@ -153,7 +151,10 @@ void render_state(GState& gs, SDL_Renderer* renderer, int num_players) {
 void get_key_inputs(GInput inputs[4]) {
 	// reset inputs
 	inputs[0].input.value = 0;
-	inputs[0].input.value = 0;
+	inputs[1].input.value = 0;
+    inputs[2].input.value = 0;
+    inputs[3].input.value = 0;
+
 	// fetch inputs
 	auto keys = SDL_GetKeyboardState(NULL);
 	// P1
@@ -273,7 +274,7 @@ int main(int argc, char* args[])
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
+	using frame = std::chrono::duration<Gekko::u32, std::ratio<1, 60>>;
 	using clock = std::chrono::steady_clock;
 
 	time_point timer(clock::now());

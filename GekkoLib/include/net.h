@@ -8,6 +8,12 @@
 
 #include <zpp/serializer.h>
 
+#ifdef _WIN32
+#define _WIN32_WINNT 0x0A00
+#endif // _WIN32
+
+#include <asio/asio.hpp>
+
 namespace Gekko {
     struct NetAddress {
         NetAddress();
@@ -52,6 +58,15 @@ namespace Gekko {
         u16 total_size;
 
         std::vector<u8> inputs;
+
+        void Copy(const InputMsg* other) {
+            start_frame = other->start_frame;
+            input_count = other->input_count;
+            total_size = other->total_size;
+
+            inputs.clear();
+            inputs.insert(inputs.begin(), other->inputs.begin(), other->inputs.end());
+        }
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
@@ -99,9 +114,12 @@ namespace Gekko {
     };
 
     struct NetStats {
+        static const u64 DISCONNECT_TIMEOUT = std::chrono::microseconds(2000).count();
         static const u64 SYNC_MSG_DELAY = std::chrono::microseconds(200).count();
+
         Frame last_acked_frame;
         u64 last_sent_sync_message;
+        u64 last_received_message = -1;
     };
 
     struct NetInputData {
@@ -111,7 +129,7 @@ namespace Gekko {
 
     struct NetResult {
         NetAddress addr;
-        u32 data_len {};
+        u32 data_len{};
         std::unique_ptr<char[]> data;
     };
 
@@ -121,10 +139,40 @@ namespace Gekko {
         virtual void SendData(NetAddress& addr, const char* data, int length) = 0;
     };
 
-#define GEKKO_USE_DEFAULT_ASIO_SOCKET
-#ifdef GEKKO_USE_DEFAULT_ASIO_SOCKET
     class NonBlockingSocket : public NetAdapter {
-    };
-#endif // USE_DEFAULT_ASIO_SOCKET
+    public:
+        NonBlockingSocket(u16 port);
 
+        virtual std::vector<std::unique_ptr<NetResult>> ReceiveData();
+
+        virtual void SendData(NetAddress& addr, const char* data, int length);
+    private:
+        // Utility function to convert ASIO endpoint to string
+        std::string ETOS(const asio::ip::udp::endpoint& endpoint) {
+            return endpoint.address().to_string() + ":" + std::to_string(endpoint.port());
+        }
+
+        // Utility function to convert string to ASIO endpoint
+        asio::ip::udp::endpoint STOE(const std::string& str) {
+            std::string::size_type colon_pos = str.find(':');
+            if (colon_pos == std::string::npos) {
+                throw std::invalid_argument("Invalid endpoint string");
+            }
+
+            std::string address = str.substr(0, colon_pos);
+            u16 port = (u16)(std::stoi(str.substr(colon_pos + 1)));
+
+            return asio::ip::udp::endpoint(asio::ip::address::from_string(address), port);
+        }
+    private:
+        char _buffer[1024];
+
+        asio::error_code _ec;
+
+        asio::io_context _io_ctx;
+
+        asio::ip::udp::endpoint _remote;
+
+        std::unique_ptr<asio::ip::udp::socket> _socket;
+    };
 }

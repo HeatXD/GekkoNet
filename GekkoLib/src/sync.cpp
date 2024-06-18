@@ -152,3 +152,14 @@ Gekko::Frame Gekko::SyncSystem::GetMinReceivedFrame()
 	}
 	return min == INT_MAX ? GameInput::NULL_FRAME : min;
 }
+
+Gekko::Frame Gekko::SyncSystem::GetLastReceivedFrom(Handle player)
+{
+    u32 plyr = player - 1;
+
+    if (plyr >= 0 && plyr < _num_players) {
+        return _input_buffers[plyr].GetLastReceivedFrame();
+    }
+
+    return GameInput::NULL_FRAME;
+}

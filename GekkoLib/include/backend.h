@@ -9,6 +9,7 @@
 #include <vector>
 #include <queue>
 #include <chrono>
+#include <map>
 
 namespace Gekko {
 
@@ -18,15 +19,10 @@ namespace Gekko {
 		Spectator
 	};
 
-	enum PlayerStatus {
-		Initiating,
-		Connected,
-		Disconnected,
-	};
-
-    struct ChecksumEntry {
-        Frame frame = -1;
-        u32 checksum {};
+    enum PlayerStatus {
+        Initiating,
+        Connected,
+        Disconnected,
     };
 
 	class Player
@@ -55,7 +51,7 @@ namespace Gekko {
 
         static const i32 NUM_CHECKSUMS = 16;
 
-        ChecksumEntry health[NUM_CHECKSUMS];
+        std::map<Frame, u32> health;
 
 	private:
 		PlayerType _type;
@@ -126,7 +122,7 @@ namespace Gekko {
 
         SessionEventSystem session_events;
 
-        ChecksumEntry local_health[Player::NUM_CHECKSUMS];
+        std::map<Frame, u32> local_health;
 
 	private:
 		void SendSyncRequest(NetAddress* addr);
@@ -183,5 +179,17 @@ namespace Gekko {
 		std::queue<std::unique_ptr<NetInputData>> _received_inputs;
 
         std::vector<u8> _bin_buffer;
+
+        struct InputSendCache {
+            static const u64 INPUT_RESEND_DELAY = std::chrono::microseconds(200).count();
+
+            u64 last_send_time = 0;
+            Frame frame = -1;
+            InputMsg data;
+        };
+
+        InputSendCache _last_sent_input;
+
+        InputSendCache _last_sent_spectator_input;
 	};
 }

@@ -1,7 +1,6 @@
 #include <iostream>
-#include <windows.h>
 #include "SDL2/SDL.h"
-#include "../../GekkoLib/gekko.h"
+#include "gekko.h"
 #include <chrono>
 
 SDL_Window* window1 = nullptr;
@@ -144,61 +143,43 @@ void get_key_inputs(GInput inputs[2]) {
 }
 
 class FakeNetAdapter : public Gekko::NetAdapter {
-	int recv_idx = 0;
-	std::vector<std::unique_ptr<Gekko::NetData>> inbox_session1;
-	std::vector<std::unique_ptr<Gekko::NetData>> inbox_session2;
+    int recv_idx = 0;
+    std::vector<std::unique_ptr<Gekko::NetResult>> inbox_session1;
+    std::vector<std::unique_ptr<Gekko::NetResult>> inbox_session2;
 
-	virtual std::vector<Gekko::NetData*> ReceiveData() {
-		auto& curr_inbox = recv_idx % 2 == 1 ? inbox_session2 : inbox_session1;
-		auto result = std::vector<Gekko::NetData*>();
+    virtual std::vector<std::unique_ptr<Gekko::NetResult>> ReceiveData() {
+        auto& curr_inbox = recv_idx % 2 == 1 ? inbox_session2 : inbox_session1;
+        auto result = std::vector<std::unique_ptr<Gekko::NetResult>>();
 
-		for (auto& ptr : curr_inbox) {
-			result.push_back(ptr.release());
-		}
+        for (auto& ptr : curr_inbox) {
+            result.push_back(std::move(ptr));
+        }
 
-		curr_inbox.clear();
+        curr_inbox.clear();
 
-		recv_idx++;
-		return result;
-	}
+        recv_idx++;
+        return result;
+    }
 
-	virtual void SendData(Gekko::NetAddress& addr, Gekko::NetPacket& pkt) {
-		auto data = std::unique_ptr<Gekko::NetData>(new Gekko::NetData);
-		data->pkt = pkt;
+    virtual void SendData(Gekko::NetAddress& addr, const char* data, int length) {
+        auto result = std::make_unique<Gekko::NetResult>();
 
-		Gekko::u8 addr_from = (Gekko::u8)*addr.GetAddress() == 1 ? 2 : 1;
+        Gekko::u8 addr_from = (Gekko::u8)*addr.GetAddress() == 1 ? 2 : 1;
+        auto tmp = Gekko::NetAddress(&addr_from, (Gekko::u32)sizeof(char));
+        result->addr.Copy(&tmp);
 
-		auto tmp = Gekko::NetAddress(&addr_from, (Gekko::u32)sizeof(char));
-		data->addr.Copy(&tmp);
+        result->data = std::unique_ptr<char[]>(new char[length]);
+        std::memcpy(result->data.get(), data, length);
 
-		// be sure to copy input since it gets cleaned up later if not send.
-		// normally you wouldnt need to do this. just sent it over the network instead.
+        result->data_len = length;
 
-		if (pkt.type == Gekko::SpectatorInputs || pkt.type == Gekko::Inputs) {
-			data->pkt.type = pkt.type;
-			data->pkt.magic = pkt.magic;
-
-			data->pkt.x.input.input_count = pkt.x.input.input_count;
-			data->pkt.x.input.start_frame = pkt.x.input.start_frame;
-			data->pkt.x.input.total_size = pkt.x.input.total_size;
-			data->pkt.x.input.inputs = (Gekko::u8*)std::malloc(pkt.x.input.total_size);
-
-			if (data->pkt.x.input.inputs)
-				std::memcpy(data->pkt.x.input.inputs, pkt.x.input.inputs, pkt.x.input.total_size);
-		}
-		else {
-			data->pkt = pkt;
-		}
-
-		if (addr_from == 1) {
-			inbox_session2.push_back(std::move(data));
-		}
-		else {
-			inbox_session1.push_back(std::move(data));
-		}
-
-		// printf("netaddr:%d sent pkt type:%d to netaddr:%d\n", addr_from, pkt.type, *addr.GetAddress());
-	}
+        if (addr_from == 1) {
+            inbox_session2.push_back(std::move(result));
+        }
+        else {
+            inbox_session1.push_back(std::move(result));
+        }
+    }
 };
 
 int main(int argc, char* args[])
@@ -220,12 +201,12 @@ int main(int argc, char* args[])
 	auto conf = Gekko::Config();
 
 	conf.num_players = num_players;
-	conf.input_size = sizeof(char);
+	conf.input_size = sizeof(int);
 	conf.max_spectators = 1;
 	conf.input_prediction_window = 8;
 	conf.state_size = sizeof(GState);
 	conf.limited_saving = true;
-    conf.spectator_delay = 10;
+    conf.spectator_delay = 90;
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -247,7 +228,7 @@ int main(int argc, char* args[])
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
+	using frame = std::chrono::duration<Gekko::u32, std::ratio<1, 60>>;
 	using clock = std::chrono::steady_clock;
 
 	time_point timer(clock::now());
@@ -288,14 +269,14 @@ int main(int argc, char* args[])
                 case Gekko::AdvanceEvent:
                     // on advance event, advance the gamestate using the given inputs
                     inputs[0].input.value = ev->data.adv.inputs[0];
-                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    inputs[1].input.value = ev->data.adv.inputs[4];
                     frame = ev->data.adv.frame;
                     printf("S1, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
                     // now we can use them to update state.
                     update_state(state1, inputs, num_players);
                     break;
                 default:
-                    printf("S1 Unkown Event: %d\n", ev->type);
+                    printf("S1 Unknown Event: %d\n", ev->type);
                     break;
                 }
             }
@@ -319,14 +300,14 @@ int main(int argc, char* args[])
                 case Gekko::AdvanceEvent:
                     // on advance event, advance the gamestate using the given inputs
                     inputs[0].input.value = ev->data.adv.inputs[0];
-                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    inputs[1].input.value = ev->data.adv.inputs[4];
                     frame = ev->data.adv.frame;
                     printf("S2, F:%d, P1:%d P2:%d\n", frame, inputs[0].input.value, inputs[1].input.value);
                     // now we can use them to update state.
                     update_state(state2, inputs, num_players);
                     break;
                 default:
-                    printf("S2 Unkown Event: %d\n", ev->type);
+                    printf("S2 Unknown Event: %d\n", ev->type);
                     break;
                 }
             }
