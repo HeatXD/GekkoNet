@@ -39,6 +39,9 @@
     <ClInclude Include="include\sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\compression.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\backend.cpp">

@@ -134,6 +134,12 @@ std::vector<Gekko::GameEvent*> Gekko::Session::UpdateSession()
             return _current_game_events;
         }
 
+        // send a healthcheck if applicable
+        SendHealthCheck();
+
+        // check if the session is still doing alright.
+        SessionIntegrityCheck();
+
 		// then advance the session
 		if (AddAdvanceEvent(_current_game_events)) {
 			if (!_config.limited_saving ||
@@ -248,30 +254,73 @@ void Gekko::Session::SendHealthCheck()
         return;
     }
 
-    const Frame min = _sync.GetMinReceivedFrame();
-    const Frame sync = min - 1;
+    const Frame current = _sync.GetCurrentFrame();
+    const Frame confirmed = (current - _config.input_prediction_window) - 1;
 
-    if (_last_saved_frame < sync ||
-        _last_sent_healthcheck >= sync) {
+    if (confirmed <= GameInput::NULL_FRAME) {
         return;
     }
 
-    auto sav = _storage.GetState(sync);
+    if (confirmed <= _last_sent_healthcheck) {
+        return;
+    }
 
-    assert(sync == sav->frame);
+    auto sav = _storage.GetState(confirmed);
 
-    _last_sent_healthcheck = sync;
-    _msg.SendHealthCheck(sync, sav->checksum);
+    assert(sav->frame == confirmed);
 
-    _msg.local_health[sync % Player::NUM_CHECKSUMS].frame = sync;
-    _msg.local_health[sync % Player::NUM_CHECKSUMS].checksum = sav->checksum;
+    _last_sent_healthcheck = confirmed;
+
+    _msg.local_health[confirmed] = sav->checksum;
+
+    _msg.SendHealthCheck(confirmed, sav->checksum);
+
+    for (auto iter = _msg.local_health.begin();
+        iter != _msg.local_health.end(); ) {
+        if (iter->first < (confirmed - 100)) {
+            iter = _msg.local_health.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+}
+
+void Gekko::Session::SessionIntegrityCheck()
+{
+    if (!_config.desync_detection || IsSpectating()) {
+        return;
+    }
+
+    for (auto iter = _msg.local_health.begin();
+        iter != _msg.local_health.end(); ) {
+
+        for (auto& player : _msg.remotes) {
+            if (player->health.count(iter->first)) {
+                if (player->health[iter->first] != iter->second) {
+                    _msg.session_events.AddDesyncDetectedEvent(
+                        iter->first,
+                        player->handle,
+                        iter->second,
+                        player->health[iter->first]
+                    );
+                }
+                player->health.erase(iter->first);
+            }
+        }
+
+        ++iter;
+    }
 }
 
 void Gekko::Session::AddDisconnectedPlayerInputs()
 {
 	for (auto& player : _msg.remotes) {
 		if (player->GetStatus() == Disconnected) {
-			_sync.AddRemoteInput(player->handle, _disconnected_input.get(), _sync.GetCurrentFrame());
+            const Frame last_recv = _sync.GetLastReceivedFrom(player->handle) + 1;
+            const Frame current = _sync.GetCurrentFrame();
+            for (Frame i = last_recv; i < current; i++) {
+                _sync.AddRemoteInput(player->handle, _disconnected_input.get(), i);
+            }
 		}
 	}
 }
@@ -367,7 +416,7 @@ void Gekko::Session::AddSaveEvent(std::vector<GameEvent*>& ev)
 	event->type = SaveEvent;
 
 	event->data.save.frame = frame_to_save;
-	event->data.save.state = state->state;
+	event->data.save.state = state->state.get();
 	event->data.save.checksum = &state->checksum;
 	event->data.save.state_len = &state->state_len;
 
@@ -386,8 +435,8 @@ void Gekko::Session::AddLoadEvent(std::vector<GameEvent*>& ev)
 	event->type = LoadEvent;
 
     event->data.load.frame = frame_to_load;
-	event->data.load.state = state->state;
-	event->data.load.state_len = &state->state_len;
+	event->data.load.state = state->state.get();
+	event->data.load.state_len = state->state_len;
 }
 
 void Gekko::Session::Poll()
@@ -404,7 +453,7 @@ void Gekko::Session::Poll()
 	auto data = _host->ReceiveData();
 
     // process the data we received
-    _msg.HandleData(data, _started);
+    _msg.HandleData(data);
 
 	// handle received inputs
 	HandleReceivedInputs();
@@ -417,9 +466,6 @@ void Gekko::Session::Poll()
 
 	// send inputs to spectators 
 	SendSpectatorInputs();
-
-    // send a healthcheck if applicable
-    SendHealthCheck();
     
 	// now send data
 	_msg.SendPendingOutput(_host);
@@ -450,52 +496,31 @@ bool Gekko::Session::AllPlayersValid()
 
 void Gekko::Session::HandleReceivedInputs()
 {
-	NetInputData* current = nullptr;
 	auto& received_inputs = _msg.LastReceivedInputs();
-	while (!received_inputs.empty()) {
-		current = received_inputs.front();
-		received_inputs.pop();
+	while(received_inputs.size() > 0) {
+        // fetch input to be processed
+		auto current = received_inputs.front().get();
 
 		// handle it as a spectator input if there are no local players.
-		if (IsSpectating()) {
-			const u32 count = current->input.input_count;
-			const u32 inp_len_per_frame = current->input.total_size / count;
-			const Frame start = current->input.start_frame;
-			const Handle handle = _msg.remotes[0]->handle;
+        const bool spectating = IsSpectating();
+		const u32 count = current->input.input_count;
+		const u32 handles = spectating ? _config.num_players : (u32)current->handles.size();
+		const u32 player_offset = current->input.total_size / handles;
+		const Frame start = current->input.start_frame;
 
-			for (u32 i = 1; i <= count; i++) {
-				for (u32 j = 0; j < _config.num_players; j++) {
-					Frame frame = start + i;
-					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _config.input_size)];
-					_sync.AddRemoteInput(j + 1, input, frame);
-					if (i == count) {
-						_msg.SendInputAck(handle, frame);
-					}
-				}
-			}
-		}
-		else {
-			const u32 count = current->input.input_count;
-			const u32 handles = (u32)current->handles.size();
-			const u32 inp_len_per_frame = current->input.total_size / count;
-			const Frame start = current->input.start_frame;
-	
-			for (u32 i = 1; i <= count; i++) {
-				for (u32 j = 0; j < handles; j++) {
-					Frame frame = start + i;
-					Handle handle = current->handles[j];
-					u8* input = &current->input.inputs[((i - 1) * inp_len_per_frame) + (j * _config.input_size)];
-					_sync.AddRemoteInput(handle, input, frame);
-					if (i == count) {
-						_msg.SendInputAck(handle, frame);
-					}
-				}
-			}
-		}
+        for (u32 i = 0; i < handles; i++) {
+            Handle handle = spectating ? i + 1 : current->handles[i];
+            for (u32 j = 1; j <= count; j++) {
+                Frame frame = start + j;
+                u8* input = &current->input.inputs[(player_offset * i) + ((j - 1) * _config.input_size)];
+                _sync.AddRemoteInput(handle, input, frame);
+                if (j == count) {
+                    _msg.SendInputAck(spectating ? current->handles[0] : handle, frame);
+                }
+            }
+        }
 
-		// free the inputs since we used malloc.		
-		std::free(current->input.inputs);
-		delete current;
+        received_inputs.pop();
 	}
 }
 

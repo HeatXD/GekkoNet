@@ -39,6 +39,8 @@ namespace Gekko {
 
 		Frame GetMinReceivedFrame();
 
+        Frame GetLastReceivedFrom(Handle player);
+
 	private:
 		u8 _num_players;
 
@@ -47,6 +49,5 @@ namespace Gekko {
 		Frame _current_frame;
 
 		std::unique_ptr<InputBuffer[]> _input_buffers;
-
 	};
 }

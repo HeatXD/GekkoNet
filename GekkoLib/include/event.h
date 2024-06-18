@@ -46,7 +46,7 @@ namespace Gekko {
             } save;
             struct Load {
                 Frame frame;
-                u32* state_len;
+                u32 state_len;
                 u8* state;
             } load;
         } data;

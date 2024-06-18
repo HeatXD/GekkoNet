@@ -1,7 +1,6 @@
 #include <iostream>
-#include <windows.h>
 #include "SDL2/SDL.h"
-#include "../../GekkoLib/gekko.h"
+#include "gekko.h"
 #include <chrono>
 
 SDL_Window* window = nullptr;
@@ -152,7 +151,7 @@ int main(int argc, char* args[])
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
+	using frame = std::chrono::duration<Gekko::u32, std::ratio<1, 60>>;
 	using clock = std::chrono::steady_clock;
 
 	time_point timer(clock::now());

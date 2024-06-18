@@ -9,6 +9,7 @@
 #include <vector>
 #include <queue>
 #include <chrono>
+#include <map>
 
 namespace Gekko {
 
@@ -18,15 +19,10 @@ namespace Gekko {
 		Spectator
 	};
 
-	enum PlayerStatus {
-		Initiating,
-		Connected,
-		Disconnected,
-	};
-
-    struct ChecksumEntry {
-        Frame frame = -1;
-        u32 checksum;
+    enum PlayerStatus {
+        Initiating,
+        Connected,
+        Disconnected,
     };
 
 	class Player
@@ -47,15 +43,13 @@ namespace Gekko {
 
 		u8 sync_num;
 
-		u32 session_magic;
+		u16 session_magic;
 
 		NetStats stats;
 
 		NetAddress address;
 
-        static const i32 NUM_CHECKSUMS = 16;
-
-        ChecksumEntry health[NUM_CHECKSUMS];
+        std::map<Frame, u32> health;
 
 	private:
 		PlayerType _type;
@@ -103,11 +97,9 @@ namespace Gekko {
 
 		void SendPendingOutput(NetAdapter* host);
 
-		void HandleData(std::vector<NetData*>& data, bool session_started);
+		void HandleData(std::vector<std::unique_ptr<NetResult>>& data);
 
-		u32 GetMagic();
-
-		std::queue<NetInputData*>& LastReceivedInputs();
+        std::queue<std::unique_ptr<NetInputData>>& LastReceivedInputs();
 
 		void SendInputAck(Handle player, Frame frame);
 
@@ -128,12 +120,12 @@ namespace Gekko {
 
         SessionEventSystem session_events;
 
-        ChecksumEntry local_health[Player::NUM_CHECKSUMS];
+        std::map<Frame, u32> local_health;
 
 	private:
 		void SendSyncRequest(NetAddress* addr);
 
-		void SendSyncResponse(NetAddress* addr, u32 magic);
+		void SendSyncResponse(NetAddress* addr, u16 magic);
 
 		void AddPendingInput(bool spectator = false);
 
@@ -151,6 +143,18 @@ namespace Gekko {
 
         void SendDataTo(NetData* pkt, NetAdapter* host);
 
+        void ParsePacket(NetAddress& addr, NetPacket& pkt);
+
+        void OnSyncRequest(NetAddress& addr, NetPacket& pkt);
+
+        void OnSyncResponse(NetAddress& addr, NetPacket& pkt);
+
+        void OnInputs(NetAddress& addr, NetPacket& pkt);
+
+        void OnInputAck(NetAddress& addr, NetPacket& pkt);
+
+        void OnHealthCheck(NetAddress& addr, NetPacket& pkt);
+
 	private:
 		static const u32 MAX_PLAYER_SEND_SIZE = 32;
 		static const u32 MAX_SPECTATOR_SEND_SIZE = 48;
@@ -158,7 +162,7 @@ namespace Gekko {
 
 		u32 _input_size;
 
-		u32 _session_magic;
+		u16 _session_magic;
 
 		Frame _last_added_input;
 
@@ -168,8 +172,22 @@ namespace Gekko {
 
 		std::list<u8*> _spectator_input_send_list;
 
-		std::queue<NetData*> _pending_output;
+		std::queue<std::unique_ptr<NetData>> _pending_output;
 
-		std::queue<NetInputData*> _received_inputs;
+		std::queue<std::unique_ptr<NetInputData>> _received_inputs;
+
+        std::vector<u8> _bin_buffer;
+
+        struct InputSendCache {
+            static const u64 INPUT_RESEND_DELAY = std::chrono::microseconds(200).count();
+
+            u64 last_send_time = 0;
+            Frame frame = -1;
+            InputMsg data;
+        };
+
+        InputSendCache _last_sent_input;
+
+        InputSendCache _last_sent_spectator_input;
 	};
 }

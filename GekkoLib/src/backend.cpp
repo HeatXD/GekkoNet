@@ -1,8 +1,21 @@
 #include "backend.h"
 #include "input.h"
 #include "event.h"
+#include "compression.h"
 
 #include <chrono>
+#include <cassert>
+
+// register poly types.
+namespace
+{
+    zpp::serializer::register_types<
+        zpp::serializer::make_type<Gekko::SyncMsg, zpp::serializer::make_id("Gekko::SyncMsg")>,
+        zpp::serializer::make_type<Gekko::InputMsg, zpp::serializer::make_id("Gekko::InputMsg")>,
+        zpp::serializer::make_type<Gekko::InputAckMsg, zpp::serializer::make_id("Gekko::InputAckMsg")>,
+        zpp::serializer::make_type<Gekko::HealthCheckMsg, zpp::serializer::make_id("Gekko::HealthCheckMsg")>
+    > _;
+}
 
 Gekko::MessageSystem::MessageSystem()
 {
@@ -11,7 +24,7 @@ Gekko::MessageSystem::MessageSystem()
 	_last_added_spectator_input = GameInput::NULL_FRAME;
 
 	// gen magic for session
-	std::srand(std::time(nullptr));
+	std::srand((unsigned int)std::time(nullptr));
 	_session_magic = std::rand();
 
 	history = AdvantageHistory();
@@ -42,11 +55,6 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
 	const Frame min_ack = GetMinLastAckedFrame(false);
 	const u32 diff = _last_added_input - min_ack;
 
-	if (diff > MAX_PLAYER_SEND_SIZE && min_ack != INT_MAX) {
-		// disconnect the offending players
-		HandleTooFarBehindActors(false);
-	}
-
 	if (_player_input_send_list.size() > std::min(MAX_PLAYER_SEND_SIZE, diff)) {
 		delete _player_input_send_list.front();
 		_player_input_send_list.pop_front();
@@ -64,11 +72,6 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 	const Frame min_ack = GetMinLastAckedFrame(true);
 	const u32 diff = _last_added_spectator_input - min_ack;
 
-	if (diff > MAX_SPECTATOR_SEND_SIZE && min_ack != INT_MAX) {
-		// disconnect the offending spectators
-		HandleTooFarBehindActors(true);
-	}
-
 	if (_spectator_input_send_list.size() > std::min(MAX_SPECTATOR_SEND_SIZE, diff)) {
 		delete _spectator_input_send_list.front();
 		_spectator_input_send_list.pop_front();
@@ -80,226 +83,59 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	// add input packet
 	if (!_player_input_send_list.empty() && !remotes.empty()) {
 		AddPendingInput(false);
+        // check for disconnects
+        HandleTooFarBehindActors(false);
 	}
 
 	// add spectator input packet
 	if (!_spectator_input_send_list.empty() && !spectators.empty()) {
 		AddPendingInput(true);
+        // check for disconnects
+        HandleTooFarBehindActors(true);
 	}
 
 	// handle messages
 	for (u32 i = 0; i < _pending_output.size(); i++) {
-		auto pkt = _pending_output.front();
+		auto& pkt = _pending_output.front();
 		if (pkt->pkt.header.type == Inputs || pkt->pkt.header.type == SpectatorInputs) {
             if (pkt->pkt.header.type == Inputs) {
-                SendDataToAll(pkt, host);
+                SendDataToAll(pkt.get(), host);
             } else {
-                SendDataToAll(pkt, host, true);
+                SendDataToAll(pkt.get(), host, true);
             }
-			// now when done we can cleanup the inputs since we used malloc
-			std::free(pkt->pkt.data.input.inputs);
 		}
         else if (pkt->pkt.header.type == HealthCheck) {
             // send to remotes
-            SendDataToAll(pkt, host);
+            SendDataToAll(pkt.get(), host);
             // send to spectators
-            SendDataToAll(pkt, host, true);
+            SendDataToAll(pkt.get(), host, true);
         }
 		else {
-			SendDataTo(pkt, host);
+			SendDataTo(pkt.get(), host);
 		}
-		// cleanup packet
-		delete pkt;
 		// housekeeping
 		_pending_output.pop();
 	}
 }
 
-void Gekko::MessageSystem::HandleData(std::vector<NetData*>& data, bool session_started)
+void Gekko::MessageSystem::HandleData(std::vector<std::unique_ptr<NetResult>>& data)
 {
-	u64 now = TimeSinceEpoch();
+    for (auto& res : data) {
+        _bin_buffer.clear();
 
-	for (u32 i = 0; i < data.size(); i++) {
-		// handle connection events
-		auto type = data[i]->pkt.header.type;
-		if (type == SyncRequest) {
-			i32 should_send = 0;
-			// handle and set the peer its session magic
-			// but when the session has started only allow spectators
-			if (!session_started) {
-				for (u32 j = 0; j < remotes.size(); j++) {
-					if (remotes[j]->address.Equals(data[i]->addr)) {
-						remotes[j]->session_magic = data[i]->pkt.data.sync_request.rng_data;
-						if (remotes[j]->sync_num == 0) {
-							remotes[j]->stats.last_sent_sync_message = now;
-							should_send++;
-						}
-					}
-				}
-			}
+        try {
+            _bin_buffer.insert(_bin_buffer.begin(), res->data.get(), res->data.get() + res->data_len);
 
-			for (u32 j = 0; j < spectators.size(); j++) {
-				if (spectators[j]->address.Equals(data[i]->addr)) {
-					spectators[j]->session_magic = data[i]->pkt.data.sync_request.rng_data;
-					if (spectators[j]->sync_num == 0) {
-						spectators[j]->stats.last_sent_sync_message = now;
-						should_send++;
-					}
-				}
-			}
+            NetPacket pkt;
+            zpp::serializer::memory_input_archive in(_bin_buffer);
+            in(pkt.header, pkt.body);
 
-			if (should_send > 0) {
-				// send a packet containing the local session magic
-				SendSyncResponse(&data[i]->addr, data[i]->pkt.data.sync_response.rng_data);
-			}
-			// cleanup packet
-			delete data[i];
-			continue;
-		}
-
-		if (data[i]->pkt.header.magic != _session_magic) {
-			// cleanup packet
-			delete data[i];
-			continue;
-		}
-
-		// handle other events
-		if (type == SyncResponse) {
-			i32 stop_sending = 0; 
-
-			for (u32 j = 0; j < remotes.size(); j++) {
-				if (remotes[j]->GetStatus() == Connected) continue;
-
-				if (remotes[j]->address.Equals(data[i]->addr)) {
-					remotes[j]->session_magic = data[i]->pkt.data.sync_request.rng_data;
-
-					if (remotes[j]->sync_num < NUM_TO_SYNC) {
-						remotes[j]->sync_num++;
-						stop_sending--;
-                        session_events.AddPlayerSyncingEvent(remotes[j]->handle, remotes[j]->sync_num, NUM_TO_SYNC);
-						continue;
-					}
-
-					if (remotes[j]->sync_num == NUM_TO_SYNC) {
-						remotes[j]->SetStatus(Connected);
-						stop_sending++;
-                        session_events.AddPlayerConnectedEvent(remotes[j]->handle);
-						continue;
-					}
-				}
-			}
-
-			for (u32 j = 0; j < spectators.size(); j++) {
-				if (spectators[j]->GetStatus() == Connected) continue;
-
-				if (spectators[j]->address.Equals(data[i]->addr)) {
-					spectators[j]->session_magic = data[i]->pkt.data.sync_request.rng_data;
-
-					if (spectators[j]->sync_num < NUM_TO_SYNC) {
-						spectators[j]->sync_num++;
-						stop_sending--;
-                        session_events.AddPlayerSyncingEvent(spectators[j]->handle, spectators[j]->sync_num, NUM_TO_SYNC);
-						continue;
-					}
-
-					if (spectators[j]->sync_num == NUM_TO_SYNC) {
-						spectators[j]->SetStatus(Connected);
-						stop_sending++;
-                        session_events.AddPlayerConnectedEvent(spectators[j]->handle);
-						// TODO SEND CONNECT INIT MESSAGE WITH GAMESTATE IF NEEDED
-						continue;
-					}
-				}
-			}
-
-			if (stop_sending < 0) {
-				// send a packet containing the local session magic
-				SendSyncResponse(&data[i]->addr, data[i]->pkt.data.sync_response.rng_data);
-			}
-
-			delete data[i];
-			continue;
-		}
-
-		if (type == Inputs || type == SpectatorInputs) {
-			// printf("recv inputs from netaddr:%d\n", *data[i]->addr.GetAddress());
-
-			auto net_input = new NetInputData;
-
-			net_input->handles = GetHandlesForAddress(&data[i]->addr);
-
-			net_input->input.total_size = data[i]->pkt.data.input.total_size;
-			net_input->input.input_count = data[i]->pkt.data.input.input_count;
-			net_input->input.start_frame = data[i]->pkt.data.input.start_frame;
-
-			net_input->input.inputs = (u8*)std::malloc(net_input->input.total_size);
-
-            if (net_input->input.inputs) {
-                std::memcpy(net_input->input.inputs, data[i]->pkt.data.input.inputs, net_input->input.total_size);
-            }
-
-			// now when done we can cleanup the inputs since we used malloc
-			std::free(data[i]->pkt.data.input.inputs);
-
-			_received_inputs.push(net_input);
-
-			delete data[i];
-			continue;
-		}
-
-		if(type == InputAck) {
-			// we should just update the ack frame for all handles where the address matches
-			const Frame ack_frame = data[i]->pkt.data.input_ack.ack_frame;
-            const i32 remote_advantage = data[i]->pkt.data.input_ack.frame_advantage;
-            bool added_advantage = false;
-
-			for (auto& player : remotes) {
-				if (player->address.Equals(data[i]->addr)) {
-					if (player->stats.last_acked_frame < ack_frame) {
-						player->stats.last_acked_frame = ack_frame;
-                        // only add remote advantages once
-                        if (!added_advantage) {
-                            history.AddRemoteAdvantage(remote_advantage);
-                            added_advantage = true;
-                        }
-					}
-				}
-			}
-
-			for (auto& player : spectators) {
-				if (player->address.Equals(data[i]->addr)) {
-					if (player->stats.last_acked_frame < ack_frame) {
-						player->stats.last_acked_frame = ack_frame;
-					}
-				}
-			}
-
-			delete data[i];
-			continue;
-		}
-
-        if (type == HealthCheck) {
-            // printf("recv addr:%d, f: %d, check:%u\n", *data[i]->addr.GetAddress(), data[i]->pkt.data.health_check.frame, data[i]->pkt.data.health_check.checksum);
-            const Frame frame = data[i]->pkt.data.health_check.frame;
-            const u32 checksum = data[i]->pkt.data.health_check.checksum;
-
-            for (auto& player : remotes) {
-                if (player->address.Equals(data[i]->addr)) {
-                    player->SetChecksum(frame, checksum);
-                    for (auto& entry : local_health) {
-                        if (entry.frame == frame && entry.checksum != checksum) {
-                            session_events.AddDesyncDetectedEvent(
-                                frame,player->handle, entry.checksum, checksum);
-                        }
-                    }
-                    break;
-                }
-            }
-
-            delete data[i];
-            continue;
+            ParsePacket(res->addr, pkt);
         }
-	}
+        catch (const std::exception&) {
+            printf("failed to deserialize packet\n");
+        }
+    }
 }
 
 void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
@@ -308,40 +144,40 @@ void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
         return;
     }
 
-	auto message = new NetData;
+    _pending_output.push(std::make_unique<NetData>());
+	auto& message = _pending_output.back();
 
 	message->addr.Copy(addr);
 
 	message->pkt.header.type = SyncRequest;
 	message->pkt.header.magic = 0;
 
-	message->pkt.data.sync_request.rng_data = _session_magic;
+    auto body = std::make_unique<SyncMsg>();
+    body->rng_data = _session_magic;
 
-	_pending_output.push(message);
+    message->pkt.body = std::move(body);
 }
 
-void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u32 magic)
+void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u16 magic)
 {
     if (!addr || magic == 0) {
         return;
     }
 
-	auto message = new NetData;
+    _pending_output.push(std::make_unique<NetData>());
+    auto& message = _pending_output.back();
 
 	message->addr.Copy(addr);
 	message->pkt.header.type = SyncResponse;
 	message->pkt.header.magic = magic;
-	message->pkt.data.sync_request.rng_data = _session_magic;
 
-	_pending_output.push(message);
+    auto body = std::make_unique<SyncMsg>();
+    body->rng_data = _session_magic;
+
+    message->pkt.body = std::move(body);
 }
 
-Gekko::u32 Gekko::MessageSystem::GetMagic()
-{
-	return _session_magic;
-}
-
-std::queue<Gekko::NetInputData*>& Gekko::MessageSystem::LastReceivedInputs()
+std::queue<std::unique_ptr<Gekko::NetInputData>>& Gekko::MessageSystem::LastReceivedInputs()
 {
 	return _received_inputs;
 }
@@ -354,16 +190,18 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
         return;
     }
 
-	auto message = new NetData;
+    _pending_output.push(std::make_unique<NetData>());
+    auto& message = _pending_output.back();
 
 	message->addr.Copy(&plyr->address);
 	message->pkt.header.magic = plyr->session_magic;
-
 	message->pkt.header.type = InputAck;
-	message->pkt.data.input_ack.ack_frame = frame;
-	message->pkt.data.input_ack.frame_advantage = history.GetLocalAdvantage();
-	
-	_pending_output.push(message);
+
+    auto body = std::make_unique<InputAckMsg>();
+	body->ack_frame = frame;
+	body->frame_advantage = history.GetLocalAdvantage();
+
+    message->pkt.body = std::move(body);
 }
 
 std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
@@ -407,62 +245,66 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	i32 result = 0;
 	u64 now = TimeSinceEpoch();
 
-	for (auto& player : remotes) {
-		if (player->GetStatus() == Initiating) {
-			if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
-				if (player->sync_num == 0) {
-					SendSyncRequest(&player->address);
-					player->stats.last_sent_sync_message = now;
-				}
-				else if (player->sync_num < NUM_TO_SYNC) {
-					SendSyncResponse(&player->address, player->session_magic);
-					player->stats.last_sent_sync_message = now;
-				}
-			}
-			result--;
-		}
-	}
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
 
-	for (auto& player : spectators) {
-		if (player->GetStatus() == Initiating) {
-			if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
-				if (player->sync_num == 0) {
-					SendSyncRequest(&player->address);
-					player->stats.last_sent_sync_message = now;
-				}
-				else if (player->sync_num < NUM_TO_SYNC) {
-					SendSyncResponse(&player->address, player->session_magic);
-					player->stats.last_sent_sync_message = now;
-				}
-			}
-			result--;
-		}
-	}
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+        for (auto& player : *current) {
+            if (player->GetStatus() == Initiating) {
+                if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
+                    if (player->sync_num == 0) {
+                        SendSyncRequest(&player->address);
+                        player->stats.last_sent_sync_message = now;
+                    }
+                    else if (player->sync_num < NUM_TO_SYNC) {
+                        SendSyncResponse(&player->address, player->session_magic);
+                        player->stats.last_sent_sync_message = now;
+                    }
+                    else {
+                        player->SetStatus(Connected);
+                        session_events.AddPlayerConnectedEvent(player->handle);
+                        result++;
+                    }
+                }
+                result--;
+            }
+        }
+    }
 
 	return result == 0;
 }
 
 void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
 {
-    auto data = new NetData;
+    _pending_output.push(std::make_unique<NetData>());
+    auto& message = _pending_output.back();
 
     // the address and magic is set later so dont worry about it now
-    data->pkt.header.type = HealthCheck;
-    data->pkt.data.health_check.frame = frame;
-    data->pkt.data.health_check.checksum = checksum;
+    message->pkt.header.type = HealthCheck;
 
-    _pending_output.push(data);
+    auto body = std::make_unique<HealthCheckMsg>();
+    body->frame = frame;
+    body->checksum = checksum;
+
+    message->pkt.body = std::move(body);
 }
 
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
+    const u64 now = TimeSinceEpoch();
+
 	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
 
 	for (auto& player : spectator ? spectators : remotes) {
 		if (player->GetStatus() == Connected) {
 			const u32 diff = last_added - player->stats.last_acked_frame;
-			if (diff > max_diff) {
+            const u64 msg_diff = now - player->stats.last_received_message;
+
+			if (diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
                 session_events.AddPlayerDisconnectedEvent(player->handle);
                 player->SetStatus(Disconnected);
                 player->sync_num = 0;
@@ -481,56 +323,341 @@ void Gekko::MessageSystem::SendDataToAll(NetData* pkt, NetAdapter* host, bool sp
 {
     auto& actors = spectators_only ? spectators : remotes;
 
+    std::vector<u8> body_buffer;
+
+    try {
+        zpp::serializer::memory_output_archive out(body_buffer);
+        out(pkt->pkt.body);
+    }
+    catch (const std::exception&)
+    {
+        printf("failed to serialize packet body\n");
+        return;
+    }
+
+
     for (auto& actor : actors) {
-        if (actor->address.GetSize() != 0) {
+        _bin_buffer.clear();
+        if (actor->address.GetSize() != 0 && actor->GetStatus() != Disconnected) {
+
             pkt->addr.Copy(&actor->address);
             pkt->pkt.header.magic = actor->session_magic;
-            // TODO USE SER\DE
-            host->SendData(pkt->addr);
+
+            try {
+                zpp::serializer::memory_output_archive out(_bin_buffer);
+                out(pkt->pkt.header);
+            }
+            catch (const std::exception&)
+            {
+                printf("failed to serialize packet header\n");
+                continue;
+            }
+
+            _bin_buffer.insert(
+                _bin_buffer.end(),
+                body_buffer.begin(),
+                body_buffer.end()
+            );
+
+            host->SendData(actor->address, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
         }
     }
 }
 
 void Gekko::MessageSystem::SendDataTo(NetData* pkt, NetAdapter* host)
 {
-   // TODO
+    _bin_buffer.clear();
+
+    try {
+        zpp::serializer::memory_output_archive out(_bin_buffer);
+        out(pkt->pkt.header, pkt->pkt.body);
+    }
+    catch (const std::exception&)
+    {
+        printf("failed to serialize packet\n");
+        return;
+    }
+
+    // printf("Send Size: %d\n", (int)_bin_buffer.size());
+    // Compression::PrintArray(_bin_buffer.data(), (u32)_bin_buffer.size());
+    host->SendData(pkt->addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
+}
+
+void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
+{
+    u64 now = TimeSinceEpoch();
+    // update receive timers.
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& player : *current) {
+            if (player->address.Equals(addr)) {
+                player->stats.last_received_message = now;
+            }
+        }
+    }
+
+    // handle packet.
+    if (pkt.header.magic != _session_magic) {
+        if (pkt.header.type == SyncRequest) {
+            OnSyncRequest(addr, pkt);
+        }
+        else {
+            printf("dropped packet!\n");
+        }
+    }
+    else {
+        switch (pkt.header.type)
+        {
+        case SyncResponse:
+            OnSyncResponse(addr, pkt);
+            return;
+        case Inputs:
+        case SpectatorInputs:
+            OnInputs(addr, pkt);
+            return;
+        case InputAck:
+            OnInputAck(addr, pkt);
+            return;
+        case HealthCheck:
+            OnHealthCheck(addr, pkt);
+            return;
+        default:
+            printf("cannot process an unknown event!\n");
+            return;
+        }
+    }
+}
+
+void Gekko::MessageSystem::OnSyncRequest(NetAddress& addr, NetPacket& pkt)
+{
+    i32 should_send = 0;
+    u64 now = TimeSinceEpoch();
+    auto body = (SyncMsg*)pkt.body.get();
+
+    // handle requests and set the peer its session magic for both remotes and spectators
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& player : *current) {
+            if (player->address.Equals(addr)) {
+                player->session_magic = body->rng_data;
+                if (player->sync_num == 0) {
+                    player->stats.last_sent_sync_message = now;
+                    should_send++;
+                }
+            }
+        }
+    }
+
+    if (should_send > 0) {
+	    // send a packet containing the local session magic
+	    SendSyncResponse(&addr, body->rng_data);
+    }
+}
+
+void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
+{
+    i32 should_send = 0;
+    u64 now = TimeSinceEpoch();
+    auto body = (SyncMsg*)pkt.body.get();
+
+    // handle sync responses for both remotes and spectators
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& player : *current) {
+            if (player->GetStatus() == Connected) continue;
+
+            if (player->address.Equals(addr)) {
+                player->session_magic = body->rng_data;
+                if (player->sync_num < NUM_TO_SYNC) {
+                    player->sync_num++;
+                    should_send++;
+                    player->stats.last_sent_sync_message = now;
+                    session_events.AddPlayerSyncingEvent(
+                        player->handle,
+                        player->sync_num,
+                        NUM_TO_SYNC
+                    );
+                    continue;
+                }
+
+                if (player->sync_num >= NUM_TO_SYNC) {
+                    player->SetStatus(Connected);
+                    session_events.AddPlayerConnectedEvent(player->handle);
+                    continue;
+                }
+            }
+        }
+    }
+
+    if (should_send > 0) {
+    	// send a packet containing the local session magic
+    	SendSyncResponse(&addr, body->rng_data);
+    }
+}
+
+void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
+{
+    auto body = (InputMsg*)pkt.body.get();
+    auto net_input = std::make_unique<NetInputData>();
+
+    net_input->handles = GetHandlesForAddress(&addr);
+    net_input->input.inputs = Compression::RLEDecode(body->inputs.data(), (u32)body->inputs.size());
+
+    net_input->input.input_count = body->input_count;
+    net_input->input.start_frame = body->start_frame;
+    net_input->input.total_size = (u16)net_input->input.inputs.size();
+
+    _received_inputs.push(std::move(net_input));
+}
+
+void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
+{
+    auto body = (InputAckMsg*)pkt.body.get();
+    // we should just update the ack frame for all handles where the address matches
+	const Frame ack_frame = body->ack_frame;
+    const i32 remote_advantage = body->frame_advantage;
+    bool added_advantage = false;
+
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& player : *current) {
+            if (player->address.Equals(addr)) {
+                if (player->stats.last_acked_frame < ack_frame) {
+                    player->stats.last_acked_frame = ack_frame;
+                    // only add remote advantages once
+                    if (!added_advantage && i == 0) {
+                        history.AddRemoteAdvantage(remote_advantage);
+                        added_advantage = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
+{
+    auto body = (HealthCheckMsg*)pkt.body.get();
+
+    const Frame frame = body->frame;
+    const u32 checksum = body->checksum;
+
+    for (auto& player : remotes) {
+        if (player->address.Equals(addr)) {
+            player->SetChecksum(frame, checksum);
+
+            for (auto iter = player->health.begin();
+                iter != player->health.end(); ) {
+                if (iter->first < (_last_added_input - 100)) {
+                    iter = player->health.erase(iter);
+                } else {
+                    ++iter;
+                }
+            }
+            break;
+        }
+    }
 }
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
 {
+    u64 now = TimeSinceEpoch();
+
 	const auto& send_list = spectator ? _spectator_input_send_list : _player_input_send_list;
 
+    auto& cache = spectator ? _last_sent_spectator_input : _last_sent_input;
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
 
+    // just copy and resend the same data instead of doing calculations
+    if (cache.frame != GameInput::NULL_FRAME && last_added == cache.frame) {
+        // only resend if enough time has passed. we dont want to spam.
+        if (cache.last_send_time + InputSendCache::INPUT_RESEND_DELAY > now) {
+            return;
+        }
+
+        _pending_output.push(std::make_unique<NetData>());
+        auto& message = _pending_output.back();
+
+        message->pkt.header.type = spectator ? SpectatorInputs : Inputs;
+
+        auto body = std::make_unique<InputMsg>();
+        body->Copy(&cache.data);
+
+        message->pkt.body = std::move(body);
+
+        cache.last_send_time = now;
+        return;
+    }
+
 	const u32 num_players = spectator ? (u32)(locals.size() + remotes.size()) : (u32)locals.size();
-	const u32 input_size = _input_size * num_players;
+	const u32 total_input_size = _input_size * num_players;
 	const u32 input_count = (u32)send_list.size();
-	const u32 total_size = input_size * input_count;
+	const u32 total_size = total_input_size * input_count;
 
 	std::unique_ptr<u8[]> inputs(new u8[total_size]);
 
+    const u32 offset_per_player = total_size / num_players;
+
 	u32 idx = 0;
 	for (auto& input : send_list) {
-		std::memcpy(&inputs[idx * input_size], input, input_size);
+        // line up all players input in series.
+        // this should make RLE encoding more efficent in the end.
+        // before P1|P2|P1|P2 now P1|P1|P2|P2
+        // i should probably not be copying this much. fix this later TODO
+        if (num_players > 1) {
+            for (u32 i = 0; i < num_players; i++) {
+                auto dst = &inputs[(idx * _input_size) + (i * offset_per_player)];
+                auto src = &input[i * _input_size];
+                std::memcpy(dst, src, _input_size);
+            }
+        }
+        else {
+            std::memcpy(&inputs[idx * _input_size], input, _input_size);
+        }
 		idx++;
 	}
 
-	// TODO? maybe add some type of compression to the inputs.
-	// the address and magic is set later so dont worry about it now
+    auto comp = Compression::RLEEncode(inputs.get(), total_size);
 
-	auto data = new NetData;
+    _pending_output.push(std::make_unique<NetData>());
+	auto& message = _pending_output.back();
 
-	data->pkt.header.type = spectator ? SpectatorInputs : Inputs;
-	data->pkt.data.input.input_count = (u32)send_list.size();
-	data->pkt.data.input.start_frame = last_added - (u32)send_list.size();
-	data->pkt.data.input.inputs = (u8*)std::malloc(total_size);
-	data->pkt.data.input.total_size = total_size;
-	
-    if (data->pkt.data.input.inputs) {
-        std::memcpy(data->pkt.data.input.inputs, inputs.get(), total_size);
-    }
+    message->pkt.header.type = spectator ? SpectatorInputs : Inputs;
 
-	_pending_output.push(data);
+    auto body = std::make_unique<InputMsg>();
+
+    body->total_size = (u16)comp.size();
+	body->input_count = (u8)send_list.size();
+	body->start_frame = last_added - (u32)send_list.size();
+
+    body->inputs = std::move(comp);
+
+    // save to the cache for later use.
+    cache.frame = last_added;
+    cache.data.Copy(body.get());
+    cache.last_send_time = now;
+
+    message->pkt.body = std::move(body);
 }
 
 void Gekko::AdvantageHistory::Init()

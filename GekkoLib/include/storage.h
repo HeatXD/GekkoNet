@@ -8,10 +8,8 @@
 
 namespace Gekko {
 	struct StateEntry {
-		~StateEntry();
-
 		Frame frame = GameInput::NULL_FRAME;
-		u8* state = nullptr;
+		std::unique_ptr<u8[]> state;
 		u32 state_len = 0;
 		u32 checksum = 0;
 	};
