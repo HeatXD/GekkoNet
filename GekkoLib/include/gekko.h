@@ -85,8 +85,6 @@ namespace Gekko {
 
         bool _delay_spectator;
 
-        Frame _sync_frame;
-
 		Frame _last_saved_frame;
 
         Frame _last_sent_healthcheck;

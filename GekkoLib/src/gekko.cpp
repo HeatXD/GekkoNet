@@ -11,7 +11,6 @@ Gekko::Session::Session()
     _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
-    _sync_frame = GameInput::NULL_FRAME;
 }
 
 void Gekko::Session::SetNetAdapter(NetAdapter* adapter)

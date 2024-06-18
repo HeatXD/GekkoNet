@@ -49,8 +49,6 @@ namespace Gekko {
 
 		NetAddress address;
 
-        static const i32 NUM_CHECKSUMS = 16;
-
         std::map<Frame, u32> health;
 
 	private:
