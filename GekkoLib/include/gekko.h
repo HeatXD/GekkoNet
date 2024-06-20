@@ -7,6 +7,7 @@
 #include "event.h"
 #include "sync.h"
 #include "storage.h"
+#include "replay.h"
 
 namespace Gekko {
 	struct Config {
@@ -14,13 +15,21 @@ namespace Gekko {
 
 		u8 num_players = 0;
 		u8 max_spectators = 0;
-		u8 input_prediction_window = 0;
         u8 spectator_delay = 0;
+		u8 input_prediction_window = 0;
+
 		u32 input_size = 0;
 		u32 state_size = 0;
+
         bool limited_saving = false;
         bool post_sync_joining = false;
         bool desync_detection = false;
+
+        enum ReplayMode : u8 {
+            None = 0,
+            Read,
+            Write,
+        } replay_mode = None;
 	};
 
 	class Session {
@@ -102,6 +111,8 @@ namespace Gekko {
 		StateStorage _storage;
 
         GameEventBuffer _game_event_buffer;
+
+        std::unique_ptr<ReplaySystem> _replay;
 
         std::vector<GameEvent*> _current_game_events;
 	};

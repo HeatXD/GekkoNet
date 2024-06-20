@@ -26,6 +26,7 @@
     <ClInclude Include="include\gekko_types.h" />
     <ClInclude Include="include\input.h" />
     <ClInclude Include="include\net.h" />
+    <ClInclude Include="include\replay.h" />
     <ClInclude Include="include\storage.h" />
     <ClInclude Include="include\sync.h" />
   </ItemGroup>
@@ -36,6 +37,7 @@
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\player.cpp" />
+    <ClCompile Include="src\replay.cpp" />
     <ClCompile Include="src\storage.cpp" />
     <ClCompile Include="src\sync.cpp" />
   </ItemGroup>

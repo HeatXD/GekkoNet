@@ -109,6 +109,8 @@ namespace Gekko {
 
         void SendHealthCheck(Frame frame, u32 checksum);
 
+        u16 GetMagic();
+
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
 

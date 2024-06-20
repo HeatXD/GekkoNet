@@ -3,13 +3,15 @@
 
 #include <cassert>
 
-Gekko::Session::Session()
+Gekko::Session ::Session()
 {
 	_host = nullptr;
+    _disconnected_input = nullptr;
+
 	_started = false;
     _delay_spectator = false;
+
     _last_saved_frame = GameInput::NULL_FRAME - 1;
-	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
 }
 
@@ -45,6 +47,13 @@ void Gekko::Session::Init(Config& config)
 
     // we only detect desyncs whenever we are not limited saving for now.
     _config.desync_detection = _config.limited_saving ? false : _config.desync_detection;
+
+    // setup replay system if requested
+    if (_config.replay_mode != Config::ReplayMode::None) {
+        _replay = std::make_unique<ReplaySystem>();
+        _replay->Init(_config.replay_mode - 1);
+        _replay->SetSessionMagic(_msg.GetMagic());
+    }
 }
 
 void Gekko::Session::SetLocalDelay(Handle player, u8 delay)
@@ -257,11 +266,8 @@ void Gekko::Session::SendHealthCheck()
     const Frame current = _sync.GetCurrentFrame();
     const Frame confirmed = (current - _config.input_prediction_window) - 1;
 
-    if (confirmed <= GameInput::NULL_FRAME) {
-        return;
-    }
-
-    if (confirmed <= _last_sent_healthcheck) {
+    if (confirmed <= GameInput::NULL_FRAME ||
+        confirmed <= _last_sent_healthcheck) {
         return;
     }
 

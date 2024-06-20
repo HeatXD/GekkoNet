@@ -236,7 +236,8 @@ Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator)
 	return min;
 }
 
-Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator) {
+Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator)
+{
 	return spectator ? _last_added_spectator_input : _last_added_input;
 }
 
@@ -253,24 +254,26 @@ bool Gekko::MessageSystem::CheckStatusActors()
             current = &spectators;
         }
         for (auto& player : *current) {
-            if (player->GetStatus() == Initiating) {
-                if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
-                    if (player->sync_num == 0) {
-                        SendSyncRequest(&player->address);
-                        player->stats.last_sent_sync_message = now;
-                    }
-                    else if (player->sync_num < NUM_TO_SYNC) {
-                        SendSyncResponse(&player->address, player->session_magic);
-                        player->stats.last_sent_sync_message = now;
-                    }
-                    else {
-                        player->SetStatus(Connected);
-                        session_events.AddPlayerConnectedEvent(player->handle);
-                        result++;
-                    }
-                }
-                result--;
+            if (player->GetStatus() != Initiating) {
+                continue;
             }
+
+            if (player->stats.last_sent_sync_message + NetStats::SYNC_MSG_DELAY < now) {
+                if (player->sync_num == 0) {
+                    SendSyncRequest(&player->address);
+                    player->stats.last_sent_sync_message = now;
+                }
+                else if (player->sync_num < NUM_TO_SYNC) {
+                    SendSyncResponse(&player->address, player->session_magic);
+                    player->stats.last_sent_sync_message = now;
+                }
+                else {
+                    player->SetStatus(Connected);
+                    session_events.AddPlayerConnectedEvent(player->handle);
+                    result++;
+                }
+            }
+            result--;
         }
     }
 
@@ -292,6 +295,11 @@ void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
     message->pkt.body = std::move(body);
 }
 
+Gekko::u16 Gekko::MessageSystem::GetMagic()
+{
+    return _session_magic;
+}
+
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
     const u64 now = TimeSinceEpoch();
@@ -300,15 +308,17 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
 
 	for (auto& player : spectator ? spectators : remotes) {
-		if (player->GetStatus() == Connected) {
-			const u32 diff = last_added - player->stats.last_acked_frame;
-            const u64 msg_diff = now - player->stats.last_received_message;
+        if (player->GetStatus() != Connected) {
+            continue;
+        }
 
-			if (diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
-                session_events.AddPlayerDisconnectedEvent(player->handle);
-                player->SetStatus(Disconnected);
-                player->sync_num = 0;
-			}
+		const u32 diff = last_added - player->stats.last_acked_frame;
+        const u64 msg_diff = now - player->stats.last_received_message;
+
+		if (diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
+            session_events.AddPlayerDisconnectedEvent(player->handle);
+            player->SetStatus(Disconnected);
+            player->sync_num = 0;
 		}
 	}
 }
@@ -378,8 +388,6 @@ void Gekko::MessageSystem::SendDataTo(NetData* pkt, NetAdapter* host)
         return;
     }
 
-    // printf("Send Size: %d\n", (int)_bin_buffer.size());
-    // Compression::PrintArray(_bin_buffer.data(), (u32)_bin_buffer.size());
     host->SendData(pkt->addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
 }
 
@@ -448,12 +456,15 @@ void Gekko::MessageSystem::OnSyncRequest(NetAddress& addr, NetPacket& pkt)
         }
 
         for (auto& player : *current) {
-            if (player->address.Equals(addr)) {
-                player->session_magic = body->rng_data;
-                if (player->sync_num == 0) {
-                    player->stats.last_sent_sync_message = now;
-                    should_send++;
-                }
+            if (!player->address.Equals(addr)) {
+                continue;
+            }
+
+            player->session_magic = body->rng_data;
+
+            if (player->sync_num == 0) {
+                player->stats.last_sent_sync_message = now;
+                should_send++;
             }
         }
     }
@@ -479,7 +490,9 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
         }
 
         for (auto& player : *current) {
-            if (player->GetStatus() == Connected) continue;
+            if (player->GetStatus() == Connected) {
+                continue;
+            }
 
             if (player->address.Equals(addr)) {
                 player->session_magic = body->rng_data;
@@ -541,14 +554,16 @@ void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
         }
 
         for (auto& player : *current) {
-            if (player->address.Equals(addr)) {
-                if (player->stats.last_acked_frame < ack_frame) {
-                    player->stats.last_acked_frame = ack_frame;
-                    // only add remote advantages once
-                    if (!added_advantage && i == 0) {
-                        history.AddRemoteAdvantage(remote_advantage);
-                        added_advantage = true;
-                    }
+            if (!player->address.Equals(addr)) {
+                continue;
+            }
+
+            if (player->stats.last_acked_frame < ack_frame) {
+                player->stats.last_acked_frame = ack_frame;
+                // only add remote advantages once
+                if (!added_advantage && i == 0) {
+                    history.AddRemoteAdvantage(remote_advantage);
+                    added_advantage = true;
                 }
             }
         }
@@ -563,19 +578,21 @@ void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
     const u32 checksum = body->checksum;
 
     for (auto& player : remotes) {
-        if (player->address.Equals(addr)) {
-            player->SetChecksum(frame, checksum);
-
-            for (auto iter = player->health.begin();
-                iter != player->health.end(); ) {
-                if (iter->first < (_last_added_input - 100)) {
-                    iter = player->health.erase(iter);
-                } else {
-                    ++iter;
-                }
-            }
-            break;
+        if (!player->address.Equals(addr)) {
+            continue;
         }
+
+        player->SetChecksum(frame, checksum);
+
+        for (auto iter = player->health.begin();
+            iter != player->health.end(); ) {
+            if (iter->first < (_last_added_input - 100)) {
+                iter = player->health.erase(iter);
+            } else {
+                ++iter;
+            }
+        }
+        break;
     }
 }
 
