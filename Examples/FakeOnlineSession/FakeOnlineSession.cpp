@@ -88,7 +88,7 @@ struct GInput {
 			char down : 1;
 			char right : 1;
 		}dir;
-		unsigned char value;
+		unsigned int value;
 	}input;
 };
 
@@ -243,7 +243,8 @@ int main(int argc, char* args[])
 	conf.input_prediction_window = 8;
 	conf.state_size = sizeof(GState);
 	conf.limited_saving = false;
-    conf.desync_detection = true;
+    conf.desync_detection = false;
+    conf.replay_mode = Gekko::Config::ReplayMode::Write;
 
 	sess1.Init(conf);
 	sess2.Init(conf);
@@ -279,8 +280,6 @@ int main(int argc, char* args[])
 
 	time_point timer(clock::now());
 	frame fps = {};
-
-    bool session_synced = false;
 
 	while (running) {
 		fps = std::chrono::duration_cast<frame>(clock::now() - timer);

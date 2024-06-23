@@ -89,6 +89,8 @@ namespace Gekko {
 
         void SessionIntegrityCheck();
 
+        bool ShouldSaveLocally();
+
 	private:
 		bool _started;
 

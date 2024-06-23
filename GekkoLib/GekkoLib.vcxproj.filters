@@ -45,6 +45,9 @@
     <ClInclude Include="include\replay.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\backend.cpp">

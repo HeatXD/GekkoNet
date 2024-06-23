@@ -43,7 +43,7 @@ namespace Gekko {
 
 		u8 sync_num;
 
-		u16 session_magic;
+		u32 session_magic;
 
 		NetStats stats;
 
@@ -109,7 +109,7 @@ namespace Gekko {
 
         void SendHealthCheck(Frame frame, u32 checksum);
 
-        u16 GetMagic();
+        u32 GetMagic();
 
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
@@ -127,7 +127,7 @@ namespace Gekko {
 	private:
 		void SendSyncRequest(NetAddress* addr);
 
-		void SendSyncResponse(NetAddress* addr, u16 magic);
+		void SendSyncResponse(NetAddress* addr, u32 magic);
 
 		void AddPendingInput(bool spectator = false);
 
@@ -164,7 +164,7 @@ namespace Gekko {
 
 		u32 _input_size;
 
-		u16 _session_magic;
+		u32 _session_magic;
 
 		Frame _last_added_input;
 

@@ -51,8 +51,11 @@ void Gekko::Session::Init(Config& config)
     // setup replay system if requested
     if (_config.replay_mode != Config::ReplayMode::None) {
         _replay = std::make_unique<ReplaySystem>();
-        _replay->Init(_config.replay_mode - 1);
+        _replay->Init(_config.replay_mode - 1, _config.num_players, _config.input_size);
         _replay->SetSessionMagic(_msg.GetMagic());
+        if (_config.replay_mode == Config::ReplayMode::Write) {
+            _replay->SetOutputDir("");
+        }
     }
 }
 
@@ -106,6 +109,11 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 
 void Gekko::Session::AddLocalInput(Handle player, void* input)
 {
+    // in read mode we dont want to accept local inputs
+    if (_config.replay_mode == Config::ReplayMode::Read) {
+        return;
+    }
+
 	Input inp = (u8*)input;
 
 	for (u32 i = 0; i < _msg.locals.size(); i++) {
@@ -143,17 +151,13 @@ std::vector<Gekko::GameEvent*> Gekko::Session::UpdateSession()
             return _current_game_events;
         }
 
-        // send a healthcheck if applicable
+        // send a healthcheck if applicable and then check if the session is still doing alright.
         SendHealthCheck();
-
-        // check if the session is still doing alright.
         SessionIntegrityCheck();
 
 		// then advance the session
 		if (AddAdvanceEvent(_current_game_events)) {
-			if (!_config.limited_saving ||
-				(IsSpectating() || IsPlayingLocally()) &&
-				_sync.GetCurrentFrame() % _config.input_prediction_window == 0) {
+			if (!_config.limited_saving || ShouldSaveLocally()) {
 				AddSaveEvent(_current_game_events);
 			}
 			_sync.IncrementFrame();
@@ -313,9 +317,14 @@ void Gekko::Session::SessionIntegrityCheck()
                 player->health.erase(iter->first);
             }
         }
-
         ++iter;
     }
+}
+
+bool Gekko::Session::ShouldSaveLocally()
+{
+    return (IsSpectating() || IsPlayingLocally()) &&
+        _sync.GetCurrentFrame() % _config.input_prediction_window == 0;
 }
 
 void Gekko::Session::AddDisconnectedPlayerInputs()
@@ -341,18 +350,34 @@ void Gekko::Session::SendSpectatorInputs()
 		if (!_sync.GetSpectatorInputs(inputs, frame)) {
 			break;
 		}
+
 		_msg.AddSpectatorInput(frame, inputs.get());
+
+        for (u8 i = 1; i <= _config.num_players; i++) {
+            _replay->AddInputForHandle(
+                i, frame, &inputs[(i - 1) * _config.input_size],
+                _config.input_size);
+        }
 	}
 }
 
 void Gekko::Session::HandleRollback(std::vector<GameEvent*>& ev)
 {
 	Frame current = _sync.GetCurrentFrame();
+
 	if (_last_saved_frame == GameInput::NULL_FRAME - 1) {
 		_sync.SetCurrentFrame(current - 1);
 		AddSaveEvent(ev);
 		_sync.IncrementFrame();
 	}
+
+    if (_config.replay_mode == Config::ReplayMode::Write &&
+        _last_saved_frame >= GameInput::NULL_FRAME &&
+        current == GameInput::NULL_FRAME + 2) {
+        auto sav = _storage.GetState(_last_saved_frame);
+        assert(sav->frame == _last_saved_frame);
+        _replay->AddStartState(sav->state.get(), sav->state_len);
+    }
 
 	if (_config.input_prediction_window == 0 || IsSpectating() || IsPlayingLocally()) {
         return;
@@ -450,8 +475,8 @@ void Gekko::Session::Poll()
     // reset session events
     _msg.session_events.Reset();
 
-	// return if no host is defined.
-    if (!_host) {
+	// return if no host is defined. or we are currently replaying
+    if (!_host || _config.replay_mode == Config::ReplayMode::Read) {
         return;
     }
 
@@ -479,6 +504,12 @@ void Gekko::Session::Poll()
 
 bool Gekko::Session::AllPlayersValid()
 {
+    // in read mode we dont need to validate players.
+    if (_config.replay_mode == Config::ReplayMode::Read) {
+        _started = true;
+        return true;
+    }
+
 	if (!_started) {
 		if (!_msg.CheckStatusActors()) {
 			return false;

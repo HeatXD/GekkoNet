@@ -38,6 +38,27 @@ namespace Gekko {
         //    }
         //}
 
+        static std::vector<uint8_t> RLEEncodeSized(const uint8_t* data, u32 data_length, const u32 elem_size) {
+            std::vector<uint8_t> result;
+
+            u32 idx = 0;
+            u8 count = 0;
+
+            while (idx < data_length) {
+                count = 1;
+                while (count != UINT8_MAX && idx + elem_size < data_length &&
+                    std::memcmp(&data[idx], &data[idx + elem_size], elem_size) == 0) {
+                    idx += elem_size;
+                    count++;
+                }
+                result.push_back(count);
+                result.insert(result.end(), &data[idx], &data[idx] + elem_size);
+                idx += elem_size;
+            }
+
+            return result;
+        }
+
         static std::vector<uint8_t> RLEEncode(const uint8_t* data, u32 length) {
             std::vector<uint8_t> result;
 
@@ -54,6 +75,29 @@ namespace Gekko {
                 result.push_back(data[idx]);
                 idx++;
             }
+
+            return result;
+        }
+
+        static std::vector<uint8_t> RLEDecodeSized(const uint8_t* data, u32 data_length, u32 elem_size) {
+            std::vector<uint8_t> result;
+
+            u32 idx = 0;
+            u8 count = 0;
+
+            const uint8_t* value = nullptr;
+
+            while (idx < data_length) {
+                count = data[idx];
+                value = &data[idx + 1];
+
+                for (i32 x = 0; x < count; x++) {
+                    result.insert(result.end(), value, value + elem_size);
+                }
+
+                idx += elem_size + 1;
+            }
+
             return result;
         }
 

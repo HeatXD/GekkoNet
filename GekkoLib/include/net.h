@@ -41,7 +41,7 @@ namespace Gekko {
 
     struct MsgHeader {
         PacketType type;
-        u16 magic;
+        u32 magic;
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
@@ -85,7 +85,7 @@ namespace Gekko {
     };
 
     struct SyncMsg : MsgBody {
-        u16 rng_data;
+        u32 rng_data;
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {

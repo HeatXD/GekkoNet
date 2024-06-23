@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\backend.h" />
+    <ClInclude Include="include\common.h" />
     <ClInclude Include="include\compression.h" />
     <ClInclude Include="include\event.h" />
     <ClInclude Include="include\gekko.h" />

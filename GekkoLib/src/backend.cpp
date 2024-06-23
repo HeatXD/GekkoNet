@@ -2,6 +2,7 @@
 #include "input.h"
 #include "event.h"
 #include "compression.h"
+#include "common.h"
 
 #include <chrono>
 #include <cassert>
@@ -24,8 +25,7 @@ Gekko::MessageSystem::MessageSystem()
 	_last_added_spectator_input = GameInput::NULL_FRAME;
 
 	// gen magic for session
-	std::srand((unsigned int)std::time(nullptr));
-	_session_magic = std::rand();
+    _session_magic = Common::RNG();
 
 	history = AdvantageHistory();
     session_events = SessionEventSystem();
@@ -158,7 +158,7 @@ void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
     message->pkt.body = std::move(body);
 }
 
-void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u16 magic)
+void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u32 magic)
 {
     if (!addr || magic == 0) {
         return;
@@ -295,7 +295,7 @@ void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
     message->pkt.body = std::move(body);
 }
 
-Gekko::u16 Gekko::MessageSystem::GetMagic()
+Gekko::u32 Gekko::MessageSystem::GetMagic()
 {
     return _session_magic;
 }
