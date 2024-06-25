@@ -154,7 +154,6 @@ void get_key_inputs(GInput inputs[4]) {
 	inputs[1].input.value = 0;
     inputs[2].input.value = 0;
     inputs[3].input.value = 0;
-
 	// fetch inputs
 	auto keys = SDL_GetKeyboardState(NULL);
 	// P1
@@ -244,7 +243,7 @@ int main(int argc, char* args[])
 	conf.state_size = sizeof(GState);
 	conf.limited_saving = false;
     conf.desync_detection = false;
-    conf.replay_mode = Gekko::Config::ReplayMode::Write;
+    conf.replay_mode = Gekko::Config::ReplayMode::None;
 
 	sess1.Init(conf);
 	sess2.Init(conf);

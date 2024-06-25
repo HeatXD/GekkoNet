@@ -6,6 +6,11 @@
 #include <iostream>
 #include <fstream>  
 
+Gekko::ReplaySystem::~ReplaySystem()
+{
+    WriteToFile();
+}
+
 void Gekko::ReplaySystem::Init(bool replay_mode, u8 num_players, u32 input_size)
 {
     _mode = replay_mode;
@@ -14,7 +19,6 @@ void Gekko::ReplaySystem::Init(bool replay_mode, u8 num_players, u32 input_size)
         _file.input_size = input_size;
         _file.num_players = num_players;
     }
-
 
     for (u8 i = 1; i <= num_players; i++) {
         _inputs[i] = Chunk();
@@ -27,7 +31,9 @@ void Gekko::ReplaySystem::AddStartState(u8* state, u32 size)
         return;
     }
 
-    _file.start_state.insert(_file.start_state.end(), state, state + size);
+    if (_file.start_state.empty()) {
+        _file.start_state.insert(_file.start_state.end(), state, state + size);
+    }
 }
 
 void Gekko::ReplaySystem::LoadFile(std::string filepath)
@@ -41,6 +47,37 @@ void Gekko::ReplaySystem::LoadFile(std::string filepath)
     }
 
     _path = filepath;
+
+    try {
+        std::ifstream in_file(_path, std::ios::binary);
+
+        if (!in_file.is_open()) {
+            assert(false);
+        }
+
+        in_file.seekg(0, std::ios::end);
+        auto file_size = in_file.tellg();
+        in_file.seekg(0, std::ios::beg);
+
+        std::vector<u8> buffer(file_size);
+
+        if (!in_file.read((char*)buffer.data(), file_size)) {
+            assert(false);
+        }
+
+        in_file.close();
+
+        // TODO POTENTIAL DECOMPRESSION ALGO?
+
+        zpp::serializer::memory_input_archive in(buffer);
+
+        in(_file);
+
+    }
+    catch (const std::exception&)
+    {
+
+    }
 }
 
 void Gekko::ReplaySystem::SetOutputDir(std::string dirpath)
@@ -59,9 +96,6 @@ void Gekko::ReplaySystem::SetOutputDir(std::string dirpath)
     _path /= std::to_string(_magic);
     _path += Today();
     _path += FILE_EXT;
-
-    auto stream = std::ofstream(_path, std::ios::binary);
-    stream.close();
 }
 
 void Gekko::ReplaySystem::SetSessionMagic(u32 magic)
@@ -86,8 +120,6 @@ void Gekko::ReplaySystem::AddInputForHandle(Handle handle, Frame frame, u8* inpu
         return;
     }
 
-    _file.input_count = frame;
-
     chnk.last_added = frame;
     chnk.raw.insert(chnk.raw.end(), input, input + length);
 
@@ -101,6 +133,43 @@ void Gekko::ReplaySystem::AddInputForHandle(Handle handle, Frame frame, u8* inpu
 
     // clear raw list
     chnk.raw.clear();
+}
+
+Gekko::Frame Gekko::ReplaySystem::GetMinInputCount()
+{
+    Frame min = UINT32_MAX;
+
+    for (auto& input: _inputs){
+        min = std::min(input.second.last_added, min);
+    }
+
+    return min == UINT32_MAX ? 0 : min;
+}
+
+void Gekko::ReplaySystem::WriteToFile()
+{
+    if (!IsWriting()) {
+        return;
+    }
+
+    _file.input_count = GetMinInputCount();
+
+    std::vector<u8> buffer;
+
+    zpp::serializer::memory_output_archive out(buffer);
+    out(_file);
+
+    //TODO ADD COMPRESSION ALGO TO BUFFER. LZ4? ZLIB? ZSTD? do research.
+
+    std::ofstream out_file(_path, std::ios::binary);
+
+    if (!out_file.is_open()) {
+        assert(false);
+    }
+
+    out_file.write((char*)buffer.data(), buffer.size());
+    
+    out_file.close();
 }
 
 bool Gekko::ReplaySystem::IsReading() const
@@ -140,7 +209,7 @@ std::string Gekko::ReplaySystem::Today()
     localtime_safe(&now, &t);
 
     // Buffer to hold the formatted date
-    char buffer[15]; // [YYYY-MM-DD] is 12 characters long + 1 for null terminator
+    char buffer[15];
     std::snprintf(buffer, sizeof(buffer), "[%04d-%02d-%02d]", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday);
 
     // Convert buffer to a string and return

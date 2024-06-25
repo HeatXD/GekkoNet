@@ -8,6 +8,8 @@
 #include <vector>
 #include <filesystem>
 
+#include <zpp/serializer.h>
+
 namespace Gekko {
     struct ReplayFile {
         u32 input_size = 0;
@@ -16,9 +18,16 @@ namespace Gekko {
 
         std::vector<u8> start_state;
         std::vector<u8> inputs;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.input_size, s.num_players, s.input_count, s.start_state, s.inputs);
+        }
     };
 
     struct ReplaySystem {
+
+        ~ReplaySystem();
 
         void Init(bool replay_mode, u8 num_players, u32 input_size);
 
@@ -35,6 +44,10 @@ namespace Gekko {
         void AddInputForHandle(Handle handle, Frame frame, u8* input, u32 length);
 
     private:
+        Frame GetMinInputCount();
+
+        void WriteToFile();
+
         bool IsReading() const;
 
         bool IsWriting() const;

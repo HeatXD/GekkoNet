@@ -353,10 +353,13 @@ void Gekko::Session::SendSpectatorInputs()
 
 		_msg.AddSpectatorInput(frame, inputs.get());
 
-        for (u8 i = 1; i <= _config.num_players; i++) {
-            _replay->AddInputForHandle(
-                i, frame, &inputs[(i - 1) * _config.input_size],
-                _config.input_size);
+        // maybe seperate this later? idk its seems fine here for now.
+        if (_config.replay_mode == Config::ReplayMode::Write) {
+            for (u8 i = 1; i <= _config.num_players; i++) {
+                _replay->AddInputForHandle(
+                    i, frame, &inputs[(i - 1) * _config.input_size],
+                    _config.input_size);
+            }
         }
 	}
 }

@@ -4,7 +4,6 @@
 
 #include <random>
 
-
 namespace Gekko {
     struct Common {
         static u32 RNG() {

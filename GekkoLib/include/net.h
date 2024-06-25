@@ -53,9 +53,9 @@ namespace Gekko {
     };
 
     struct InputMsg : MsgBody {
-        Frame start_frame;
-        u8 input_count;
-        u16 total_size;
+        Frame start_frame = 0;
+        u8 input_count = 0;
+        u16 total_size = 0;
 
         std::vector<u8> inputs;
 
@@ -75,8 +75,8 @@ namespace Gekko {
     };
 
     struct InputAckMsg : MsgBody {
-        Frame ack_frame;
-        i8 frame_advantage;
+        Frame ack_frame = 0;
+        i8 frame_advantage = 0;
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
@@ -85,7 +85,7 @@ namespace Gekko {
     };
 
     struct SyncMsg : MsgBody {
-        u32 rng_data;
+        u32 rng_data = 0;
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
@@ -94,8 +94,8 @@ namespace Gekko {
     };
 
     struct HealthCheckMsg : MsgBody {
-        Frame frame;
-        u32 checksum;
+        Frame frame = 0;
+        u32 checksum = 0;
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
@@ -114,8 +114,8 @@ namespace Gekko {
     };
 
     struct NetStats {
-        static const u64 DISCONNECT_TIMEOUT = std::chrono::microseconds(2000).count();
-        static const u64 SYNC_MSG_DELAY = std::chrono::microseconds(200).count();
+        static const u64 DISCONNECT_TIMEOUT = std::chrono::milliseconds(2000).count();
+        static const u64 SYNC_MSG_DELAY = std::chrono::milliseconds(200).count();
 
         Frame last_acked_frame;
         u64 last_sent_sync_message;

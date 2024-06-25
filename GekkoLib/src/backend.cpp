@@ -45,10 +45,12 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
 {
 	if (_last_added_input + 1 == input_frame) {
 		_last_added_input++;
-		_player_input_send_list.push_back(new u8[_input_size * locals.size()]);
-		std::memcpy(_player_input_send_list.back(), input, _input_size * locals.size());
+        _player_input_send_list.push_back(std::unique_ptr<u8[]>(new u8[_input_size * locals.size()]));
 
-		// update history
+        auto& tmp = _player_input_send_list.back();
+	    std::memcpy(tmp.get(), input, _input_size * locals.size());
+
+        // update history
 		history.Update(input_frame);
 	}
 
@@ -56,7 +58,6 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
 	const u32 diff = _last_added_input - min_ack;
 
 	if (_player_input_send_list.size() > std::min(MAX_PLAYER_SEND_SIZE, diff)) {
-		delete _player_input_send_list.front();
 		_player_input_send_list.pop_front();
 	}
 }
@@ -65,15 +66,16 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 {
 	if (_last_added_spectator_input + 1 == input_frame) {
 		_last_added_spectator_input++;
-		_spectator_input_send_list.push_back(new u8[_input_size * (locals.size() + remotes.size())]);
-		std::memcpy(_spectator_input_send_list.back(), input, _input_size * (locals.size() + remotes.size()));
+        _spectator_input_send_list.push_back(std::unique_ptr<u8[]>(new u8[_input_size * (locals.size() + remotes.size())]));
+
+        auto& tmp = _spectator_input_send_list.back();
+		std::memcpy(tmp.get(), input, _input_size * (locals.size() + remotes.size()));
 	}
 
 	const Frame min_ack = GetMinLastAckedFrame(true);
 	const u32 diff = _last_added_spectator_input - min_ack;
 
 	if (_spectator_input_send_list.size() > std::min(MAX_SPECTATOR_SEND_SIZE, diff)) {
-		delete _spectator_input_send_list.front();
 		_spectator_input_send_list.pop_front();
 	}
 }
@@ -236,7 +238,7 @@ Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator)
 	return min;
 }
 
-Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator)
+Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator) const
 {
 	return spectator ? _last_added_spectator_input : _last_added_input;
 }
@@ -295,7 +297,7 @@ void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
     message->pkt.body = std::move(body);
 }
 
-Gekko::u32 Gekko::MessageSystem::GetMagic()
+Gekko::u32 Gekko::MessageSystem::GetMagic() const
 {
     return _session_magic;
 }
@@ -640,7 +642,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
         // line up all players input in series.
         // this should make RLE encoding more efficent in the end.
         // before P1|P2|P1|P2 now P1|P1|P2|P2
-        // i should probably not be copying this much. fix this later TODO
+        // i should probably not be copying this much. maybe fix this later?
         if (num_players > 1) {
             for (u32 i = 0; i < num_players; i++) {
                 auto dst = &inputs[(idx * _input_size) + (i * offset_per_player)];
@@ -649,7 +651,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
             }
         }
         else {
-            std::memcpy(&inputs[idx * _input_size], input, _input_size);
+            std::memcpy(&inputs[idx * _input_size], &input, _input_size);
         }
 		idx++;
 	}
@@ -700,7 +702,7 @@ void Gekko::AdvantageHistory::Update(Frame frame)
 	_remote[update_frame % HISTORY_SIZE] = max == INT8_MIN ? 0 : max;
 }
 
-Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
+Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage() const
 {
 	f32 sum_local = 0.f;
 	f32 sum_remote = 0.f;
@@ -726,6 +728,6 @@ void Gekko::AdvantageHistory::AddRemoteAdvantage(i8 adv) {
     _adv_index++;
 }
 
-Gekko::i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
+Gekko::i8 Gekko::AdvantageHistory::GetLocalAdvantage() const {
 	return _local_frame_adv;
 }

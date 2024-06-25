@@ -63,9 +63,9 @@ namespace Gekko {
 
 		void Update(Frame frame);
 
-		f32 GetAverageAdvantage();
+		f32 GetAverageAdvantage() const;
 
-		i8 GetLocalAdvantage();
+		i8 GetLocalAdvantage() const;
 
 		void SetLocalAdvantage(i8 adv);
 
@@ -103,13 +103,13 @@ namespace Gekko {
 
 		void SendInputAck(Handle player, Frame frame);
 
-		Frame GetLastAddedInput(bool spectator = false);
+		Frame GetLastAddedInput(bool spectator = false) const;
 
 		bool CheckStatusActors();
 
         void SendHealthCheck(Frame frame, u32 checksum);
 
-        u32 GetMagic();
+        u32 GetMagic() const;
 
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
@@ -170,9 +170,9 @@ namespace Gekko {
 
 		Frame _last_added_spectator_input;
 
-		std::list<u8*> _player_input_send_list;
+		std::list<std::unique_ptr<u8[]>> _player_input_send_list;
 
-		std::list<u8*> _spectator_input_send_list;
+		std::list<std::unique_ptr<u8[]>> _spectator_input_send_list;
 
 		std::queue<std::unique_ptr<NetData>> _pending_output;
 
@@ -181,7 +181,7 @@ namespace Gekko {
         std::vector<u8> _bin_buffer;
 
         struct InputSendCache {
-            static const u64 INPUT_RESEND_DELAY = std::chrono::microseconds(200).count();
+            static const u64 INPUT_RESEND_DELAY = std::chrono::milliseconds(200).count();
 
             u64 last_send_time = 0;
             Frame frame = -1;
