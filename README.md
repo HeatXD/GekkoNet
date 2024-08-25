@@ -28,8 +28,10 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 ### Work in progress
 - Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
+- Add Cmake for building.
+
+### Maybe Later
 - Replays
-- Add xmake for building.
 - Commission an artist to create a logo for GekkoNet
 
 ## Getting Started
