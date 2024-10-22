@@ -24,7 +24,7 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 	}
 }
 
-void Gekko::SyncSystem::AddLocalInput(Handle player, Input input)
+void Gekko::SyncSystem::AddLocalInput(Handle player, u8* input)
 {
 	// valid handles start from 1 while the input buffers index starts at 0.
 	i32 plyr = player - 1;
@@ -37,7 +37,7 @@ void Gekko::SyncSystem::AddLocalInput(Handle player, Input input)
 	_input_buffers[plyr].AddLocalInput(_current_frame, input);
 }
 
-void Gekko::SyncSystem::AddRemoteInput(Handle player, Input input, Frame frame)
+void Gekko::SyncSystem::AddRemoteInput(Handle player, u8* input, Frame frame)
 {
 	// valid handles start from 1 while the input buffers index starts at 0.
 	i32 plyr = player - 1;
@@ -65,7 +65,7 @@ bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame 
 			return false;
 		}
 
-		std::memcpy(all_input.get() + (i * _input_size), inp->input, _input_size);
+		std::memcpy(all_input.get() + (i * _input_size), (void*)inp->input.get(), _input_size);
 	}
 	inputs = std::move(all_input);
 	return true;
@@ -81,7 +81,7 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 			return false;
 		}
 
-		std::memcpy(all_input.get() + (i * _input_size), inp->input, _input_size);
+		std::memcpy(all_input.get() + (i * _input_size), (void*)inp->input.get(), _input_size);
 	}
 	frame = _current_frame;
 	inputs = std::move(all_input);
@@ -99,7 +99,7 @@ bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique
 			return false;
 		}
 
-		std::memcpy(all_input.get() + (i * _input_size), inp->input, _input_size);
+		std::memcpy(all_input.get() + (i * _input_size), (void*)inp->input.get(), _input_size);
 	}
 	inputs = std::move(all_input);
 	return true;

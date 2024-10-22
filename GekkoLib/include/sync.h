@@ -13,9 +13,9 @@ namespace Gekko {
 
 		void Init(u8 num_players, u32 input_size);
 
-		void AddLocalInput(Handle player, Input input);
+		void AddLocalInput(Handle player, u8* input);
 
-		void AddRemoteInput(Handle player, Input input, Frame frame);
+		void AddRemoteInput(Handle player, u8* input, Frame frame);
 
 		void IncrementFrame();
 

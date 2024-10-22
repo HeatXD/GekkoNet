@@ -21,7 +21,7 @@
 #endif // GEKKONET_NO_ASIO
 
 namespace Gekko {
-    struct GEKKONET_API NetAddress {
+    struct NetAddress {
         NetAddress();
         NetAddress(void* data, u32 size);
 
@@ -139,14 +139,14 @@ namespace Gekko {
         std::unique_ptr<char[]> data;
     };
 
-    class GEKKONET_API NetAdapter {
+    class NetAdapter {
     public:
         virtual std::vector<std::unique_ptr<NetResult>> ReceiveData() = 0;
         virtual void SendData(NetAddress& addr, const char* data, int length) = 0;
     };
 
 #ifndef GEKKONET_NO_ASIO
-    class GEKKONET_API NonBlockingSocket : public NetAdapter {
+    class NonBlockingSocket : public NetAdapter {
     public:
         NonBlockingSocket(u16 port);
 
