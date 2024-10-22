@@ -19,6 +19,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Include directories for third-party header-only libraries
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty)
+include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
 
 # Manually list all your source files
 set(SRC_FILES
