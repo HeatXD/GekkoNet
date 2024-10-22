@@ -31,6 +31,10 @@ jobs:
             platform: macos
     runs-on: ${{ matrix.os }}
 
+    defaults:
+      run:
+        working-directory: GekkoLib  # Set working directory for all steps
+
     steps:
       - uses: actions/checkout@v2
 
@@ -39,7 +43,7 @@ jobs:
 
       - name: Configure CMake
         run: |
-          cmake -S GekkoLib -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
           -DBUILD_SHARED_LIBS=ON \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
 
@@ -50,7 +54,7 @@ jobs:
         run: |
           mkdir -p package/${{ matrix.configuration }}/lib
           mkdir -p package/${{ matrix.configuration }}/include
-          cp -r my_subfolder/include/* package/${{ matrix.configuration }}/include/
+          cp -r include/* package/${{ matrix.configuration }}/include/
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp build/${{ matrix.configuration }}/* package/${{ matrix.configuration }}/lib/ || true
           else
