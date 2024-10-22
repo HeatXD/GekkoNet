@@ -3,7 +3,12 @@ name: Create Release
 on:
   push:
     branches: [ main ]
-
+# Add these permission settings
+permissions:
+  contents: write
+  packages: write
+  deployments: write
+  
 jobs:
   create_release:
     runs-on: ubuntu-latest
