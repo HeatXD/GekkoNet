@@ -13,13 +13,13 @@
 
 namespace Gekko {
 
-	enum PlayerType {
+	enum GEKKONET_API PlayerType {
 		LocalPlayer,
 		RemotePlayer,
 		Spectator
 	};
 
-    enum PlayerStatus {
+    enum GEKKONET_API PlayerStatus {
         Initiating,
         Connected,
         Disconnected,

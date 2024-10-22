@@ -1,21 +1,27 @@
 #pragma once
 
+#include "gekkonet.h"
+
 #include "gekko_types.h"
 
 #include <memory>
 #include <vector>
 #include <chrono>
 
-#include <zpp/serializer.h>
+#include "zpp/serializer.h"
+
+#ifndef GEKKONET_NO_ASIO
 
 #ifdef _WIN32
 #define _WIN32_WINNT 0x0A00
 #endif // _WIN32
 
-#include <asio/asio.hpp>
+#include "asio/asio.hpp"
+
+#endif // GEKKONET_NO_ASIO
 
 namespace Gekko {
-    struct NetAddress {
+    struct GEKKONET_API NetAddress {
         NetAddress();
         NetAddress(void* data, u32 size);
 
@@ -133,13 +139,14 @@ namespace Gekko {
         std::unique_ptr<char[]> data;
     };
 
-    class NetAdapter {
+    class GEKKONET_API NetAdapter {
     public:
         virtual std::vector<std::unique_ptr<NetResult>> ReceiveData() = 0;
         virtual void SendData(NetAddress& addr, const char* data, int length) = 0;
     };
 
-    class NonBlockingSocket : public NetAdapter {
+#ifndef GEKKONET_NO_ASIO
+    class GEKKONET_API NonBlockingSocket : public NetAdapter {
     public:
         NonBlockingSocket(u16 port);
 
@@ -175,4 +182,5 @@ namespace Gekko {
 
         std::unique_ptr<asio::ip::udp::socket> _socket;
     };
+#endif // !GEKKONET_NO_ASIO
 }

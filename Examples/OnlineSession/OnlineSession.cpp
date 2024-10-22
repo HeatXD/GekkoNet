@@ -1,6 +1,6 @@
 #include <iostream>
 #include "SDL2/SDL.h"
-#include <gekko.h>
+#include "gekko.h"
 #include <chrono>
 #include <string>
 
@@ -69,14 +69,6 @@ void process_events(Gekko::Session& sess) {
         case SDL_KEYDOWN:
             if (event.key.keysym.sym == SDLK_ESCAPE) {
                 running = false;
-                break;
-            }
-
-            if (event.key.keysym.sym == SDLK_q) {
-                break;
-            }
-
-            if (event.key.keysym.sym == SDLK_e) {
                 break;
             }
         }
@@ -231,7 +223,7 @@ int main(int argc, char* args[])
         localplayer = sess.AddActor(Gekko::PlayerType::LocalPlayer);
     }
 
-    sess.SetLocalDelay(localplayer, 5);
+    sess.SetLocalDelay(localplayer, 1);
     // timing
 
     gtime_point start_time(gclock::now());
@@ -244,7 +236,7 @@ int main(int argc, char* args[])
 
         auto frame_time = GetFrameTime(sess.FramesAhead());
 
-        // std::cout << "ft: " << frame_time.count() << std::endl;
+        std::cout << "ft: " << frame_time.count() << std::endl;
 
         process_events(sess);
 
