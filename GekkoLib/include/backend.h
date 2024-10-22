@@ -156,9 +156,9 @@ namespace Gekko {
         void OnHealthCheck(NetAddress& addr, NetPacket& pkt);
 
 	private:
-		static const u32 MAX_PLAYER_SEND_SIZE = 32;
-		static const u32 MAX_SPECTATOR_SEND_SIZE = 48;
-		static const u32 NUM_TO_SYNC = 4;
+		const u32 MAX_PLAYER_SEND_SIZE = 32;
+		const u32 MAX_SPECTATOR_SEND_SIZE = 48;
+	    const u32 NUM_TO_SYNC = 4;
 
 		u32 _input_size;
 
