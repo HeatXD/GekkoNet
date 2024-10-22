@@ -1,0 +1,106 @@
+name: Create Release
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get version
+        id: version
+        run: |
+          echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+
+  build:
+    needs: create_release
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        build_type: [static, shared]
+        asio: [with_asio, no_asio]
+        configuration: [Debug, Release]
+        include:
+          - os: windows-latest
+            archive_ext: zip
+            archive_cmd: 7z a
+            platform: windows
+          - os: ubuntu-latest
+            archive_ext: tar.gz
+            archive_cmd: tar -czf
+            platform: linux
+          - os: macos-latest
+            archive_ext: tar.gz
+            archive_cmd: tar -czf
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create build directory
+        run: cmake -E make_directory build
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
+          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
+          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.configuration }}
+
+      # Create separate directories for Debug and Release
+      - name: Prepare files for packaging
+        run: |
+          mkdir -p package/${{ matrix.configuration }}/lib
+          mkdir -p package/${{ matrix.configuration }}/include
+          cp -r include/* package/${{ matrix.configuration }}/include/
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp build/${{ matrix.configuration }}/* package/${{ matrix.configuration }}/lib/ || true
+          else
+            cp build/* package/${{ matrix.configuration }}/lib/ || true
+          fi
+        shell: bash
+
+      # Windows ZIP archive
+      - name: Create Windows Archive
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd package
+          7z a ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
+
+      # Linux/MacOS TAR archive
+      - name: Create Unix Archive
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd package
+          tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }}
+          asset_name: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }}
+          asset_content_type: ${{ matrix.archive_ext == 'zip' && 'application/zip' || 'application/gzip' }}
