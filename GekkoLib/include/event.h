@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gekkonet.h"
+
 #include "gekko_types.h"
 
 #include <vector>
@@ -7,14 +9,14 @@
 
 namespace Gekko {
 
-    enum GameEventType {
+    enum GEKKONET_API GameEventType {
         EmptyGameEvent= -1,
         AdvanceEvent,
         SaveEvent,
         LoadEvent
     };
 
-    enum SessionEventType {
+    enum GEKKONET_API SessionEventType {
         EmptySessionEvent = -1,
         PlayerSyncing,
         PlayerConnected,
@@ -25,7 +27,7 @@ namespace Gekko {
         DesyncDetected,
     };
 
-	struct GameEvent {
+	struct GEKKONET_API GameEvent {
     public:
         ~GameEvent();
 
@@ -72,7 +74,7 @@ namespace Gekko {
         std::vector<std::unique_ptr<GameEvent>> _buffer_others;
     };
 
-    struct SessionEvent {
+    struct GEKKONET_API SessionEvent {
     public:
         SessionEventType type;
 
@@ -139,5 +141,4 @@ namespace Gekko {
 
         SessionEventBuffer _event_buffer;
     };
-
 }

@@ -50,6 +50,7 @@ Gekko::u8* Gekko::NetAddress::GetAddress()
     return _data.get();
 }
 
+#ifndef GEKKONET_NO_ASIO
 Gekko::NonBlockingSocket::NonBlockingSocket(u16 port)
 {
     _socket = std::make_unique<asio::ip::udp::socket>(_io_ctx, asio::ip::udp::endpoint(asio::ip::udp::v4(), port));
@@ -95,4 +96,5 @@ void Gekko::NonBlockingSocket::SendData(NetAddress& addr, const char* data, int 
         std::cerr << "send failed: " << _ec.message() << std::endl;
     }
 }
+#endif 
 

@@ -23,6 +23,7 @@
     <ClInclude Include="include\compression.h" />
     <ClInclude Include="include\event.h" />
     <ClInclude Include="include\gekko.h" />
+    <ClInclude Include="include\gekkonet.h" />
     <ClInclude Include="include\gekko_types.h" />
     <ClInclude Include="include\input.h" />
     <ClInclude Include="include\net.h" />
