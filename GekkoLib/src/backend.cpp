@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cassert>
+#include <climits>
 
 // register poly types.
 namespace
