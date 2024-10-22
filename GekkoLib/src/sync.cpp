@@ -1,6 +1,8 @@
 #include "sync.h"
 
 #include <memory>
+#include <cstring>
+#include <climits>
 
 Gekko::SyncSystem::SyncSystem()
 {
