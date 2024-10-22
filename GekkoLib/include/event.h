@@ -9,14 +9,14 @@
 
 namespace Gekko {
 
-    enum GEKKONET_API GameEventType {
+    enum GameEventType {
         EmptyGameEvent= -1,
         AdvanceEvent,
         SaveEvent,
         LoadEvent
     };
 
-    enum GEKKONET_API SessionEventType {
+    enum SessionEventType {
         EmptySessionEvent = -1,
         PlayerSyncing,
         PlayerConnected,
@@ -27,7 +27,7 @@ namespace Gekko {
         DesyncDetected,
     };
 
-	struct GEKKONET_API GameEvent {
+	struct GameEvent {
     public:
         ~GameEvent();
 
@@ -74,7 +74,7 @@ namespace Gekko {
         std::vector<std::unique_ptr<GameEvent>> _buffer_others;
     };
 
-    struct GEKKONET_API SessionEvent {
+    struct SessionEvent {
     public:
         SessionEventType type;
 

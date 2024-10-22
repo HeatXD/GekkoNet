@@ -12,9 +12,9 @@ namespace Gekko {
 
 		void Init(GameInput* other);
 
-		void Init(Frame frame_num, Input inp, u32 inp_len);
+		void Init(Frame frame_num, u8* inp, u32 inp_len);
 
-		bool IsEqualTo(Input other);
+		bool IsEqualTo(u8* other);
 
 		void Clear();
 
@@ -23,7 +23,7 @@ namespace Gekko {
 
 		Frame frame;
 
-		Input input;
+		std::unique_ptr<u8[]> input;
 
 		u32 input_len;
 	};
@@ -35,9 +35,9 @@ namespace Gekko {
 
 		void Init(u8 delay, u8 input_window, u32 input_size);
 
-		void AddLocalInput(Frame frame, Input input);
+		void AddLocalInput(Frame frame, u8* input);
 
-		void AddInput(Frame frame, Input input);
+		void AddInput(Frame frame, u8* input);
 
 		void SetDelay(u8 delay);
 

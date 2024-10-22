@@ -38,7 +38,7 @@ void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
 	}
 }
 
-void Gekko::InputBuffer::AddLocalInput(Frame frame, const Input input)
+void Gekko::InputBuffer::AddLocalInput(Frame frame, u8* input)
 {
 	if (_inputs[frame % BUFF_SIZE]->frame == GameInput::NULL_FRAME && _input_delay > 0) {
 		for (i32 i = 0; i < _input_delay; i++) {
@@ -48,7 +48,7 @@ void Gekko::InputBuffer::AddLocalInput(Frame frame, const Input input)
 	AddInput(frame + _input_delay, input);
 }
 
-void Gekko::InputBuffer::AddInput(Frame frame, Input input)
+void Gekko::InputBuffer::AddInput(Frame frame, u8* input)
 {
 	if (frame == _last_received_input + 1) {
 		if (_input_prediction_window > 0 && _first_predicted_input == frame) {
@@ -99,7 +99,7 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 		_input_delay = delay;
 
 		Frame last_input = _last_received_input;
-        Input prev = _inputs[last_input % BUFF_SIZE]->input;
+        u8* prev = _inputs[last_input % BUFF_SIZE]->input.get();
 
 		for (i32 i = 1; i <= _input_delay; i++) {
 			AddInput(last_input + i, prev);
@@ -219,42 +219,42 @@ void Gekko::GameInput::Init(GameInput* other)
 	input_len = other->input_len;
 
 	if (input) {
-		std::memcpy(input, other->input, input_len);
+		std::memcpy(input.get(), other->input.get(), input_len);
 		return;
 	}
 
-	input = (Input) std::malloc(input_len);
+	input = std::make_unique<u8[]>(input_len);
 
     if (input) {
-        std::memcpy(input, other->input, input_len);
+        std::memcpy(input.get(), other->input.get(), input_len);
     }
 }
 
-void Gekko::GameInput::Init(Frame frame_num, Input inp, u32 inp_len)
+void Gekko::GameInput::Init(Frame frame_num, u8* inp, u32 inp_len)
 {
 	frame = frame_num;
 	input_len = inp_len;
 
 	if (input) {
-		std::memcpy(input, inp, input_len);
+		std::memcpy(input.get(), inp, input_len);
 		return;
 	}
 
-	input = (Input) std::malloc(input_len);
+	input = std::make_unique<u8[]>(input_len);
 
     if (input) {
-        std::memcpy(input, inp, input_len);
+        std::memcpy(input.get(), inp, input_len);
     }
 }
 
-bool Gekko::GameInput::IsEqualTo(Input other)
+bool Gekko::GameInput::IsEqualTo(u8* other)
 {
-	return input_len != 0 && std::memcmp(input, other, input_len) == 0;
+	return input_len != 0 && std::memcmp(input.get(), other, input_len) == 0;
 }
 
 void Gekko::GameInput::Clear()
 {
-    std::memset(input, 0, input_len);
+    std::memset(input.get(), 0, input_len);
 	frame = NULL_FRAME;
 }
 
@@ -262,13 +262,9 @@ Gekko::GameInput::GameInput()
 {
 	frame = NULL_FRAME;
 	input_len = 0;
-	input = nullptr;
+	input = std::unique_ptr<u8[]>();
 }
 
 Gekko::GameInput::~GameInput()
 {
-	if (input) {
-		std::free(input);
-		input = nullptr;
-	}
 }

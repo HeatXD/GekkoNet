@@ -56,7 +56,7 @@ Gekko::GameEvent* Gekko::GameEventBuffer::GetEvent(bool advance)
 Gekko::GameEvent::~GameEvent()
 {
     // cleanup inputs automatically
-    if (type == AdvanceEvent && data.adv.inputs) {
+    if (type == AdvanceEvent) {
         std::free(data.adv.inputs);
         data.adv.inputs = nullptr;
     }

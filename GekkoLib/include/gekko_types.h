@@ -17,6 +17,5 @@ namespace Gekko {
 	typedef double f64;
 
 	typedef int32_t Frame;
-	typedef uint8_t* Input;
 	typedef int32_t Handle;
 }

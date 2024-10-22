@@ -97,7 +97,7 @@ Gekko::Handle Gekko::Session::AddActor(PlayerType type, NetAddress* addr)
 
 void Gekko::Session::AddLocalInput(Handle player, void* input)
 {
-	Input inp = (u8*)input;
+	u8* inp = (u8*)input;
 
 	for (u32 i = 0; i < _msg.locals.size(); i++) {
 		if (_msg.locals[i]->handle == player) {
