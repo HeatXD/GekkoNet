@@ -12,7 +12,7 @@
 
 namespace Gekko {
 	struct Config {
-        static const u8 MAX_SPECTATOR_DELAY = (u8)(InputBuffer::BUFF_SIZE * 0.75); // max delay in frames
+        const u8 MAX_SPECTATOR_DELAY = (u8)(InputBuffer::BUFF_SIZE * 0.75); // max delay in frames
 
 		u8 num_players = 0;
 		u8 max_spectators = 0;
