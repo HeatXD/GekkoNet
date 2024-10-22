@@ -9,10 +9,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Option to build both shared and static libraries
-option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
 # Option to exclude ASIO from the shared and static libraries
-option(NO_ASIO_BUILD "Exclude ASIO from the build" ON)
+option(NO_ASIO_BUILD "Exclude ASIO from the build" OFF)
 
 # Include directories for your project headers
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -33,16 +33,30 @@ set(SRC_FILES
 )
 
 # Shared libraries
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
+
 # Static libraries
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
 
 # Create both static and shared library targets
 add_library(GekkoNet ${SRC_FILES})
 
+# Set the output names conditionally if NO_ASIO_BUILD is enabled
+if(NO_ASIO_BUILD)
+    set(TARGET_SUFFIX "_NO_ASIO")
+else()
+    set(TARGET_SUFFIX "")
+endif()
+
+# Set the output name with the conditional suffix
+set_target_properties(GekkoNet PROPERTIES OUTPUT_NAME "GekkoNet${TARGET_SUFFIX}")
+
 # Set properties for Windows DLL export macros (if building a DLL)
 if(WIN32 AND BUILD_SHARED_LIBS)
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_DLL_EXPORT)
+else()
+    target_compile_definitions(GekkoNet PRIVATE GEKKONET_STATIC)
 endif()
 
 if(NO_ASIO_BUILD)
