@@ -1,5 +1,6 @@
 #include "event.h"
 #include <cassert>
+#include <cstdlib>
 
 void Gekko::GameEventBuffer::Init(u32 input_size)
 {
