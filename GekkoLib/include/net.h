@@ -16,6 +16,8 @@
 #define _WIN32_WINNT 0x0A00
 #endif // _WIN32
 
+#define ASIO_STANDALONE 
+
 #include "asio/asio.hpp"
 
 #endif // GEKKONET_NO_ASIO
