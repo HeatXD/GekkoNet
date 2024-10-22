@@ -10,8 +10,70 @@ permissions:
   deployments: write
 
 jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        asio: [with_asio, no_asio]
+        configuration: [Debug, Release]
+        include:
+          - os: windows-latest
+            archive_ext: zip
+            archive_cmd: 7z a
+            platform: windows
+          - os: ubuntu-latest
+            archive_ext: tar.gz
+            archive_cmd: tar -czf
+            platform: linux
+          - os: macos-latest
+            archive_ext: tar.gz
+            archive_cmd: tar -czf
+            platform: macos
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create build directory
+        run: cmake -E make_directory build
+
+      - name: Configure CMake
+        run: |
+          cmake -S GekkoLib -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
+          -DBUILD_SHARED_LIBS=ON \
+          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.configuration }}
+
+      - name: Prepare files for packaging
+        run: |
+          mkdir -p package/${{ matrix.configuration }}/lib
+          mkdir -p package/${{ matrix.configuration }}/include
+          cp -r my_subfolder/include/* package/${{ matrix.configuration }}/include/
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp build/${{ matrix.configuration }}/* package/${{ matrix.configuration }}/lib/ || true
+          else
+            cp build/* package/${{ matrix.configuration }}/lib/ || true
+          fi
+        shell: bash
+
+      - name: Create Windows Archive
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd package
+          7z a ../GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
+
+      - name: Create Unix Archive
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd package
+          tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
+
   create_release:
+    needs: build
     runs-on: ubuntu-latest
+    if: ${{ success() }}  # Only proceed if the build job succeeded
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.version.outputs.version }}
@@ -34,67 +96,6 @@ jobs:
           release_name: Release ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
-
-  build:
-    needs: create_release
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        asio: [with_asio, no_asio]
-        configuration: [Debug, Release]
-        include:
-          - os: windows-latest
-            archive_ext: zip
-            archive_cmd: 7z a
-            platform: windows
-          - os: ubuntu-latest
-            archive_ext: tar.gz
-            archive_cmd: tar -czf
-            platform: linux
-          - os: macos-latest
-            archive_ext: tar.gz
-            archive_cmd: tar -czf
-            platform: macos
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Create build directory
-        run: cmake -E make_directory build
-
-      - name: Configure CMake
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
-          -DBUILD_SHARED_LIBS=ON \
-          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-
-      - name: Build
-        run: cmake --build build --config ${{ matrix.configuration }}
-
-      - name: Prepare files for packaging
-        run: |
-          mkdir -p package/${{ matrix.configuration }}/lib
-          mkdir -p package/${{ matrix.configuration }}/include
-          cp -r include/* package/${{ matrix.configuration }}/include/
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp build/${{ matrix.configuration }}/* package/${{ matrix.configuration }}/lib/ || true
-          else
-            cp build/* package/${{ matrix.configuration }}/lib/ || true
-          fi
-        shell: bash
-
-      - name: Create Windows Archive
-        if: matrix.os == 'windows-latest'
-        run: |
-          cd package
-          7z a ../GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
-
-      - name: Create Unix Archive
-        if: matrix.os != 'windows-latest'
-        run: |
-          cd package
-          tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
