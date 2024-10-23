@@ -1,21 +1,18 @@
 name: Create Release
-
 on:
   push:
     branches: [ main ]
-
 permissions:
   contents: write
   packages: write
   deployments: write
-
 jobs:
   build:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
+        build_type: [static, shared]
         asio: [with_asio, no_asio]
-        configuration: [Debug, Release]
         include:
           - os: windows-latest
             archive_ext: zip
@@ -30,66 +27,68 @@ jobs:
             archive_cmd: tar -czf
             platform: macos
     runs-on: ${{ matrix.os }}
-
     defaults:
       run:
-        working-directory: GekkoLib  # Set working directory for all steps
-
+        working-directory: GekkoLib
     steps:
       - uses: actions/checkout@v2
-
+      
       - name: Create build directory
         run: cmake -E make_directory build
-
+      
       - name: Configure CMake
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
-          -DBUILD_SHARED_LIBS=ON \
+          cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-
+      
       - name: Build
-        run: cmake --build build --config ${{ matrix.configuration }}
-
+        run: cmake --build build --config Release
+      
       - name: Prepare files for packaging
         run: |
-          mkdir -p package/${{ matrix.configuration }}/lib
-          mkdir -p package/${{ matrix.configuration }}/include
-          cp -r include/* package/${{ matrix.configuration }}/include/
+          mkdir -p package/Release/lib
+          mkdir -p package/Release/include
+          cp -r include/* package/Release/include/
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp build/${{ matrix.configuration }}/* package/${{ matrix.configuration }}/lib/ || true
+            cp build/Release/* package/Release/lib/ || true
           else
-            cp build/* package/${{ matrix.configuration }}/lib/ || true
+            cp build/* package/Release/lib/ || true
           fi
         shell: bash
-
+      
       - name: Create Windows Archive
         if: matrix.os == 'windows-latest'
         run: |
           cd package
-          7z a ../GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
-
+          7z a ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }} *
+      
       - name: Create Unix Archive
         if: matrix.os != 'windows-latest'
         run: |
           cd package
-          tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }} *
+          tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }} *
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release
+          path: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
 
   create_release:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ success() }}  # Only proceed if the build job succeeded
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-      version: ${{ steps.version.outputs.version }}
+    if: ${{ success() }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
+      
       - name: Get version
         id: version
         run: |
           echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
+      
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -100,13 +99,18 @@ jobs:
           release_name: Release ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+      
+      - name: List artifacts
+        run: ls -R
+      
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            GekkoNet-*/*
+          tag_name: v${{ steps.version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }}
-          asset_name: GekkoNet-${{ matrix.platform }}-${{ matrix.asio }}-${{ matrix.configuration }}.${{ matrix.archive_ext }}
-          asset_content_type: ${{ matrix.archive_ext == 'zip' && 'application/zip' || 'application/gzip' }}
