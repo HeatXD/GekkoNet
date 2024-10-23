@@ -62,7 +62,12 @@ jobs:
           cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
           
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            find build/Release -name "*.dll" -o -name "*.lib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
+            # For Windows, check both build and build/Release directories
+            if [ -d build/Release ]; then
+              find build/Release -name "*.dll" -o -name "*.lib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
+            else
+              find build -name "*.dll" -o -name "*.lib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
+            fi
           else
             find build -name "*.so" -o -name "*.so.*" -o -name "*.a" -o -name "*.dylib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
           fi
