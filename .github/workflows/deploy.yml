@@ -39,8 +39,8 @@ jobs:
         run: >-
           cmake -B build 
           -DCMAKE_BUILD_TYPE=Release 
-          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=GekkoLib/out
-          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=GekkoLib/out
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=out
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=out
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} 
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
           .
@@ -50,8 +50,8 @@ jobs:
         run: |
           cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=GekkoLib/out \
-          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=GekkoLib/out \
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=out \
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=out \
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
           .
@@ -63,11 +63,11 @@ jobs:
       - name: List build directory contents
         run: ls -R build
 
-      # Debugging step: Print GekkoLib/out directory contents (after build)
+      # Debugging step: Print out directory contents (after build)
       - name: List output directory contents
         run: |
-          if [ -d "GekkoLib/out" ]; then
-            ls -R GekkoLib/out
+          if [ -d "out" ]; then
+            ls -R out
           else
             echo "Output directory does not exist!"
           fi
@@ -79,10 +79,10 @@ jobs:
           cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
 
           # Only copy binaries if the output directory exists
-          if [ -d "GekkoLib/out" ]; then
-            cp GekkoLib/out/* package/Release/${{ matrix.platform }}/lib/ || true
+          if [ -d "out" ]; then
+            cp out/* package/Release/${{ matrix.platform }}/lib/ || true
           else
-            echo "No binaries found in GekkoLib/out/!"
+            echo "No binaries found in out/!"
           fi
       
       - name: Upload Build Artifact
