@@ -116,12 +116,13 @@ jobs:
           # Group by OS platform
           for os_platform in windows linux macos; do
             mkdir -p "GekkoNet-${os_platform}"
-            mkdir -p "GekkoNet-${os_platform}/include"
-            mkdir -p "GekkoNet-${os_platform}/thirdparty"
+            mkdir -p "GekkoNet-${os_platform}/${os_platform}/include"
+            mkdir -p "GekkoNet-${os_platform}/${os_platform}/thirdparty"
+
+            cp -r GekkoLib/include/* "GekkoNet-${os_platform}/${os_platform}/include" || true
+            cp -r GekkoLib/thirdparty/* "GekkoNet-${os_platform}/${os_platform}/thirdparty" || true
               
             for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
-              cp -r GekkoLib/include/* "GekkoNet-${os_platform}/include" || true
-              cp -r GekkoLib/thirdparty/* "GekkoNet-${os_platform}/thirdparty" || true
               cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
             done
             tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
