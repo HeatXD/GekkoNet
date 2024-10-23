@@ -1,14 +1,12 @@
 name: Create Release
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 permissions:
   contents: write
   packages: write
   deployments: write
-
 jobs:
-  # Step 1: Build job which reuses the headers artifact
   build:
     strategy:
       matrix:
@@ -23,7 +21,7 @@ jobs:
           - os: macos-latest
             platform: macos
     runs-on: ${{ matrix.os }}
-
+    
     defaults:
       run:
         shell: bash
@@ -31,10 +29,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Create build directory
         run: cmake -E make_directory build
-
+      
       - name: Configure CMake (Windows)
         if: matrix.os == 'windows-latest'
         shell: cmd
@@ -57,10 +55,19 @@ jobs:
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
           .
-
+      
       - name: Build
         run: cmake --build build --config Release
-
+        
+      # Debugging step: Print out directory contents (after build)
+      - name: List output directory contents
+        run: |
+          if [ -d "out" ];then
+            ls -R out
+          else
+            echo "Output directory does not exist!"
+          fi
+      
       - name: Prepare files for packaging
         run: |
           # Create the directory structure for the package
@@ -68,9 +75,11 @@ jobs:
           mkdir -p package/Release/${{ matrix.platform }}/include
           mkdir -p package/Release/${{ matrix.platform }}/thirdparty
 
-          # Copy library headers from the downloaded artifact
-          cp -r GekkoLib/include/* package/Release/${{ matrix.platform }}/include/ || true
-          cp -r GekkoLib/thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
+          # Copy library headers
+          cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
+          
+          # Conditionally copy third-party headers based on asio configuration
+          cp -r thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
 
           if [ "${{ matrix.asio }}" == "no_asio" ]; then
             echo "ASIO disabled, skipping ASIO headers"
@@ -83,7 +92,7 @@ jobs:
           else
             echo "No binaries found in out/!"
           fi
-
+          
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -97,35 +106,37 @@ jobs:
     if: ${{ success() }}
     permissions:
       contents: write
-
+    
     defaults:
       run:
         shell: bash
 
     steps:
       - uses: actions/checkout@v4
-
+        
       - name: Get version
         id: version
         run: |
           echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
+      
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
           path: downloads
-
+      
       - name: Create OS-specific packages
         run: |
           # Group by OS platform
           for os_platform in windows linux macos; do
             mkdir -p "GekkoNet-${os_platform}"
+            mkdir -p "GekkoNet-${os_platform}/include"
+            mkdir -p "GekkoNet-${os_platform}/thirdparty"
             for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
               cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
             done
             tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
           done
-
+      
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
