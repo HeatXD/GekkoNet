@@ -21,56 +21,52 @@ jobs:
           - os: macos-latest
             platform: macos
     runs-on: ${{ matrix.os }}
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: GekkoLib
+
     steps:
       - uses: actions/checkout@v4
       
       - name: Create build directory
-        run: cmake -E make_directory GekkoLib/build
+        run: cmake -E make_directory build
       
       - name: Configure CMake (Windows)
         if: matrix.os == 'windows-latest'
         shell: cmd
-        working-directory: GekkoLib
         run: >-
           cmake -B build 
           -DCMAKE_BUILD_TYPE=Release 
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=GekkoLib/out
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=GekkoLib/out
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} 
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
           .
 
       - name: Configure CMake (Unix)
         if: matrix.os != 'windows-latest'
-        shell: bash
-        working-directory: GekkoLib
         run: |
           cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=GekkoLib/out \
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=GekkoLib/out \
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
           .
       
       - name: Build
-        working-directory: GekkoLib
         run: cmake --build build --config Release
       
       - name: Prepare files for packaging
-        working-directory: GekkoLib
-        shell: bash
         run: |
           mkdir -p package/Release/${{ matrix.platform }}/lib
           mkdir -p package/Release/${{ matrix.platform }}/include
           cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
-          
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # For Windows, check both build and build/Release directories
-            if [ -d build/Release ]; then
-              find build/Release -name "*.dll" -o -name "*.lib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
-            else
-              find build -name "*.dll" -o -name "*.lib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
-            fi
-          else
-            find build -name "*.so" -o -name "*.so.*" -o -name "*.a" -o -name "*.dylib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
-          fi
+
+          # Copy all relevant binaries from unified GekkoLib/out/ folder
+          cp GekkoLib/out/* package/Release/${{ matrix.platform }}/lib/ || true
       
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
@@ -85,6 +81,11 @@ jobs:
     if: ${{ success() }}
     permissions:
       contents: write
+    
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - uses: actions/checkout@v4
         
