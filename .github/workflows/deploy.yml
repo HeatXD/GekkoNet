@@ -62,7 +62,7 @@ jobs:
       # Debugging step: Print out directory contents (after build)
       - name: List output directory contents
         run: |
-          if [ -d "out" ]; then
+          if [ -d "out" ];then
             ls -R out
           else
             echo "Output directory does not exist!"
@@ -70,14 +70,21 @@ jobs:
       
       - name: Prepare files for packaging
         run: |
+          # Create the directory structure for the package
           mkdir -p package/Release/${{ matrix.platform }}/lib
           mkdir -p package/Release/${{ matrix.platform }}/include
           mkdir -p package/Release/${{ matrix.platform }}/thirdparty
+
+          # Copy library headers
           cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
+          
+          # Conditionally copy third-party headers based on asio configuration
           cp -r thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
 
-          if [matrix.asio != 'no_asio']; then
-            rm -r package/Release/${{ matrix.platform }}/thirdparty/asio || true
+          if [ "${{ matrix.asio }}" == "no_asio" ]; then
+            echo "ASIO disabled, skipping ASIO headers"
+            rm -rf package/Release/${{ matrix.platform }}/thirdparty/asio || true
+          fi
 
           # Only copy binaries if the output directory exists
           if [ -d "out" ]; then
