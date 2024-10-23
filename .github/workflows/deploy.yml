@@ -15,16 +15,10 @@ jobs:
         asio: [with_asio, no_asio]
         include:
           - os: windows-latest
-            archive_ext: zip
-            archive_cmd: 7z a
             platform: windows
           - os: ubuntu-latest
-            archive_ext: tar.gz
-            archive_cmd: tar -czf
             platform: linux
           - os: macos-latest
-            archive_ext: tar.gz
-            archive_cmd: tar -czf
             platform: macos
     runs-on: ${{ matrix.os }}
     steps:
@@ -63,34 +57,21 @@ jobs:
         working-directory: GekkoLib
         shell: bash
         run: |
-          mkdir -p package/Release/lib
-          mkdir -p package/Release/include
-          cp -r include/* package/Release/include/
+          mkdir -p package/Release/${{ matrix.platform }}/lib
+          mkdir -p package/Release/${{ matrix.platform }}/include
+          cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
+          
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp build/Release/* package/Release/lib/ || true
+            find build/Release -name "*.dll" -o -name "*.lib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
           else
-            cp build/* package/Release/lib/ || true
+            find build -name "*.so" -o -name "*.so.*" -o -name "*.a" -o -name "*.dylib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \;
           fi
       
-      - name: Create Windows Archive
-        if: matrix.os == 'windows-latest'
-        working-directory: GekkoLib
-        run: |
-          cd package
-          7z a ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }} *
-      
-      - name: Create Unix Archive
-        if: matrix.os != 'windows-latest'
-        working-directory: GekkoLib
-        run: |
-          cd package
-          tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }} *
-      
-      - name: Upload Artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: release-artifacts
-          path: GekkoLib/GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
+          name: ${{ matrix.platform }}-builds-${{ matrix.build_type }}-${{ matrix.asio }}
+          path: GekkoLib/package/Release
           retention-days: 1
 
   create_release:
@@ -107,20 +88,21 @@ jobs:
         run: |
           echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
-          name: release-artifacts
-          path: releases
+          path: downloads
       
-      - name: Display structure of downloaded files
+      - name: Create OS-specific packages
         run: |
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          echo "Releases directory contents:"
-          ls -la releases/
+          # Group by OS platform
+          for os_platform in windows linux macos; do
+            mkdir -p "GekkoNet-${os_platform}"
+            for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
+              cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
+            done
+            tar -czf "GekkoNet-${os_platform}-all-variants-Release.tar.gz" "GekkoNet-${os_platform}"
+          done
       
       - name: Create Release
         env:
@@ -131,4 +113,4 @@ jobs:
           name: Release ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
-          files: releases/*
+          files: GekkoNet-*-all-variants-Release.tar.gz
