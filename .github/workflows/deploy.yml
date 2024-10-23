@@ -76,14 +76,7 @@ jobs:
 
           # Only copy binaries if the output directory exists
           if [ -d "out" ]; then
-            cp out/* package/Release/${{ matrix.platform }}/lib/ || true
-          else
-            echo "No binaries found in out/!"
-          fi
-          
-          # windows edgecase
-          if [ -d "out/Release" ]; then
-            cp out/Release/* package/Release/${{ matrix.platform }}/lib/ || true
+            cp -r out/* package/Release/${{ matrix.platform }}/lib/ || true
           else
             echo "No binaries found in out/!"
           fi
