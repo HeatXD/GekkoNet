@@ -1,38 +1,15 @@
 name: Create Release
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 permissions:
   contents: write
   packages: write
   deployments: write
 
 jobs:
-  # Step 1: Download headers and package them as an artifact
-  prepare_headers:
-    runs-on: ubuntu-latest
-    outputs:
-      artifact-path: ${{ steps.prepare.outputs.artifact-path }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Prepare and package headers (include & thirdparty)
-        id: prepare
-        run: |
-          mkdir -p package/headers
-          cp -r GekkoLib/include package/headers/ || true
-          cp -r GekkoLib/thirdparty package/headers/ || true
-          echo "::set-output name=artifact-path::package/headers"
-        
-      - name: Upload headers as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: headers
-          path: package/headers
-
-  # Step 2: Build job which reuses the headers artifact
+  # Step 1: Build job which reuses the headers artifact
   build:
-    needs: prepare_headers
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
@@ -46,7 +23,7 @@ jobs:
           - os: macos-latest
             platform: macos
     runs-on: ${{ matrix.os }}
-    
+
     defaults:
       run:
         shell: bash
@@ -54,13 +31,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      # Step 3: Download and extract the headers artifact
-      - name: Download headers artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: headers
-          path: package/headers
 
       - name: Create build directory
         run: cmake -E make_directory build
@@ -87,19 +57,10 @@ jobs:
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
           .
-      
+
       - name: Build
         run: cmake --build build --config Release
-        
-      # Debugging step: Print out directory contents (after build)
-      - name: List output directory contents
-        run: |
-          if [ -d "out" ]; then
-            ls -R out
-          else
-            echo "Output directory does not exist!"
-          fi
-      
+
       - name: Prepare files for packaging
         run: |
           # Create the directory structure for the package
@@ -108,8 +69,8 @@ jobs:
           mkdir -p package/Release/${{ matrix.platform }}/thirdparty
 
           # Copy library headers from the downloaded artifact
-          cp -r package/headers/include/* package/Release/${{ matrix.platform }}/include/ || true
-          cp -r package/headers/thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
+          cp -r GekkoLib/include/* package/Release/${{ matrix.platform }}/include/ || true
+          cp -r GekkoLib/thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
 
           if [ "${{ matrix.asio }}" == "no_asio" ]; then
             echo "ASIO disabled, skipping ASIO headers"
@@ -122,7 +83,7 @@ jobs:
           else
             echo "No binaries found in out/!"
           fi
-          
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -136,24 +97,24 @@ jobs:
     if: ${{ success() }}
     permissions:
       contents: write
-    
+
     defaults:
       run:
         shell: bash
 
     steps:
       - uses: actions/checkout@v4
-        
+
       - name: Get version
         id: version
         run: |
           echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
           path: downloads
-      
+
       - name: Create OS-specific packages
         run: |
           # Group by OS platform
@@ -164,7 +125,7 @@ jobs:
             done
             tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
           done
-      
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
