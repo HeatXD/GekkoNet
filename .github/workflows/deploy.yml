@@ -58,6 +58,19 @@ jobs:
       
       - name: Build
         run: cmake --build build --config Release
+
+      # Debugging step: Print build directory contents
+      - name: List build directory contents
+        run: ls -R build
+
+      # Debugging step: Print GekkoLib/out directory contents (after build)
+      - name: List output directory contents
+        run: |
+          if [ -d "GekkoLib/out" ]; then
+            ls -R GekkoLib/out
+          else
+            echo "Output directory does not exist!"
+          fi
       
       - name: Prepare files for packaging
         run: |
@@ -65,8 +78,12 @@ jobs:
           mkdir -p package/Release/${{ matrix.platform }}/include
           cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
 
-          # Copy all relevant binaries from unified GekkoLib/out/ folder
-          cp GekkoLib/out/* package/Release/${{ matrix.platform }}/lib/ || true
+          # Only copy binaries if the output directory exists
+          if [ -d "GekkoLib/out" ]; then
+            cp GekkoLib/out/* package/Release/${{ matrix.platform }}/lib/ || true
+          else
+            echo "No binaries found in GekkoLib/out/!"
+          fi
       
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
