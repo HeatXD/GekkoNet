@@ -8,33 +8,31 @@ permissions:
   deployments: write
 
 jobs:
-  download_headers:
+  # Step 1: Download headers and package them as an artifact
+  prepare_headers:
     runs-on: ubuntu-latest
     outputs:
-      cache-key: ${{ steps.cache-headers.outputs.cache-key }}
+      artifact-path: ${{ steps.prepare.outputs.artifact-path }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Headers (Include & Thirdparty)
-        id: cache-headers
-        uses: actions/cache@v3
-        with:
-          path: |
-            GekkoLib/include
-            GekkoLib/thirdparty
-          key: ${{ runner.os }}-headers-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-headers-
-
-      - name: Prepare Headers
+      - name: Prepare and package headers (include & thirdparty)
+        id: prepare
         run: |
-          mkdir -p GekkoLib/include GekkoLib/thirdparty
-          # Add any custom steps here to download or organize headers if necessary
-          ls -R GekkoLib/include || echo "No include directory!"
-          ls -R GekkoLib/thirdparty || echo "No thirdparty directory!"
+          mkdir -p package/headers
+          cp -r GekkoLib/include package/headers/ || true
+          cp -r GekkoLib/thirdparty package/headers/ || true
+          echo "::set-output name=artifact-path::package/headers"
+        
+      - name: Upload headers as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: headers
+          path: package/headers
 
+  # Step 2: Build job which reuses the headers artifact
   build:
-    needs: download_headers
+    needs: prepare_headers
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
@@ -48,7 +46,7 @@ jobs:
           - os: macos-latest
             platform: macos
     runs-on: ${{ matrix.os }}
-
+    
     defaults:
       run:
         shell: bash
@@ -57,17 +55,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore Cached Headers (Include & Thirdparty)
-        uses: actions/cache@v3
+      # Step 3: Download and extract the headers artifact
+      - name: Download headers artifact
+        uses: actions/download-artifact@v3
         with:
-          path: |
-            GekkoLib/include
-            GekkoLib/thirdparty
-          key: ${{ needs.download_headers.outputs.cache-key }}
-      
+          name: headers
+          path: package/headers
+
       - name: Create build directory
         run: cmake -E make_directory build
-      
+
       - name: Configure CMake (Windows)
         if: matrix.os == 'windows-latest'
         shell: cmd
@@ -110,11 +107,9 @@ jobs:
           mkdir -p package/Release/${{ matrix.platform }}/include
           mkdir -p package/Release/${{ matrix.platform }}/thirdparty
 
-          # Copy library headers
-          cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
-          
-          # Conditionally copy third-party headers based on asio configuration
-          cp -r thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
+          # Copy library headers from the downloaded artifact
+          cp -r package/headers/include/* package/Release/${{ matrix.platform }}/include/ || true
+          cp -r package/headers/thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
 
           if [ "${{ matrix.asio }}" == "no_asio" ]; then
             echo "ASIO disabled, skipping ASIO headers"
