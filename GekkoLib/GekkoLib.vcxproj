@@ -34,6 +34,7 @@
     <ClCompile Include="src\backend.cpp" />
     <ClCompile Include="src\event.cpp" />
     <ClCompile Include="src\gekko.cpp" />
+    <ClCompile Include="src\gekkonet.cpp" />
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\player.cpp" />

@@ -2,10 +2,9 @@
 
 #include <vector>
 
-#include "gekkonet.h"
+#include "gekko_types.h"
 
 #include "backend.h"
-#include "gekko_types.h"
 #include "event.h"
 #include "sync.h"
 #include "storage.h"

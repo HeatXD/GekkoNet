@@ -1,7 +1,5 @@
 #pragma once
 
-#include "gekkonet.h"
-
 #include "gekko_types.h"
 
 #include <memory>
