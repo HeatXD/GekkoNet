@@ -72,20 +72,7 @@ jobs:
         run: |
           # Create the directory structure for the package
           mkdir -p package/Release/${{ matrix.platform }}/lib
-          mkdir -p package/Release/${{ matrix.platform }}/include
-          mkdir -p package/Release/${{ matrix.platform }}/thirdparty
-
-          # Copy library headers
-          cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
           
-          # Conditionally copy third-party headers based on asio configuration
-          cp -r thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
-
-          if [ "${{ matrix.asio }}" == "no_asio" ]; then
-            echo "ASIO disabled, skipping ASIO headers"
-            rm -rf package/Release/${{ matrix.platform }}/thirdparty/asio || true
-          fi
-
           # Only copy binaries if the output directory exists
           if [ -d "out" ]; then
             cp -r out/* package/Release/${{ matrix.platform }}/lib/ || true
@@ -129,9 +116,11 @@ jobs:
           # Group by OS platform
           for os_platform in windows linux macos; do
             mkdir -p "GekkoNet-${os_platform}"
-            mkdir -p "GekkoNet-${os_platform}/include"
-            mkdir -p "GekkoNet-${os_platform}/thirdparty"
+            mkdir -p "GekkoNet-${os_platform}/Release/include"
+            mkdir -p "GekkoNet-${os_platform}/Release/thirdparty"
+              
             for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
+              cp -r include/* GekkoNet-${os_platform}/Release/include || true
               cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
             done
             tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
