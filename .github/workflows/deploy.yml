@@ -58,11 +58,7 @@ jobs:
       
       - name: Build
         run: cmake --build build --config Release
-
-      # Debugging step: Print build directory contents
-      - name: List build directory contents
-        run: ls -R build
-
+        
       # Debugging step: Print out directory contents (after build)
       - name: List output directory contents
         run: |
@@ -84,7 +80,14 @@ jobs:
           else
             echo "No binaries found in out/!"
           fi
-      
+          
+          # windows edgecase
+          if [ -d "out/Release" ]; then
+            cp out/Release/* package/Release/${{ matrix.platform }}/lib/ || true
+          else
+            echo "No binaries found in out/!"
+          fi
+          
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
