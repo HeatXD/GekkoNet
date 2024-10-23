@@ -36,12 +36,25 @@ jobs:
       - name: Create build directory
         run: cmake -E make_directory build
       
-      - name: Configure CMake
+      - name: Configure CMake (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: >-
+          cmake -B build 
+          -DCMAKE_BUILD_TYPE=Release 
+          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} 
+          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+          .
+
+      - name: Configure CMake (Unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
+          .
       
       - name: Build
         run: cmake --build build --config Release
