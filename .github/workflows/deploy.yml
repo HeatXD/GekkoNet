@@ -6,8 +6,35 @@ permissions:
   contents: write
   packages: write
   deployments: write
+
 jobs:
+  download_headers:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-headers.outputs.cache-key }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Headers (Include & Thirdparty)
+        id: cache-headers
+        uses: actions/cache@v3
+        with:
+          path: |
+            GekkoLib/include
+            GekkoLib/thirdparty
+          key: ${{ runner.os }}-headers-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-headers-
+
+      - name: Prepare Headers
+        run: |
+          mkdir -p GekkoLib/include GekkoLib/thirdparty
+          # Add any custom steps here to download or organize headers if necessary
+          ls -R GekkoLib/include || echo "No include directory!"
+          ls -R GekkoLib/thirdparty || echo "No thirdparty directory!"
+
   build:
+    needs: download_headers
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
@@ -21,7 +48,7 @@ jobs:
           - os: macos-latest
             platform: macos
     runs-on: ${{ matrix.os }}
-    
+
     defaults:
       run:
         shell: bash
@@ -29,6 +56,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Restore Cached Headers (Include & Thirdparty)
+        uses: actions/cache@v3
+        with:
+          path: |
+            GekkoLib/include
+            GekkoLib/thirdparty
+          key: ${{ needs.download_headers.outputs.cache-key }}
       
       - name: Create build directory
         run: cmake -E make_directory build
@@ -62,7 +97,7 @@ jobs:
       # Debugging step: Print out directory contents (after build)
       - name: List output directory contents
         run: |
-          if [ -d "out" ];then
+          if [ -d "out" ]; then
             ls -R out
           else
             echo "Output directory does not exist!"
