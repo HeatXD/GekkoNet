@@ -31,7 +31,7 @@ jobs:
       run:
         working-directory: GekkoLib
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Create build directory
         run: cmake -E make_directory build
@@ -71,7 +71,7 @@ jobs:
           tar -czf ../GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }} *
       
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release
           path: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
@@ -82,7 +82,7 @@ jobs:
     if: ${{ success() }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Get version
         id: version
@@ -101,7 +101,7 @@ jobs:
           prerelease: false
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
       
       - name: List artifacts
         run: ls -R
