@@ -72,7 +72,12 @@ jobs:
         run: |
           mkdir -p package/Release/${{ matrix.platform }}/lib
           mkdir -p package/Release/${{ matrix.platform }}/include
+          mkdir -p package/Release/${{ matrix.platform }}/thirdparty
           cp -r include/* package/Release/${{ matrix.platform }}/include/ || true
+          cp -r thirdparty/* package/Release/${{ matrix.platform }}/thirdparty/ || true
+
+          if [matrix.asio != 'no_asio']; then
+            rm -r package/Release/${{ matrix.platform }}/thirdparty/asio || true
 
           # Only copy binaries if the output directory exists
           if [ -d "out" ]; then
@@ -120,7 +125,7 @@ jobs:
             for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
               cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
             done
-            tar -czf "GekkoNet-${os_platform}-all-variants-Release.tar.gz" "GekkoNet-${os_platform}"
+            tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
           done
       
       - name: Create Release
@@ -132,4 +137,4 @@ jobs:
           name: Release ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
-          files: GekkoNet-*-all-variants-Release.tar.gz
+          files: GekkoNet-*-Release.tar.gz
