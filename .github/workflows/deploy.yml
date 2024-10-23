@@ -86,44 +86,41 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release
+          name: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
           path: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
+          retention-days: 1
 
   create_release:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ success() }}
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Get version
         id: version
         run: |
           echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: Release ${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: false
-      
       - name: Download all artifacts
         uses: actions/download-artifact@v3
-      
-      - name: List artifacts
-        run: ls -R
-      
-      - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
         with:
-          files: |
-            GekkoNet-*/*
-          tag_name: v${{ steps.version.outputs.version }}
+          path: artifacts
+      
+      - name: Move artifacts to root
+        run: |
+          mkdir releases
+          find artifacts -type f -name "*.zip" -o -name "*.tar.gz" | while read file; do
+            mv "$file" releases/
+          done
+      
+      - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: releases/*
