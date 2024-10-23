@@ -89,7 +89,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
+          name: release-artifacts
           path: GekkoLib/GekkoNet-${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}-Release.${{ matrix.archive_ext }}
           retention-days: 1
 
@@ -107,20 +107,20 @@ jobs:
         run: |
           echo "version=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: artifacts
+          name: release-artifacts
+          path: releases
       
       - name: Display structure of downloaded files
-        run: ls -R artifacts
-      
-      - name: Move artifacts to root
         run: |
-          mkdir releases
-          find artifacts -type f -name "*.zip" -o -name "*.tar.gz" | while read file; do
-            cp "$file" releases/
-          done
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la
+          echo "Releases directory contents:"
+          ls -la releases/
       
       - name: Create Release
         env:
