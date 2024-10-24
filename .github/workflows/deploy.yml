@@ -13,94 +13,13 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
         build_type: [static, shared]
         asio: [with_asio, no_asio]
-        compiler_name: [msvc2022, mingw64-gcc, llvm-clang, gcc, clang, appleclang, llvm]
         include:
-          # Windows
           - os: windows-latest
-            compiler_name: msvc2022
-            cc: cl
-            cxx: cl
             platform: windows
-            env: ''
-
-          - os: windows-latest
-            compiler_name: mingw64-gcc
-            cc: gcc
-            cxx: g++
-            platform: windows
-            env: mingw64
-
-          - os: windows-latest
-            compiler_name: llvm-clang
-            cc: clang
-            cxx: clang++
-            platform: windows
-            env: llvm
-
-          # Ubuntu
           - os: ubuntu-latest
-            compiler_name: gcc
-            cc: gcc-13
-            cxx: g++-13
             platform: linux
-            env: ''
-
-          - os: ubuntu-latest
-            compiler_name: clang
-            cc: clang-17
-            cxx: clang++-17
-            platform: linux
-            env: ''
-
-          # macOS
           - os: macos-latest
-            compiler_name: appleclang
-            cc: clang
-            cxx: clang++
             platform: macos
-            env: ''
-
-          - os: macos-latest
-            compiler_name: llvm
-            cc: /usr/local/opt/llvm/bin/clang
-            cxx: /usr/local/opt/llvm/bin/clang++
-            platform: macos
-            env: ''
-        exclude:
-          # Windows excludes
-          - os: windows-latest
-            compiler_name: gcc
-          - os: windows-latest
-            compiler_name: clang
-          - os: windows-latest
-            compiler_name: appleclang
-          - os: windows-latest
-            compiler_name: llvm
-
-          # Ubuntu excludes
-          - os: ubuntu-latest
-            compiler_name: msvc2022
-          - os: ubuntu-latest
-            compiler_name: mingw64-gcc
-          - os: ubuntu-latest
-            compiler_name: llvm-clang
-          - os: ubuntu-latest
-            compiler_name: appleclang
-          - os: ubuntu-latest
-            compiler_name: llvm
-
-          # macOS excludes
-          - os: macos-latest
-            compiler_name: msvc2022
-          - os: macos-latest
-            compiler_name: mingw64-gcc
-          - os: macos-latest
-            compiler_name: llvm-clang
-          - os: macos-latest
-            compiler_name: gcc
-          - os: macos-latest
-            compiler_name: clang
-
     runs-on: ${{ matrix.os }}
     
     defaults:
@@ -111,48 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # Install Windows compilers
-      - name: Install Compilers (Windows)
-        if: matrix.os == 'windows-latest' && matrix.env != ''
-        shell: pwsh
-        run: |
-          if ('${{ matrix.env }}' -eq 'mingw64') {
-            choco install mingw
-            echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
-          elseif ('${{ matrix.env }}' -eq 'llvm') {
-            choco install llvm
-            echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            # For LLVM we also need MinGW for the linker
-            choco install mingw
-          }
-
-      # Install Ubuntu compilers
-      - name: Install Compilers (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          if [[ "${{ matrix.compiler_name }}" == "gcc" ]]; then
-            sudo apt-get install -y g++-13
-          elif [[ "${{ matrix.compiler_name }}" == "clang" ]]; then
-            wget https://apt.llvm.org/llvm.sh
-            chmod +x llvm.sh
-            sudo ./llvm.sh 17
-          fi
-
-      # Install macOS LLVM
-      - name: Install LLVM (macOS)
-        if: matrix.os == 'macos-latest' && matrix.compiler_name == 'llvm'
-        run: |
-          brew install llvm
-          echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
-      
       - name: Create build directory
         run: cmake -E make_directory build
       
-      # MSVC configuration
-      - name: Configure CMake (Windows MSVC)
-        if: matrix.os == 'windows-latest' && matrix.compiler_name == 'msvc2022'
+      - name: Configure CMake (Windows)
+        if: matrix.os == 'windows-latest'
         shell: cmd
         run: >-
           cmake -B build 
@@ -161,33 +43,10 @@ jobs:
           -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=out
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} 
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-          -T host=x64 
-          -A x64
           .
 
-      # MinGW/LLVM configuration
-      - name: Configure CMake (Windows MinGW/LLVM)
-        if: matrix.os == 'windows-latest' && matrix.compiler_name != 'msvc2022'
-        shell: bash
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
-        run: |
-          cmake -B build \
-          -G "MinGW Makefiles" \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=out \
-          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=out \
-          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
-          .
-
-      # Unix configuration
       - name: Configure CMake (Unix)
         if: matrix.os != 'windows-latest'
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
         run: |
           cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
