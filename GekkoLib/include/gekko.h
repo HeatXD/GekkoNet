@@ -10,7 +10,7 @@
 #include "storage.h"
 
 namespace Gekko {
-	struct Config {
+	struct GEKKONET_API Config {
         const u8 MAX_SPECTATOR_DELAY = (u8)(InputBuffer::BUFF_SIZE * 0.75); // max delay in frames
 
 		u8 num_players = 0;
@@ -24,7 +24,7 @@ namespace Gekko {
         bool desync_detection = false;
 	};
 
-	class  Session {
+	class GEKKONET_API Session {
 	public:
 		Session();
 

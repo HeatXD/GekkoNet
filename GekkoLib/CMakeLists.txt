@@ -23,7 +23,6 @@ include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
 
 # Manually list all your source files
 set(SRC_FILES
-    ${PROJECT_SOURCE_DIR}/src/gekkonet.cpp
     ${PROJECT_SOURCE_DIR}/src/backend.cpp
     ${PROJECT_SOURCE_DIR}/src/event.cpp
     ${PROJECT_SOURCE_DIR}/src/gekko.cpp
@@ -44,11 +43,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
 # Create both static and shared library targets
 add_library(GekkoNet ${SRC_FILES})
 
-# Set the output names conditionally if NO_ASIO_BUILD is enabled
+# Set the output names conditionally based on used options
+set(TARGET_SUFFIX "")
+
+if(NOT BUILD_SHARED_LIBS)
+    set(TARGET_SUFFIX "${TARGET_SUFFIX}_STATIC")
+endif()
+
 if(NO_ASIO_BUILD)
-    set(TARGET_SUFFIX "_NO_ASIO")
-else()
-    set(TARGET_SUFFIX "")
+    set(TARGET_SUFFIX "${TARGET_SUFFIX}_NO_ASIO")
 endif()
 
 # Set the output name with the conditional suffix

@@ -42,9 +42,6 @@
     <ClInclude Include="include\compression.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\gekkonet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\backend.cpp">
@@ -69,9 +66,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\sync.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\gekkonet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
