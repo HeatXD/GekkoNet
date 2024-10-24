@@ -59,8 +59,10 @@ set_target_properties(GekkoNet PROPERTIES OUTPUT_NAME "GekkoNet${TARGET_SUFFIX}"
 
 # Set properties for Windows DLL export macros (if building a DLL)
 if(WIN32 AND BUILD_SHARED_LIBS)
+    set(CMAKE_CXX_FLAGS_RELEASE "/MD")   
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_DLL_EXPORT)
 else()
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT")  
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_STATIC)
 endif()
 
