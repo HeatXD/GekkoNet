@@ -1,7 +1,5 @@
 #pragma once
 
-#include "gekkonet.h"
-
 #include "gekko_types.h"
 
 #include <vector>
@@ -27,7 +25,7 @@ namespace Gekko {
         DesyncDetected,
     };
 
-	struct GameEvent {
+	struct GEKKONET_API GameEvent {
     public:
         ~GameEvent();
 
@@ -74,7 +72,7 @@ namespace Gekko {
         std::vector<std::unique_ptr<GameEvent>> _buffer_others;
     };
 
-    struct SessionEvent {
+    struct GEKKONET_API SessionEvent {
     public:
         SessionEventType type;
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "gekkonet.h"
-
 #include "gekko_types.h"
 
 #include <memory>
@@ -23,7 +21,7 @@
 #endif // GEKKONET_NO_ASIO
 
 namespace Gekko {
-    struct NetAddress {
+    struct GEKKONET_API NetAddress {
         NetAddress();
         NetAddress(void* data, u32 size);
 
@@ -135,20 +133,20 @@ namespace Gekko {
         InputMsg input;
     };
 
-    struct NetResult {
+    struct GEKKONET_API NetResult {
         NetAddress addr;
         u32 data_len{};
         std::unique_ptr<char[]> data;
     };
 
-    class NetAdapter {
+    class GEKKONET_API NetAdapter {
     public:
         virtual std::vector<std::unique_ptr<NetResult>> ReceiveData() = 0;
         virtual void SendData(NetAddress& addr, const char* data, int length) = 0;
     };
 
 #ifndef GEKKONET_NO_ASIO
-    class NonBlockingSocket : public NetAdapter {
+    class GEKKONET_API NonBlockingSocket : public NetAdapter {
     public:
         NonBlockingSocket(u16 port);
 
