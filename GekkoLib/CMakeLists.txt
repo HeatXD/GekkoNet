@@ -11,6 +11,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Option to build both shared and static libraries
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
+if(MSVC)
+    # Visual Studio specific flags
+    if(BUILD_SHARED_LIBS)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+    else()
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+    endif()
+else()
+    # GCC/Clang flags
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 # Option to exclude ASIO from the shared and static libraries
 option(NO_ASIO_BUILD "Exclude ASIO from the build" OFF)
 
@@ -59,10 +71,8 @@ set_target_properties(GekkoNet PROPERTIES OUTPUT_NAME "GekkoNet${TARGET_SUFFIX}"
 
 # Set properties for Windows DLL export macros (if building a DLL)
 if(WIN32 AND BUILD_SHARED_LIBS)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD")   
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_DLL_EXPORT)
 else()
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT")  
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_STATIC)
 endif()
 
