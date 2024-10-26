@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "gekkonet.h"
 #include "gekko_types.h"
 
 #include "backend.h"
@@ -9,40 +10,42 @@
 #include "sync.h"
 #include "storage.h"
 
+// define GekkoSession internally 
+struct GekkoSession {
+    virtual void Init(GekkoConfig* config) = 0;
+    virtual void SetLocalDelay(i32 player, u8 delay) = 0;
+    virtual void SetNetAdapter(GekkoNetAdapter* adapter) = 0;
+    virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) = 0;
+    virtual void AddLocalInput(i32 player, void* input) = 0;
+    virtual GekkoGameEvent** UpdateSession(i32* count) = 0;
+    virtual GekkoSessionEvent** Events(i32* count) = 0;
+    virtual f32 FramesAhead() = 0;
+};
+
 namespace Gekko {
-	struct GEKKONET_API Config {
-        const u8 MAX_SPECTATOR_DELAY = (u8)(InputBuffer::BUFF_SIZE * 0.75); // max delay in frames
 
-		u8 num_players = 0;
-		u8 max_spectators = 0;
-		u8 input_prediction_window = 0;
-        u8 spectator_delay = 0;
-		u32 input_size = 0;
-		u32 state_size = 0;
-        bool limited_saving = false;
-        bool post_sync_joining = false;
-        bool desync_detection = false;
-	};
-
-	class GEKKONET_API Session {
-	public:
+	class Session : public GekkoSession {
+    public:
 		Session();
 
-		void Init(Config& config);
+        virtual void Init(GekkoConfig* config);
 
-		void SetLocalDelay(Handle player, u8 delay);
+        virtual void SetLocalDelay(i32 player, u8 delay);
 
+        virtual void SetNetAdapter(GekkoNetAdapter* adapter);
+
+        virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr);
+
+        virtual void AddLocalInput(i32 player, void* input);
+
+        virtual GekkoGameEvent** UpdateSession(i32* count);
+
+        virtual GekkoSessionEvent** Events(i32* count);
+
+        virtual f32 FramesAhead();
+
+    public:
 		void SetNetAdapter(NetAdapter* adapter);
-
-		Handle AddActor(PlayerType type, NetAddress* addr = nullptr);
-
-		void AddLocalInput(Handle player, void* input);
-
-		std::vector<GameEvent*> UpdateSession();
-
-        std::vector<SessionEvent*> Events();
-
-		f32 FramesAhead();
 
 	private:
 		void Poll();
@@ -63,15 +66,15 @@ namespace Gekko {
 
 		void SendSpectatorInputs();
 
-		void HandleRollback(std::vector<GameEvent*>& ev);
+		void HandleRollback(std::vector<GekkoGameEvent*>& ev);
 
-		bool AddAdvanceEvent(std::vector<GameEvent*>& ev);
+		bool AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev);
 
-		void AddSaveEvent(std::vector<GameEvent*>& ev);
+		void AddSaveEvent(std::vector<GekkoGameEvent*>& ev);
 
-		void AddLoadEvent(std::vector<GameEvent*>& ev);
+		void AddLoadEvent(std::vector<GekkoGameEvent*>& ev);
 
-		void HandleSavingConfirmedFrame(std::vector<GameEvent*>& ev);
+		void HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev);
 
 		void UpdateLocalFrameAdvantage();
 
@@ -92,7 +95,7 @@ namespace Gekko {
 
 		std::unique_ptr<u8[]> _disconnected_input;
 
-		Config _config;
+		GekkoConfig _config;
 
 		SyncSystem _sync;
 
@@ -104,6 +107,6 @@ namespace Gekko {
 
         GameEventBuffer _game_event_buffer;
 
-        std::vector<GameEvent*> _current_game_events;
+        std::vector<GekkoGameEvent*> _current_game_events;
 	};
 }

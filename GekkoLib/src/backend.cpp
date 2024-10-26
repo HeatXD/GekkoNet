@@ -205,7 +205,7 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
     message->pkt.body = std::move(body);
 }
 
-std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
+std::vector<Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
 {
 	auto result = std::vector<Handle>();
 	for (auto& player: remotes) {
@@ -226,7 +226,7 @@ Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle)
 	return nullptr;
 }
 
-Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator) 
+Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator) 
 {
 	Frame min = INT_MAX;
 	for (auto& player : spectator ? spectators : remotes) {
@@ -237,7 +237,8 @@ Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator)
 	return min;
 }
 
-Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator) {
+Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator)
+{
 	return spectator ? _last_added_spectator_input : _last_added_input;
 }
 
@@ -314,7 +315,7 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 	}
 }
 
-Gekko::u64 Gekko::MessageSystem::TimeSinceEpoch()
+u64 Gekko::MessageSystem::TimeSinceEpoch()
 {
 	using namespace std::chrono;
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -684,7 +685,7 @@ void Gekko::AdvantageHistory::Update(Frame frame)
 	_remote[update_frame % HISTORY_SIZE] = max == INT8_MIN ? 0 : max;
 }
 
-Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
+f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 {
 	f32 sum_local = 0.f;
 	f32 sum_remote = 0.f;
@@ -710,6 +711,6 @@ void Gekko::AdvantageHistory::AddRemoteAdvantage(i8 adv) {
     _adv_index++;
 }
 
-Gekko::i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
+i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
 	return _local_frame_adv;
 }

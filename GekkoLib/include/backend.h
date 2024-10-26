@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gekkonet.h"
+
 #include "gekko_types.h"
 #include "net.h"
 #include "event.h"
@@ -13,12 +15,6 @@
 
 namespace Gekko {
 
-	enum PlayerType {
-		LocalPlayer,
-		RemotePlayer,
-		Spectator
-	};
-
     enum PlayerStatus {
         Initiating,
         Connected,
@@ -28,9 +24,9 @@ namespace Gekko {
 	class Player
 	{
 	public:
-		Player(Handle phandle, PlayerType type, NetAddress* addr, u32 magic = 0);
+		Player(Handle phandle, GekkoPlayerType type, NetAddress* addr, u32 magic = 0);
 
-		PlayerType GetType();
+        GekkoPlayerType GetType();
 
 		PlayerStatus GetStatus();
 
@@ -52,7 +48,7 @@ namespace Gekko {
         std::map<Frame, u32> health;
 
 	private:
-		PlayerType _type;
+        GekkoPlayerType _type;
 
 		PlayerStatus _status;
 	};

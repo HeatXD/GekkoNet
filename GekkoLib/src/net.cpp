@@ -4,7 +4,7 @@
 #include <cassert>
 #include <iostream>
 
-Gekko::u32 Gekko::NetAddress::GetSize()
+u32 Gekko::NetAddress::GetSize()
 {
     return _size;
 }
@@ -45,7 +45,7 @@ bool Gekko::NetAddress::Equals(NetAddress& other)
     return _size == other._size && std::memcmp(_data.get(), other._data.get(), _size) == 0;
 }
 
-Gekko::u8* Gekko::NetAddress::GetAddress()
+u8* Gekko::NetAddress::GetAddress()
 {
     return _data.get();
 }

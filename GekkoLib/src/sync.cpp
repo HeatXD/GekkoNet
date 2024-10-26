@@ -112,7 +112,7 @@ void Gekko::SyncSystem::SetLocalDelay(Handle player, u8 delay)
 	_input_buffers[player - 1].SetDelay(delay);
 }
 
-Gekko::u8 Gekko::SyncSystem::GetLocalDelay(Handle player)
+u8 Gekko::SyncSystem::GetLocalDelay(Handle player)
 {
 	return _input_buffers[player - 1].GetDelay();
 }
@@ -122,7 +122,7 @@ void Gekko::SyncSystem::SetInputPredictionWindow(Handle player, u8 input_window)
 	_input_buffers[player - 1].SetInputPredictionWindow(input_window);
 }
 
-Gekko::Frame Gekko::SyncSystem::GetCurrentFrame()
+Frame Gekko::SyncSystem::GetCurrentFrame()
 {
 	return _current_frame;
 }
@@ -132,7 +132,7 @@ void Gekko::SyncSystem::SetCurrentFrame(Frame frame)
 	_current_frame = frame;
 }
 
-Gekko::Frame Gekko::SyncSystem::GetMinIncorrectFrame()
+Frame Gekko::SyncSystem::GetMinIncorrectFrame()
 {
 	Frame min = INT_MAX;
 	for (i32 i = 0; i < _num_players; i++) {
@@ -145,7 +145,7 @@ Gekko::Frame Gekko::SyncSystem::GetMinIncorrectFrame()
 	return min == INT_MAX ? GameInput::NULL_FRAME : min;
 }
 
-Gekko::Frame Gekko::SyncSystem::GetMinReceivedFrame()
+Frame Gekko::SyncSystem::GetMinReceivedFrame()
 {
 	Frame min = INT_MAX;
 	for (i32 i = 0; i < _num_players; i++) {
@@ -155,7 +155,7 @@ Gekko::Frame Gekko::SyncSystem::GetMinReceivedFrame()
 	return min == INT_MAX ? GameInput::NULL_FRAME : min;
 }
 
-Gekko::Frame Gekko::SyncSystem::GetLastReceivedFrom(Handle player)
+Frame Gekko::SyncSystem::GetLastReceivedFrom(Handle player)
 {
     u32 plyr = player - 1;
 

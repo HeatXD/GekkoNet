@@ -35,6 +35,7 @@ include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
 
 # Manually list all your source files
 set(SRC_FILES
+    ${PROJECT_SOURCE_DIR}/src/gekkonet.cpp
     ${PROJECT_SOURCE_DIR}/src/backend.cpp
     ${PROJECT_SOURCE_DIR}/src/event.cpp
     ${PROJECT_SOURCE_DIR}/src/gekko.cpp
