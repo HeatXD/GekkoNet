@@ -1,6 +1,18 @@
 #include "gekkonet.h"
 #include "gekko.h"
 
+#ifndef GEKKONET_NO_ASIO
+
+#ifdef _WIN32
+#define _WIN32_WINNT 0x0A00
+#endif // _WIN32
+
+#define ASIO_STANDALONE 
+
+#include "asio/asio.hpp"
+
+#endif // GEKKONET_NO_ASIO
+
 bool gekko_create(GekkoSession** session)
 {
     if (*session) {
@@ -60,3 +72,27 @@ float gekko_frames_ahead(GekkoSession* session)
 {
     return session->FramesAhead();
 }
+
+#ifndef GEKKONET_NO_ASIO
+
+static void asio_send(GekkoNetAddress* addr, const char* data, int length) {
+}
+
+static GekkoNetResult** asio_receive(int* length) {
+}
+
+static void asio_free(void* data_ptr) {
+    delete data_ptr;
+}
+
+static GekkoNetAdapter default_sock {
+    asio_send,
+    asio_receive,
+    asio_free
+};
+
+GekkoNetAdapter* gekko_default_adapter() {
+    return &default_sock;
+}
+
+#endif

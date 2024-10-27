@@ -60,7 +60,8 @@ typedef struct GekkoNetAdapter {
     // send data to another peer
     void (*send_data)(GekkoNetAddress* addr, const char* data, int length);
     // receive all packets accumulated between the last frame and now
-    // the array of results will be freed after use using the free_data function
+    // the results within the array will be freed after use using the free_data function
+    // the array itself won't be touched
     GekkoNetResult** (*receive_data)(int* length);
     // free data function so gekkonet can cleanup data that the user created.
     void (*free_data)(void* data_ptr);
@@ -152,6 +153,12 @@ GEKKONET_API GekkoGameEvent** gekko_update_session(GekkoSession* session, int* c
 GEKKONET_API GekkoSessionEvent** gekko_session_events(GekkoSession* session, int* count);
 
 GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
+
+#ifndef GEKKONET_NO_ASIO
+
+GEKKONET_API GekkoNetAdapter* gekko_default_adapter();
+
+#endif // GEKKONET_NO_ASIO
 
 #ifdef __cplusplus
 }
