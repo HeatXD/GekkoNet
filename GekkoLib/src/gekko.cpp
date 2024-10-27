@@ -11,6 +11,7 @@ Gekko::Session::Session()
     _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
+    _config = GekkoConfig();
 }
 
 void Gekko::Session::Init(GekkoConfig* config)
@@ -57,6 +58,7 @@ void Gekko::Session::SetLocalDelay(i32 player, u8 delay)
 
 void Gekko::Session::SetNetAdapter(GekkoNetAdapter* adapter)
 {
+    _host = adapter;
 }
 
 i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
@@ -166,11 +168,6 @@ GekkoSessionEvent** Gekko::Session::Events(i32* count)
 {
     *count = (i32)_msg.session_events.GetRecentEvents().size();
     return _msg.session_events.GetRecentEvents().data();
-}
-
-void Gekko::Session::SetNetAdapter(NetAdapter* adapter)
-{
-	_host = adapter;
 }
 
 f32 Gekko::Session::FramesAhead()
@@ -465,10 +462,11 @@ void Gekko::Session::Poll()
     }
 
     // fetch data from network
-	auto data = _host->ReceiveData();
+    int length = 0;
+	auto data = _host->receive_data(&length);
 
     // process the data we received
-    _msg.HandleData(data);
+    _msg.HandleData(_host, data, length);
 
 	// handle received inputs
 	HandleReceivedInputs();

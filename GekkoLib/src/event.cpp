@@ -100,7 +100,7 @@ void Gekko::SessionEventSystem::AddEvent(GekkoSessionEvent* ev)
     _events.push_back(ev);
 }
 
-std::vector<GekkoSessionEvent*> Gekko::SessionEventSystem::GetRecentEvents()
+std::vector<GekkoSessionEvent*>& Gekko::SessionEventSystem::GetRecentEvents()
 {
     return _events;
 }

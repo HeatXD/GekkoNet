@@ -48,7 +48,7 @@ namespace Gekko {
     public:
         void Reset();
 
-        std::vector<GekkoSessionEvent*> GetRecentEvents();
+        std::vector<GekkoSessionEvent*>& GetRecentEvents();
 
         void AddPlayerSyncingEvent(Handle handle, u8 sync, u8 max);
 

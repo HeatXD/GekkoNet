@@ -44,9 +44,6 @@ namespace Gekko {
 
         virtual f32 FramesAhead();
 
-    public:
-		void SetNetAdapter(NetAdapter* adapter);
-
 	private:
 		void Poll();
 
@@ -99,7 +96,7 @@ namespace Gekko {
 
 		SyncSystem _sync;
 
-        NetAdapter* _host;
+        GekkoNetAdapter* _host;
 
 		MessageSystem _msg;
 

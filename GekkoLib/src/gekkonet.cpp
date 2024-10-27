@@ -3,12 +3,12 @@
 
 bool gekko_create(GekkoSession** session)
 {
-    if (!session) {
-        *session = new Gekko::Session();
-        return true;
+    if (*session) {
+        return false;
     }
 
-    return false;
+    *session = new Gekko::Session();
+    return true;
 }
 
 bool gekko_destroy(GekkoSession* session)

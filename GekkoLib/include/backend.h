@@ -91,9 +91,9 @@ namespace Gekko {
 
 		void AddSpectatorInput(Frame input_frame, u8 input[]);
 
-		void SendPendingOutput(NetAdapter* host);
+		void SendPendingOutput(GekkoNetAdapter* host);
 
-		void HandleData(std::vector<std::unique_ptr<NetResult>>& data);
+		void HandleData(GekkoNetAdapter* host, GekkoNetResult** data, u32 length);
 
         std::queue<std::unique_ptr<NetInputData>>& LastReceivedInputs();
 
@@ -135,9 +135,9 @@ namespace Gekko {
 
 		u64 TimeSinceEpoch();
 
-        void SendDataToAll(NetData* pkt, NetAdapter* host, bool spectators_only = false);
+        void SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bool spectators_only = false);
 
-        void SendDataTo(NetData* pkt, NetAdapter* host);
+        void SendDataTo(NetData* pkt, GekkoNetAdapter* host);
 
         void ParsePacket(NetAddress& addr, NetPacket& pkt);
 
