@@ -40,7 +40,11 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Automatically generated Docs: https://heatxd.github.io/GekkoNet/
 - Also look at the examples to see how GekkoNet functions!
 
-## Building GekkoNet
+## Building Examples
+- The examples are built and ran using Visual Studio 2022
+- You will need installed SDL2 as prerequisite
+  
+## Building GekkoLib
 ### Prerequisites
 To build GekkoNet, make sure you have the following installed:
 
