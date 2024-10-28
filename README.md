@@ -37,7 +37,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 
 ## Getting Started
 ### Docs
-Todo
+https://heatxd.github.io/GekkoNet/
 ### Building
 Todo
 
