@@ -7,6 +7,7 @@ permissions:
   packages: write
   deployments: write
   pages: write
+  id-token: write
 jobs:
   build:
     strategy:
@@ -141,6 +142,7 @@ jobs:
     permissions:
       contents: write
       pages: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -169,5 +171,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
