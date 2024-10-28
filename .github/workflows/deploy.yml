@@ -6,6 +6,7 @@ permissions:
   contents: write
   packages: write
   deployments: write
+  pages: write
 jobs:
   build:
     strategy:
@@ -59,7 +60,6 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
         
-      # Debugging step: Print out directory contents (after build)
       - name: List output directory contents
         run: |
           if [ -d "out" ];then
@@ -70,10 +70,8 @@ jobs:
       
       - name: Prepare files for packaging
         run: |
-          # Create the directory structure for the package
           mkdir -p package/Release/${{ matrix.platform }}/lib
           
-          # Only copy binaries if the output directory exists
           if [ -d "out" ]; then
             cp -r out/* package/Release/${{ matrix.platform }}/lib/ || true
           else
@@ -113,7 +111,6 @@ jobs:
       
       - name: Create OS-specific packages
         run: |
-          # Group by OS platform
           for os_platform in windows linux macos; do
             mkdir -p "GekkoNet-${os_platform}"
             mkdir -p "GekkoNet-${os_platform}/${os_platform}/include"
@@ -136,3 +133,41 @@ jobs:
           draft: false
           prerelease: false
           files: GekkoNet-*-Release.tar.gz
+
+  generate_docs:
+    needs: create_release
+    runs-on: ubuntu-latest
+    if: ${{ success() }}
+    permissions:
+      contents: write
+      pages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
+      - name: Configure CMake for Documentation
+        run: |
+          cmake -B build \
+          -DBUILD_DOCS=ON \
+          -DCMAKE_BUILD_TYPE=Release \
+          GekkoLib
+
+      - name: Generate Documentation
+        run: cmake --build build --target docs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Documentation
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/docs/html'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
