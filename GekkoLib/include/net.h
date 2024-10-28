@@ -127,6 +127,7 @@ namespace Gekko {
         Frame last_acked_frame;
         u64 last_sent_sync_message;
         u64 last_received_message = -1;
+        u64 last_received_frame = 0;
     };
 
     struct NetInputData {
