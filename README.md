@@ -1,5 +1,6 @@
 # GekkoNet
 ### C/C++ Peer To Peer Game Networking SDK
+Traditional online networking techniques account for transmission delays by adding input lag, often resulting in a slow feeling, unresponsive feel. GekkoNet leverages rollback networking with input prediction and speculative execution, allowing player inputs to be processed immediately, creating a seamless, low-latency experience. This means that players enjoy consistent timing, reaction speeds, and muscle memory both online and offline, without the impact of added network lag. Inspired by [GGPO](https://github.com/pond3r/ggpo) and [GGRS](https://github.com/gschup/ggrs)
 
 ## Why?
 I built this because I wanted a SDK to plug into my C++ projects, in the past I have created a wrapper around GGRS for C++ but after having to deal with Rust FFI I decided to build a native alternative instead to more easily fit my projects. 
