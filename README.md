@@ -1,6 +1,5 @@
 # GekkoNet
-### C++ Peer To Peer Game Networking SDK
-#### Consider this project unstable until ive gone through most of the work in progress items.
+### C/C++ Peer To Peer Game Networking SDK
 
 ## Why?
 I built this because I wanted a SDK to plug into my C++ projects, in the past I have created a wrapper around GGRS for C++ but after having to deal with Rust FFI I decided to build a native alternative instead to more easily fit my projects. 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gekkonet.h"
+
 #include "gekko_types.h"
 #include "net.h"
 #include "event.h"
@@ -13,12 +15,6 @@
 
 namespace Gekko {
 
-	enum PlayerType {
-		LocalPlayer,
-		RemotePlayer,
-		Spectator
-	};
-
     enum PlayerStatus {
         Initiating,
         Connected,
@@ -28,9 +24,9 @@ namespace Gekko {
 	class Player
 	{
 	public:
-		Player(Handle phandle, PlayerType type, NetAddress* addr, u32 magic = 0);
+		Player(Handle phandle, GekkoPlayerType type, NetAddress* addr, u32 magic = 0);
 
-		PlayerType GetType();
+        GekkoPlayerType GetType();
 
 		PlayerStatus GetStatus();
 
@@ -52,7 +48,7 @@ namespace Gekko {
         std::map<Frame, u32> health;
 
 	private:
-		PlayerType _type;
+        GekkoPlayerType _type;
 
 		PlayerStatus _status;
 	};
@@ -95,9 +91,9 @@ namespace Gekko {
 
 		void AddSpectatorInput(Frame input_frame, u8 input[]);
 
-		void SendPendingOutput(NetAdapter* host);
+		void SendPendingOutput(GekkoNetAdapter* host);
 
-		void HandleData(std::vector<std::unique_ptr<NetResult>>& data);
+		void HandleData(GekkoNetAdapter* host, GekkoNetResult** data, u32 length);
 
         std::queue<std::unique_ptr<NetInputData>>& LastReceivedInputs();
 
@@ -139,9 +135,9 @@ namespace Gekko {
 
 		u64 TimeSinceEpoch();
 
-        void SendDataToAll(NetData* pkt, NetAdapter* host, bool spectators_only = false);
+        void SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bool spectators_only = false);
 
-        void SendDataTo(NetData* pkt, NetAdapter* host);
+        void SendDataTo(NetData* pkt, GekkoNetAdapter* host);
 
         void ParsePacket(NetAddress& addr, NetPacket& pkt);
 

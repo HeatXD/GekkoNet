@@ -79,7 +79,7 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 	}
 }
 
-void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
+void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 {
 	// add input packet
 	if (!_player_input_send_list.empty() && !remotes.empty()) {
@@ -119,23 +119,31 @@ void Gekko::MessageSystem::SendPendingOutput(NetAdapter* host)
 	}
 }
 
-void Gekko::MessageSystem::HandleData(std::vector<std::unique_ptr<NetResult>>& data)
+void Gekko::MessageSystem::HandleData(GekkoNetAdapter* host, GekkoNetResult** data, u32 length)
 {
-    for (auto& res : data) {
+    for (u32 i = 0; i < length; i++) {
+        auto res = data[i];
+        auto addr = NetAddress(res->addr.data, res->addr.size);
+
         _bin_buffer.clear();
 
         try {
-            _bin_buffer.insert(_bin_buffer.begin(), res->data.get(), res->data.get() + res->data_len);
+            _bin_buffer.insert(_bin_buffer.begin(), (u8*)res->data, (u8*)res->data + res->data_len);
 
             NetPacket pkt;
             zpp::serializer::memory_input_archive in(_bin_buffer);
             in(pkt.header, pkt.body);
 
-            ParsePacket(res->addr, pkt);
+            ParsePacket(addr, pkt);
         }
         catch (const std::exception&) {
             printf("failed to deserialize packet\n");
         }
+
+        // cleanup :)
+        host->free_data(res->addr.data);
+        host->free_data(res->data);
+        host->free_data(res);
     }
 }
 
@@ -205,7 +213,7 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
     message->pkt.body = std::move(body);
 }
 
-std::vector<Gekko::Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
+std::vector<Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
 {
 	auto result = std::vector<Handle>();
 	for (auto& player: remotes) {
@@ -226,7 +234,7 @@ Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle)
 	return nullptr;
 }
 
-Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator) 
+Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator) 
 {
 	Frame min = INT_MAX;
 	for (auto& player : spectator ? spectators : remotes) {
@@ -237,7 +245,8 @@ Gekko::Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator)
 	return min;
 }
 
-Gekko::Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator) {
+Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator)
+{
 	return spectator ? _last_added_spectator_input : _last_added_input;
 }
 
@@ -314,13 +323,13 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 	}
 }
 
-Gekko::u64 Gekko::MessageSystem::TimeSinceEpoch()
+u64 Gekko::MessageSystem::TimeSinceEpoch()
 {
 	using namespace std::chrono;
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
-void Gekko::MessageSystem::SendDataToAll(NetData* pkt, NetAdapter* host, bool spectators_only)
+void Gekko::MessageSystem::SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bool spectators_only)
 {
     auto& actors = spectators_only ? spectators : remotes;
 
@@ -360,12 +369,16 @@ void Gekko::MessageSystem::SendDataToAll(NetData* pkt, NetAdapter* host, bool sp
                 body_buffer.end()
             );
 
-            host->SendData(actor->address, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
+            auto addr = GekkoNetAddress();
+            addr.data = actor->address.GetAddress();
+            addr.size = actor->address.GetSize();
+
+            host->send_data(&addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
         }
     }
 }
 
-void Gekko::MessageSystem::SendDataTo(NetData* pkt, NetAdapter* host)
+void Gekko::MessageSystem::SendDataTo(NetData* pkt, GekkoNetAdapter* host)
 {
     _bin_buffer.clear();
 
@@ -379,9 +392,11 @@ void Gekko::MessageSystem::SendDataTo(NetData* pkt, NetAdapter* host)
         return;
     }
 
-    // printf("Send Size: %d\n", (int)_bin_buffer.size());
-    // Compression::PrintArray(_bin_buffer.data(), (u32)_bin_buffer.size());
-    host->SendData(pkt->addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
+    auto addr = GekkoNetAddress();
+    addr.data = pkt->addr.GetAddress();
+    addr.size = pkt->addr.GetSize();
+
+    host->send_data(&addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
 }
 
 void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
@@ -684,7 +699,7 @@ void Gekko::AdvantageHistory::Update(Frame frame)
 	_remote[update_frame % HISTORY_SIZE] = max == INT8_MIN ? 0 : max;
 }
 
-Gekko::f32 Gekko::AdvantageHistory::GetAverageAdvantage()
+f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 {
 	f32 sum_local = 0.f;
 	f32 sum_remote = 0.f;
@@ -710,6 +725,6 @@ void Gekko::AdvantageHistory::AddRemoteAdvantage(i8 adv) {
     _adv_index++;
 }
 
-Gekko::i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
+i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
 	return _local_frame_adv;
 }

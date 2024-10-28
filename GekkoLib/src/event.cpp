@@ -33,7 +33,7 @@ void Gekko::GameEventBuffer::Reset()
     }
 }
 
-Gekko::GameEvent* Gekko::GameEventBuffer::GetEvent(bool advance)
+GekkoGameEvent* Gekko::GameEventBuffer::GetEvent(bool advance)
 {
     auto& buff = advance ? _buffer_advance : _buffer_others;
     u16& idx = advance ? _index_advance : _index_others;
@@ -41,11 +41,15 @@ Gekko::GameEvent* Gekko::GameEventBuffer::GetEvent(bool advance)
     idx++;
 
     if (buff.size() < idx) {
-        buff.push_back(std::make_unique<GameEvent>());
+        buff.push_back(std::make_unique<GekkoGameEvent>());
 
         if (advance) {
             buff.back()->data.adv.input_len = _input_size;
-            buff.back()->data.adv.inputs = (u8*)std::malloc(_input_size);
+            // add more input space when needed
+            if (_input_memory_buffer.size() < idx) {
+                _input_memory_buffer.push_back(std::make_unique<u8[]>(_input_size));
+            }
+            buff.back()->data.adv.inputs = _input_memory_buffer.back().get();
         }
     }
 
@@ -54,26 +58,17 @@ Gekko::GameEvent* Gekko::GameEventBuffer::GetEvent(bool advance)
     return buff[idx - 1].get();
 }
 
-Gekko::GameEvent::~GameEvent()
-{
-    // cleanup inputs automatically
-    if (type == AdvanceEvent) {
-        std::free(data.adv.inputs);
-        data.adv.inputs = nullptr;
-    }
-}
-
 Gekko::SessionEventBuffer::SessionEventBuffer()
 {
     _index = 0;
 }
 
-Gekko::SessionEvent* Gekko::SessionEventBuffer::GetEvent()
+GekkoSessionEvent* Gekko::SessionEventBuffer::GetEvent()
 {
     _index++;
 
     if(_buffer.size() < _index) {
-        _buffer.push_back(std::make_unique<SessionEvent>());
+        _buffer.push_back(std::make_unique<GekkoSessionEvent>());
     }
 
     assert(_index != 0);
@@ -100,12 +95,12 @@ void Gekko::SessionEventSystem::Reset()
     _events.clear();
 }
 
-void Gekko::SessionEventSystem::AddEvent(SessionEvent* ev)
+void Gekko::SessionEventSystem::AddEvent(GekkoSessionEvent* ev)
 {
     _events.push_back(ev);
 }
 
-std::vector<Gekko::SessionEvent*> Gekko::SessionEventSystem::GetRecentEvents()
+std::vector<GekkoSessionEvent*>& Gekko::SessionEventSystem::GetRecentEvents()
 {
     return _events;
 }

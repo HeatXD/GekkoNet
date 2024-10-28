@@ -1,7 +1,12 @@
-#include <iostream>
 #include "SDL2/SDL.h"
-#include "gekko.h"
+
+#define GEKKONET_STATIC
+
+#include "gekkonet.h"
+
 #include <chrono>
+#include <iostream>
+#include <vector>
 
 SDL_Window* window1 = nullptr;
 SDL_Window* window2 = nullptr;
@@ -91,13 +96,13 @@ struct GState {
 	int py[2] = { 0, 0 };
 };
 
-void save_state(GState* gs, Gekko::GameEvent* ev) {
+void save_state(GState* gs, GekkoGameEvent* ev) {
     *ev->data.save.checksum = 0;
     *ev->data.save.state_len = sizeof(GState);
     std::memcpy(ev->data.save.state, gs, sizeof(GState));
 }
 
-void load_state(GState* gs, Gekko::GameEvent* ev) {
+void load_state(GState* gs, GekkoGameEvent* ev) {
     std::memcpy(gs, ev->data.load.state, sizeof(GState));
 }
 
@@ -142,45 +147,55 @@ void get_key_inputs(GInput inputs[2]) {
 	inputs[1].input.dir.right = keys[SDL_SCANCODE_RIGHT];
 }
 
-class FakeNetAdapter : public Gekko::NetAdapter {
-    int recv_idx = 0;
-    std::vector<std::unique_ptr<Gekko::NetResult>> inbox_session1;
-    std::vector<std::unique_ptr<Gekko::NetResult>> inbox_session2;
+int recv_idx = 0;
+std::vector<GekkoNetResult*> inbox_session1;
+std::vector<GekkoNetResult*> inbox_session2;
+std::vector<GekkoNetResult*> outbox;
 
-    virtual std::vector<std::unique_ptr<Gekko::NetResult>> ReceiveData() {
-        auto& curr_inbox = recv_idx % 2 == 1 ? inbox_session2 : inbox_session1;
-        auto result = std::vector<std::unique_ptr<Gekko::NetResult>>();
+static void fake_send_data(GekkoNetAddress* addr, const char* data, int length) {
+    // gekkonet will clean this up
+    auto result = new GekkoNetResult();
 
-        for (auto& ptr : curr_inbox) {
-            result.push_back(std::move(ptr));
-        }
+    auto addr_to = *(unsigned char*)addr->data;
+    auto addr_from = addr_to == 1 ? 2 : 1;
+    // gekkonet will clean this up 
+    result->addr.data = new unsigned char;
+    result->addr.size = sizeof(char);
+    std::memcpy(result->addr.data, &addr_from, result->addr.size);
 
-        curr_inbox.clear();
+    // user created memory
+    // gekkonet will clean this up
+    result->data = new char[length];
+    std::memcpy(result->data, data, length);
 
-        recv_idx++;
-        return result;
+    result->data_len = length;
+
+    if (addr_from == 1) {
+        inbox_session2.push_back(result);
     }
-
-    virtual void SendData(Gekko::NetAddress& addr, const char* data, int length) {
-        auto result = std::make_unique<Gekko::NetResult>();
-
-        Gekko::u8 addr_from = (Gekko::u8)*addr.GetAddress() == 1 ? 2 : 1;
-        auto tmp = Gekko::NetAddress(&addr_from, (Gekko::u32)sizeof(char));
-        result->addr.Copy(&tmp);
-
-        result->data = std::unique_ptr<char[]>(new char[length]);
-        std::memcpy(result->data.get(), data, length);
-
-        result->data_len = length;
-
-        if (addr_from == 1) {
-            inbox_session2.push_back(std::move(result));
-        }
-        else {
-            inbox_session1.push_back(std::move(result));
-        }
+    else {
+        inbox_session1.push_back(result);
     }
-};
+}
+
+static void fake_free_data(void* data_ptr) {
+    // delete user created data
+    delete data_ptr;
+}
+
+static GekkoNetResult** fake_receive_data(int* length) {
+    outbox.clear();
+
+    auto& curr_inbox = recv_idx % 2 == 1 ? inbox_session2 : inbox_session1;
+    outbox.insert(outbox.begin(), curr_inbox.begin(), curr_inbox.end());
+
+    *length = (int)curr_inbox.size();
+    curr_inbox.clear();
+
+    recv_idx++;
+
+    return outbox.data();
+}
 
 int main(int argc, char* args[])
 {
@@ -191,14 +206,19 @@ int main(int argc, char* args[])
 
 	GInput inputs[2] = {};
 
-	auto adapter = FakeNetAdapter();
+    GekkoNetAdapter adapter {
+        fake_send_data,
+        fake_receive_data,
+        fake_free_data
+    };
+
 
 	int num_players = 2;
 
-	auto sess1 = Gekko::Session();
-	auto sess2 = Gekko::Session();
+    GekkoSession* sess1 = nullptr;
+    GekkoSession* sess2 = nullptr;
 
-	auto conf = Gekko::Config();
+    GekkoConfig conf {};
 
 	conf.num_players = num_players;
 	conf.input_size = sizeof(int);
@@ -208,27 +228,30 @@ int main(int argc, char* args[])
 	conf.limited_saving = true;
     conf.spectator_delay = 90;
 
-	sess1.Init(conf);
-	sess2.Init(conf);
+    gekko_create(&sess1);
+    gekko_create(&sess2);
 
-	sess1.SetNetAdapter(&adapter);
-	sess2.SetNetAdapter(&adapter);
+    gekko_start(sess1, &conf);
+    gekko_start(sess2, &conf);
+
+    gekko_net_adapter_set(sess1, &adapter);
+    gekko_net_adapter_set(sess2, &adapter);
 
 	char addrs1 = 1;
-	auto addr1 = Gekko::NetAddress(&addrs1, sizeof(char));
+    auto addr1 = GekkoNetAddress{ &addrs1, sizeof(char) };
 
 	char addrs2 = 2;
-	auto addr2 = Gekko::NetAddress(&addrs2, sizeof(char));
+	auto addr2 = GekkoNetAddress{ &addrs2, sizeof(char) };
 
-	auto s1p1 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
-	auto s1p2 = sess1.AddActor(Gekko::PlayerType::LocalPlayer);
-	auto s1s1 = sess1.AddActor(Gekko::PlayerType::Spectator, &addr2);
+    int s1p1 = gekko_add_actor(sess1, LocalPlayer, nullptr);
+    int s1p2 = gekko_add_actor(sess1, LocalPlayer, nullptr);
+    int s1s1 = gekko_add_actor(sess1, Spectator, &addr2);
 
-	auto s2p1 = sess2.AddActor(Gekko::PlayerType::RemotePlayer, &addr1);
+    int s2p1 = gekko_add_actor(sess2, RemotePlayer, &addr1);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-	using frame = std::chrono::duration<Gekko::u32, std::ratio<1, 60>>;
+	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
 	using clock = std::chrono::steady_clock;
 
 	time_point timer(clock::now());
@@ -245,28 +268,34 @@ int main(int argc, char* args[])
 			get_key_inputs(inputs);
 
 			//add local inputs to the session
-			sess1.AddLocalInput(s1p1, &inputs[0].input.value);
-			sess1.AddLocalInput(s1p2, &inputs[1].input.value);
+            gekko_add_local_input(sess1, s1p1, &inputs[0].input.value);
+            gekko_add_local_input(sess1, s1p2, &inputs[1].input.value);
 
 			int frame = 0;
 
-            for (auto event : sess1.Events()) {
-                printf("S1 EV: %d\n", event->type);
+            int count = 0;
+            auto events = gekko_session_events(sess1, &count);
+            for (int i = 0; i < count; i++) {
+                printf("S1 EV: %d\n", events[i]->type);
             }
 
-            for (auto ev : sess1.UpdateSession())
+            count = 0;
+            auto updates = gekko_update_session(sess1, &count);
+            for (int i = 0; i < count; i++)
             {
+                auto ev = updates[i];
+
                 switch (ev->type)
                 {
-                case Gekko::SaveEvent:
+                case SaveEvent:
                     printf("S1 Save frame:%d\n", ev->data.save.frame);
                     save_state(&state1, ev);
                     break;
-                case Gekko::LoadEvent:
+                case LoadEvent:
                     printf("S1 Load frame:%d\n", ev->data.load.frame);
                     load_state(&state1, ev);
                     break;
-                case Gekko::AdvanceEvent:
+                case AdvanceEvent:
                     // on advance event, advance the gamestate using the given inputs
                     inputs[0].input.value = ev->data.adv.inputs[0];
                     inputs[1].input.value = ev->data.adv.inputs[4];
@@ -281,23 +310,29 @@ int main(int argc, char* args[])
                 }
             }
 
-            for (auto event : sess2.Events()) {
-                printf("S2 EV: %d\n", event->type);
+            count = 0;
+            events = gekko_session_events(sess2, &count);
+            for (int i = 0; i < count; i++) {
+                printf("S1 EV: %d\n", events[i]->type);
             }
 
-            for (auto ev : sess2.UpdateSession())
+            count = 0;
+            updates = gekko_update_session(sess2, &count);
+            for (int i = 0; i < count; i++)
             {
+                auto ev = updates[i];
+
                 switch (ev->type)
                 {
-                case Gekko::SaveEvent:
+                case SaveEvent:
                     printf("S2 Save frame:%d\n", ev->data.save.frame);
                     save_state(&state2, ev);
                     break;
-                case Gekko::LoadEvent:
+                case LoadEvent:
                     printf("S2 Load frame:%d\n", ev->data.load.frame);
                     load_state(&state2, ev);
                     break;
-                case Gekko::AdvanceEvent:
+                case AdvanceEvent:
                     // on advance event, advance the gamestate using the given inputs
                     inputs[0].input.value = ev->data.adv.inputs[0];
                     inputs[1].input.value = ev->data.adv.inputs[4];
@@ -327,6 +362,9 @@ int main(int argc, char* args[])
 		SDL_RenderPresent(renderer2);
 	}
 	del_windows();
+
+    gekko_destroy(sess1);
+    gekko_destroy(sess2);
 
 	return 0;
 }

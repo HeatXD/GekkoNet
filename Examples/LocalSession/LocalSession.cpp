@@ -1,7 +1,11 @@
-#include <iostream>
 #include "SDL2/SDL.h"
-#include "gekko.h"
+
+#define GEKKONET_STATIC
+
+#include "gekkonet.h"
+
 #include <chrono>
+#include <iostream>
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -16,8 +20,8 @@ bool init_window(void) {
 		"GekkoNet Example: Local Session",
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
-		900,
-		900,
+		400,
+		400,
 		0
 	);
 	if (!window) {
@@ -50,7 +54,7 @@ struct GInput {
 	}input;
 };
 
-void process_events(Gekko::Session& sess) {
+void process_events(GekkoSession* sess) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
@@ -66,12 +70,12 @@ void process_events(Gekko::Session& sess) {
 		case SDL_KEYUP:
 			auto key = event.key.keysym.sym;
 			if (key == SDLK_q) {
-				sess.SetLocalDelay(1, 30);
+                gekko_set_local_delay(sess, 1, 30);
 				printf("delay set to 30!\n");
 				break;
 			}
 			if (key == SDLK_e) {
-				sess.SetLocalDelay(1, 1);
+				gekko_set_local_delay(sess, 1, 1);
 				printf("delay set to 1!\n");
 				break;
 			}
@@ -135,23 +139,23 @@ int main(int argc, char* args[])
 
 	int num_players = 2;
 
-	auto sess = Gekko::Session();
-
-	auto conf = Gekko::Config();
+    GekkoSession* sess = nullptr;
+    GekkoConfig conf {};
 
 	conf.num_players = num_players;
 	conf.input_size = sizeof(char);
 	conf.max_spectators = 0;
 	conf.input_prediction_window = 0;
-	
-	sess.Init(conf);
 
-	auto p1 = sess.AddActor(Gekko::PlayerType::LocalPlayer);
-	auto p2 = sess.AddActor(Gekko::PlayerType::LocalPlayer);
+    gekko_create(&sess);
+    gekko_start(sess, &conf);
+
+    int p1 = gekko_add_actor(sess, LocalPlayer, nullptr);
+    int p2 = gekko_add_actor(sess, LocalPlayer, nullptr);
 
 	// timing 
 	using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-	using frame = std::chrono::duration<Gekko::u32, std::ratio<1, 60>>;
+	using frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
 	using clock = std::chrono::steady_clock;
 
 	time_point timer(clock::now());
@@ -167,18 +171,24 @@ int main(int argc, char* args[])
 			get_key_inputs(inputs);
 
 			//add local inputs to the session
-			sess.AddLocalInput(p1, &inputs[0].input.value);
-			sess.AddLocalInput(p2, &inputs[1].input.value);
+            gekko_add_local_input(sess, p1, &inputs[0].input.value);
+            gekko_add_local_input(sess, p2, &inputs[1].input.value);
 
-            for (auto event : sess.Events()) {
-                printf("ev: %d\n", event->type);
+            int count = 0;
+            auto events = gekko_session_events(sess, &count);
+            for (int i = 0; i < count; i++) {
+                printf("ev: %d\n", events[i]->type);
             }
 
-			for (auto ev : sess.UpdateSession())
+            count = 0;
+            auto updates = gekko_update_session(sess, &count);
+			for (int i = 0; i < count; i++)
 			{
+                auto ev = updates[i];
+
 				switch (ev->type)
 				{
-				case Gekko::AdvanceEvent:
+				case AdvanceEvent:
 					// on advance event, advance the gamestate using the given inputs
 					inputs[0].input.value = ev->data.adv.inputs[0];
 					inputs[1].input.value = ev->data.adv.inputs[1];
@@ -199,6 +209,8 @@ int main(int argc, char* args[])
 	}
 
 	del_window();
+
+    gekko_destroy(sess);
 
 	return 0;
 }

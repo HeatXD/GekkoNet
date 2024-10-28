@@ -118,7 +118,7 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 	}
 }
 
-Gekko::u8 Gekko::InputBuffer::GetDelay() 
+u8 Gekko::InputBuffer::GetDelay() 
 {
 	return _input_delay;
 }
@@ -128,7 +128,7 @@ void Gekko::InputBuffer::SetInputPredictionWindow(u8 input_window)
 	_input_prediction_window = input_window;
 }
 
-Gekko::Frame Gekko::InputBuffer::GetIncorrectPredictionFrame()
+Frame Gekko::InputBuffer::GetIncorrectPredictionFrame()
 {
 	Frame result = _incorrent_predicted_input;
 	// clear it after requesting it
@@ -142,7 +142,7 @@ void Gekko::InputBuffer::ResetPrediction()
 	_last_predicted_input = GameInput::NULL_FRAME;
 }
 
-Gekko::Frame Gekko::InputBuffer::GetLastReceivedFrame()
+Frame Gekko::InputBuffer::GetLastReceivedFrame()
 {
 	return _last_received_input;
 }
@@ -185,7 +185,7 @@ bool Gekko::InputBuffer::CanPredictInput() {
 }
 
 
-Gekko::u32 Gekko::InputBuffer::PreviousFrame(Frame frame)
+u32 Gekko::InputBuffer::PreviousFrame(Frame frame)
 {
 	return frame - 1 < 0 ? BUFF_SIZE - frame - 1 : frame - 1;
 }

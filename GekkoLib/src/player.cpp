@@ -1,6 +1,6 @@
 #include "backend.h"
 
-Gekko::Player::Player(Handle phandle, PlayerType type, NetAddress* addr, u32 magic)
+Gekko::Player::Player(Handle phandle, GekkoPlayerType type, NetAddress* addr, u32 magic)
 {
 	handle = phandle;
 	sync_num = 0;
@@ -16,7 +16,7 @@ Gekko::Player::Player(Handle phandle, PlayerType type, NetAddress* addr, u32 mag
 	_status = _type == LocalPlayer ? Connected : Initiating;
 }
 
-Gekko::PlayerType Gekko::Player::GetType()
+GekkoPlayerType Gekko::Player::GetType()
 {
 	return _type;
 }
