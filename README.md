@@ -20,7 +20,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- The added ability to spectate spectators. This might be handy if you have a seperate spectating service which propegates the inputs to more spectators.
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
-- Abstracted socket manager. Plug GekkoNet into existing networking solutions such as Steamworks or default sockets by inheriting and overriding the socket manager.
+- Abstracted socket manager.
 - Event System for notifications for eg. specific players being done with syncing.
 - Desync Detection (Only when limited saving is disabled for now)
 - Automated builds
