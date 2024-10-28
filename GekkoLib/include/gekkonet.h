@@ -156,7 +156,7 @@ GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
 
 #ifndef GEKKONET_NO_ASIO
 
-GEKKONET_API GekkoNetAdapter* gekko_default_adapter();
+GEKKONET_API GekkoNetAdapter* gekko_default_adapter(unsigned short port);
 
 #endif // GEKKONET_NO_ASIO
 

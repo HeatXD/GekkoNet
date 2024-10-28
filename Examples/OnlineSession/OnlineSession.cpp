@@ -1,8 +1,14 @@
-#include <iostream>
 #include "SDL2/SDL.h"
-#include "gekko.h"
+
+#define GEKKONET_STATIC
+
+#include "gekkonet.h"
+
 #include <chrono>
 #include <string>
+#include <vector>
+#include <iostream>
+#include <thread>
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -59,7 +65,7 @@ struct GInput {
     }input;
 };
 
-void process_events(Gekko::Session& sess) {
+void process_events() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -113,13 +119,13 @@ uint32_t fletcher32(const uint16_t* data, size_t len) {
     return (c1 << 16 | c0);
 }
 
-void save_state(GState* gs, Gekko::GameEvent* ev) {
+void save_state(GState* gs, GekkoGameEvent* ev) {
     *ev->data.save.state_len = sizeof(GState);
     *ev->data.save.checksum = fletcher32((uint16_t*)gs, sizeof(GState));
     std::memcpy(ev->data.save.state, gs, sizeof(GState));
 }
 
-void load_state(GState* gs, Gekko::GameEvent* ev) {
+void load_state(GState* gs, GekkoGameEvent* ev) {
     std::memcpy(gs, ev->data.load.state, sizeof(GState));
 }
 
@@ -192,8 +198,8 @@ int main(int argc, char* args[])
 
     int num_players = 2;
 
-    auto sess = Gekko::Session();
-    auto conf = Gekko::Config();
+    GekkoSession* sess = nullptr;
+    GekkoConfig conf {};
 
     conf.num_players = num_players;
     conf.input_size = sizeof(char);
@@ -203,27 +209,26 @@ int main(int argc, char* args[])
     conf.desync_detection = true;
     // conf.limited_saving = true;
 
-    sess.Init(conf);
-
-    auto sock = Gekko::NonBlockingSocket(localport);
-    sess.SetNetAdapter(&sock);
+    gekko_create(&sess);
+    gekko_start(sess, &conf);
+    gekko_net_adapter_set(sess, gekko_default_adapter(localport));
 
     // this is order dependant so we have to keep that in mind. 
     if (localplayer == 1) {
         // add local player
-        localplayer = sess.AddActor(Gekko::PlayerType::LocalPlayer);
+        localplayer = gekko_add_actor(sess, LocalPlayer, nullptr); 
         // add remote player
-        auto remote = Gekko::NetAddress((void*)remote_address.c_str(), (Gekko::u32)remote_address.size());
-        sess.AddActor(Gekko::PlayerType::RemotePlayer, &remote);
+        auto remote = GekkoNetAddress{ (void*)remote_address.c_str(), (unsigned int)remote_address.size() };
+        gekko_add_actor(sess, RemotePlayer, &remote);
     } else {
         // add remote player
-        auto remote = Gekko::NetAddress((void*)remote_address.c_str(), (Gekko::u32)remote_address.size());
-        sess.AddActor(Gekko::PlayerType::RemotePlayer, &remote);
+        auto remote = GekkoNetAddress{ (void*)remote_address.c_str(), (unsigned int)remote_address.size() };
+        gekko_add_actor(sess, RemotePlayer, &remote);
         // add local player
-        localplayer = sess.AddActor(Gekko::PlayerType::LocalPlayer);
+        localplayer = gekko_add_actor(sess, LocalPlayer, nullptr);
     }
 
-    sess.SetLocalDelay(localplayer, 1);
+    gekko_set_local_delay(sess, localplayer, 1);
     // timing
 
     gtime_point start_time(gclock::now());
@@ -234,35 +239,43 @@ int main(int argc, char* args[])
     while (running) {
         start_time = gclock::now();
 
-        auto frame_time = GetFrameTime(sess.FramesAhead());
+        auto frame_time = GetFrameTime(gekko_frames_ahead(sess));
 
         std::cout << "ft: " << frame_time.count() << std::endl;
 
-        process_events(sess);
+        process_events();
 
         //add local inputs to the session
         auto input = get_key_inputs();
-        sess.AddLocalInput(localplayer, &input);
+        gekko_add_local_input(sess, localplayer, &input);
 
-        for (auto event : sess.Events()) {
+        int count = 0;
+        auto events = gekko_session_events(sess, &count);
+        for (int i = 0; i < count; i++) {
+            auto event = events[i];
+
             printf("EV: %d\n", event->type);
-            if (event->type == 6) {
+            if (event->type == DesyncDetected) {
                 auto desync = event->data.desynced;
                 printf("desync detected, f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle, desync.local_checksum, desync.remote_checksum);
             }
         }
 
-        for (auto ev : sess.UpdateSession()) {
+        count = 0;
+        auto updates = gekko_update_session(sess, &count);
+        for (int i = 0; i < count; i++) {
+            auto ev = updates[i];
+
             switch (ev->type) {
-            case Gekko::SaveEvent:
+            case SaveEvent:
                 printf("Save frame:%d\n", ev->data.save.frame);
                 save_state(&state, ev);
                 break;
-            case Gekko::LoadEvent:
+            case LoadEvent:
                 printf("Load frame:%d\n", ev->data.load.frame);
                 load_state(&state, ev);
                 break;
-            case Gekko::AdvanceEvent:
+            case AdvanceEvent:
                 // on advance event, advance the gamestate using the given inputs
                 inputs[0].input.value = ev->data.adv.inputs[0];
                 inputs[1].input.value = ev->data.adv.inputs[1];
@@ -297,6 +310,8 @@ int main(int argc, char* args[])
     }
 
     del_window();
+
+    gekko_destroy(sess);
 
     return 0;
 }

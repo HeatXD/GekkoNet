@@ -133,43 +133,4 @@ namespace Gekko {
         std::vector<Handle> handles;
         InputMsg input;
     };
-
-#ifndef GEKKONET_NO_ASIO
-    //class NonBlockingSocket : public NetAdapter {
-    //public:
-    //    NonBlockingSocket(u16 port);
-
-    //    virtual std::vector<std::unique_ptr<NetResult>> ReceiveData();
-
-    //    virtual void SendData(NetAddress& addr, const char* data, int length);
-    //private:
-    //    // Utility function to convert ASIO endpoint to string
-    //    std::string ETOS(const asio::ip::udp::endpoint& endpoint) {
-    //        return endpoint.address().to_string() + ":" + std::to_string(endpoint.port());
-    //    }
-
-    //    // Utility function to convert string to ASIO endpoint
-    //    asio::ip::udp::endpoint STOE(const std::string& str) {
-    //        std::string::size_type colon_pos = str.find(':');
-    //        if (colon_pos == std::string::npos) {
-    //            throw std::invalid_argument("Invalid endpoint string");
-    //        }
-
-    //        std::string address = str.substr(0, colon_pos);
-    //        u16 port = (u16)(std::stoi(str.substr(colon_pos + 1)));
-
-    //        return asio::ip::udp::endpoint(asio::ip::address::from_string(address), port);
-    //    }
-    //private:
-    //    char _buffer[1024];
-
-    //    asio::error_code _ec;
-
-    //    asio::io_context _io_ctx;
-
-    //    asio::ip::udp::endpoint _remote;
-
-    //    std::unique_ptr<asio::ip::udp::socket> _socket;
-    //};
-#endif // !GEKKONET_NO_ASIO
 }
