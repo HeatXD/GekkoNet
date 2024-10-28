@@ -6,7 +6,7 @@ I built this because I wanted a SDK to plug into my C++ projects, in the past I 
 GekkoNet is heavily inspired by the [GGPO](https://github.com/pond3r/ggpo) Rust reimplementation [GGRS](https://github.com/gschup/ggrs).
 
 #### Why not use GGPO?
-I am personally not a big fan of the callback based approach of GGPO hence why I am more of fond of how GGRS handles its control flow. And I might be addicted to reinventing the wheel :sweat_smile:
+I am personally not a big fan of the callback based approach of GGPO hence why I am more of fond of how GGRS handles its control flow. And I might be addicted to reinventing the wheel, this has mostly been a learning experience of mine to learn more about async systems and networking in general :)
 
 ## Project Goals
 ### Done
@@ -28,7 +28,6 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 ### Work in progress
 - Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
-- Docs
 
 ### Maybe Later
 - Replays
@@ -37,12 +36,75 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 
 ## Getting Started
 ### Docs
-https://heatxd.github.io/GekkoNet/
-### Building
-Todo
+- Automatically generated Docs: https://heatxd.github.io/GekkoNet/
+- Also look at the examples to see how GekkoNet functions!
+
+## Building GekkoNet
+### Prerequisites
+To build GekkoNet, make sure you have the following installed:
+
+1. **CMake** (version 3.15 or higher)
+2. **C++ Compiler**:
+   - **GCC** or **Clang** (Linux/macOS)
+   - **MSVC** (Visual Studio) for Windows
+3. **Doxygen** (optional, for documentation generation if `BUILD_DOCS` is enabled)
+
+### Step-by-Step Instructions
+
+### 1. Clone the Repository
+First, clone the GekkoNet repository:
+
+```sh
+git clone https://github.com/HeatXD/GekkoNet.git
+cd GekkoNet/GekkoLib
+```
+
+#### 2. Configure Build Options
+GekkoNet includes several options to customize the build:
+
+- `BUILD_SHARED_LIBS`: Set to `ON` to build shared libraries, or `OFF` for static libraries (default).
+- `NO_ASIO_BUILD`: Set to `ON` if you do not need ASIO.
+- `BUILD_DOCS`: Set to `ON` if you want to generate documentation using Doxygen (requires Doxygen installed).
+
+To configure these options, use `cmake` with `-D` flags. For example:
+
+```sh
+cmake -S . -B build -DBUILD_SHARED_LIBS=ON -DNO_ASIO_BUILD=OFF -DBUILD_DOCS=OFF
+```
+
+### 3. Generate Build Files
+Run CMake to configure the build and generate files:
+
+```sh
+cmake -S . -B build
+```
+
+#### 4. Build the Project
+Once configured, build the project using the following command:
+
+```sh
+cmake --build build
+```
+
+On successful completion, binaries and libraries will be located in the `out` directory within the project.
+
+#### 5. (Optional) Build Documentation
+If you set `BUILD_DOCS=ON`, generate the documentation as follows:
+
+```sh
+cmake --build build --target docs
+```
+
+Documentation will be available in the `build/docs` directory as HTML files.
+
+### Build Output
+- **Library**: Located in `out/`, with shared/static suffixes depending on build options.
+- **Documentation** (if built): Available in `build/docs/`.
+
+---
 
 ## Projects using GekkoNet
-Todo
+If you have a project using GekkoNet please let me know!
 
 ## License
 GekkoNet is licensed under the BSD-2-Clause license
