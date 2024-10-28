@@ -255,9 +255,15 @@ int main(int argc, char* args[])
             auto event = events[i];
 
             printf("EV: %d\n", event->type);
+
             if (event->type == DesyncDetected) {
                 auto desync = event->data.desynced;
                 printf("desync detected, f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle, desync.local_checksum, desync.remote_checksum);
+            }
+
+            if (event->type == PlayerDisconnected) {
+                auto disco = event->data.disconnected;
+                printf("disconnect detected, player: %d\n", disco.handle);
             }
         }
 

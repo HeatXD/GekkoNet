@@ -311,10 +311,24 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 
 	for (auto& player : spectator ? spectators : remotes) {
 		if (player->GetStatus() == Connected) {
-			const u32 diff = last_added - player->stats.last_acked_frame;
+            const u64 input_diff = now - player->stats.last_received_frame;
+
+            if (!spectator && input_diff > NetStats::DISCONNECT_TIMEOUT) {
+                // give them one chance to redeem themselves
+                if (player->stats.last_received_frame == 0) {
+                    player->stats.last_received_frame = now;
+                    return;
+                }
+                session_events.AddPlayerDisconnectedEvent(player->handle);
+                player->SetStatus(Disconnected);
+                player->sync_num = 0;
+                return;
+            }
+
+			const u32 ack_diff = last_added - player->stats.last_acked_frame;
             const u64 msg_diff = now - player->stats.last_received_message;
 
-			if (diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
+			if (ack_diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
                 session_events.AddPlayerDisconnectedEvent(player->handle);
                 player->SetStatus(Disconnected);
                 player->sync_num = 0;
@@ -537,6 +551,13 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
     net_input->input.input_count = body->input_count;
     net_input->input.start_frame = body->start_frame;
     net_input->input.total_size = (u16)net_input->input.inputs.size();
+
+    for (auto handle : net_input->handles) {
+        auto player = GetPlayerByHandle(handle);
+        if (player) {
+            player->stats.last_received_frame = TimeSinceEpoch();
+        }
+    }
 
     _received_inputs.push(std::move(net_input));
 }
