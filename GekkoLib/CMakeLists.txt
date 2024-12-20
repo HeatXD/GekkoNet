@@ -13,11 +13,10 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
 
 if(MSVC)
-    # Visual Studio specific flags
     if(BUILD_SHARED_LIBS)
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
     else()
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
     endif()
 else()
     # GCC/Clang flags
@@ -29,7 +28,6 @@ option(NO_ASIO_BUILD "Exclude ASIO from the build" OFF)
 
 # Include directories for your project headers
 include_directories(${PROJECT_SOURCE_DIR}/include)
-# Include directories for third-party header-only libraries
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty)
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
 
@@ -49,7 +47,6 @@ set(SRC_FILES
 # Shared libraries
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
-# Static libraries
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/out)
 
 # Create both static and shared library targets
@@ -76,6 +73,10 @@ endif()
 
 if(NO_ASIO_BUILD)
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_NO_ASIO)
+endif()
+
+if(MSVC)
+    target_link_options(GekkoNet PRIVATE "/NODEFAULTLIB:MSVCRT")
 endif()
 
 # Documentation configuration
