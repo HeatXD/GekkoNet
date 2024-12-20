@@ -29,7 +29,6 @@ option(NO_ASIO_BUILD "Exclude ASIO from the build" OFF)
 # Include directories for your project headers
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty)
-include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
 
 # Manually list all your source files
 set(SRC_FILES
@@ -73,10 +72,6 @@ endif()
 
 if(NO_ASIO_BUILD)
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_NO_ASIO)
-endif()
-
-if(MSVC)
-    target_link_options(GekkoNet PRIVATE "/NODEFAULTLIB:MSVCRT")
 endif()
 
 # Documentation configuration
