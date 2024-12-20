@@ -30,6 +30,10 @@ option(NO_ASIO_BUILD "Exclude ASIO from the build" OFF)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty)
 
+if(NOT NO_ASIO_BUILD) 
+    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
+endif()
+
 # Manually list all your source files
 set(SRC_FILES
     ${PROJECT_SOURCE_DIR}/src/gekkonet.cpp
