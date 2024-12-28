@@ -91,8 +91,6 @@ typedef struct GekkoNetAdapter {
     GekkoNetResult** (*receive_data)(int* length);
     // free data function so gekkonet can cleanup data that the user created.
     void (*free_data)(void* data_ptr);
-    // context data. can be any data. just be sure to clean / manage it yourself.
-    void* ctx_data;
 } GekkoNetAdapter;
 
 typedef enum GekkoGameEventType {
