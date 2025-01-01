@@ -214,7 +214,7 @@ int main(int argc, char* args[])
     gekko_net_adapter_set(sess, gekko_default_adapter(localport));
 
     // this is order dependant so we have to keep that in mind. 
-    if (localplayer == 1) {
+    if (localplayer == 0) {
         // add local player
         localplayer = gekko_add_actor(sess, LocalPlayer, nullptr); 
         // add remote player
