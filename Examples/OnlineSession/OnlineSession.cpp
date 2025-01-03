@@ -10,6 +10,19 @@
 #include <iostream>
 #include <thread>
 
+// Define grid dimensions
+#define GRID_COLUMNS 10
+#define GRID_ROWS 10
+#define WINDOW_WIDTH 750
+#define WINDOW_HEIGHT 750
+
+// Calculate cell dimensions
+#define CELL_WIDTH (WINDOW_WIDTH / GRID_COLUMNS)
+#define CELL_HEIGHT (WINDOW_HEIGHT / GRID_ROWS)
+
+// current mouse postion
+int curr_grid_pos_x, curr_grid_pos_y;
+
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 bool running = false;
@@ -31,8 +44,8 @@ bool init_window(void) {
         "GekkoNet Example: Online Session",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        300,
-        300,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
         0
     );
     if (!window) {
@@ -54,15 +67,31 @@ void del_window(void) {
 }
 
 struct GInput {
-    union inp {
+    union i {
         struct dir {
             char up : 1;
             char down : 1;
             char left : 1;
             char right : 1;
         }dir;
-        unsigned char value;
+        uint8_t value;
     }input;
+    struct m {
+        union a {
+            struct c {
+                char left : 1;
+                char right : 1;
+            } clicked;
+            uint8_t value;
+        } action;
+        union g {
+            struct pos {
+                uint16_t x;
+                uint16_t y;
+            } pos;
+            uint32_t value;
+        } grid;
+    } mouse;
 };
 
 void process_events() {
@@ -75,15 +104,21 @@ void process_events() {
         case SDL_KEYDOWN:
             if (event.key.keysym.sym == SDLK_ESCAPE) {
                 running = false;
-                break;
             }
+            break;
+        case SDL_MOUSEMOTION:
+            SDL_GetMouseState(&curr_grid_pos_x, &curr_grid_pos_y);
+            // printf("Mouse at (%d, %d)\n", curr_grid_pos_x, curr_grid_pos_y);
+            break;
         }
     }
 }
 
 struct GState {
-    int px[2]{ 0, 0};
-    int py[2]{ 0, 0};
+    int px[2]{ 0, 0 };
+    int py[2]{ 0, 0 };
+    uint16_t mouse_px[2]{ 0, 0 };
+    uint16_t mouse_py[2]{ 0, 0 };
     char desync = 0;
 };
 
@@ -93,6 +128,10 @@ void update_state(GState& gs, GInput inputs[2], int num_players) {
         if (inputs[player].input.dir.down) gs.py[player] += 2;
         if (inputs[player].input.dir.left) gs.px[player] -= 2;
         if (inputs[player].input.dir.right)gs.px[player] += 2;
+
+        // set mouse pos
+        gs.mouse_px[player] = inputs[player].mouse.grid.pos.x;
+        gs.mouse_py[player] = inputs[player].mouse.grid.pos.y;
     }
 }
 
@@ -130,16 +169,42 @@ void load_state(GState* gs, GekkoGameEvent* ev) {
 }
 
 void render_state(GState& gs) {
+    // render grid
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 50);
+    for (int i = 1; i < GRID_COLUMNS; ++i) {
+        int x = i * CELL_WIDTH;
+        SDL_RenderDrawLine(renderer, x, 0, x, WINDOW_HEIGHT);
+    }
+
+    for (int i = 1; i < GRID_ROWS; ++i) {
+        int y = i * CELL_HEIGHT;
+        SDL_RenderDrawLine(renderer, 0, y, WINDOW_WIDTH, y);
+    }
+
+    // render player
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     for (int player = 0; player < 2; player++)
     {
-        SDL_Rect ball_rect = {
+        SDL_Rect player_rect = {
             gs.px[player],
             gs.py[player],
             40,
             40
         };
-        SDL_RenderFillRect(renderer, &ball_rect);
+        SDL_RenderFillRect(renderer, &player_rect);
+    }
+
+    // render mouse position
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    for (int player = 0; player < 2; player++)
+    {
+        SDL_Rect mouse_rect = {
+            gs.mouse_px[player],
+            gs.mouse_py[player],
+            5,
+            5
+        };
+        SDL_RenderFillRect(renderer, &mouse_rect);
     }
 }
 
@@ -147,6 +212,8 @@ GInput get_key_inputs() {
     GInput input{};
     // reset inputs
     input.input.value = 0;
+    input.mouse.action.value = 0;
+    input.mouse.grid.value = 0;
     // fetch local inputs
     auto keys = SDL_GetKeyboardState(NULL);
     // local player
@@ -154,6 +221,11 @@ GInput get_key_inputs() {
     input.input.dir.left = keys[SDL_SCANCODE_A];
     input.input.dir.down = keys[SDL_SCANCODE_S];
     input.input.dir.right = keys[SDL_SCANCODE_D];
+    // local mouse position
+    input.mouse.grid.pos.x = curr_grid_pos_x;
+    input.mouse.grid.pos.y = curr_grid_pos_y;
+    // local mouse actions
+    // todo
     return input;
 }
 
@@ -199,15 +271,15 @@ int main(int argc, char* args[])
     int num_players = 2;
 
     GekkoSession* sess = nullptr;
-    GekkoConfig conf {};
+    GekkoConfig conf{};
 
     conf.num_players = num_players;
-    conf.input_size = sizeof(char);
+    conf.input_size = sizeof(GInput);
     conf.state_size = sizeof(GState);
     conf.max_spectators = 0;
     conf.input_prediction_window = 10;
     conf.desync_detection = true;
-    // conf.limited_saving = true;
+    //conf.limited_saving = true;
 
     gekko_create(&sess);
     gekko_start(sess, &conf);
@@ -216,11 +288,12 @@ int main(int argc, char* args[])
     // this is order dependant so we have to keep that in mind. 
     if (localplayer == 0) {
         // add local player
-        localplayer = gekko_add_actor(sess, LocalPlayer, nullptr); 
+        localplayer = gekko_add_actor(sess, LocalPlayer, nullptr);
         // add remote player
         auto remote = GekkoNetAddress{ (void*)remote_address.c_str(), (unsigned int)remote_address.size() };
         gekko_add_actor(sess, RemotePlayer, &remote);
-    } else {
+    }
+    else {
         // add remote player
         auto remote = GekkoNetAddress{ (void*)remote_address.c_str(), (unsigned int)remote_address.size() };
         gekko_add_actor(sess, RemotePlayer, &remote);
@@ -283,8 +356,8 @@ int main(int argc, char* args[])
                 break;
             case AdvanceEvent:
                 // on advance event, advance the gamestate using the given inputs
-                inputs[0].input.value = ev->data.adv.inputs[0];
-                inputs[1].input.value = ev->data.adv.inputs[1];
+                memcpy(&inputs[0], &ev->data.adv.inputs[0], conf.input_size);
+                memcpy(&inputs[1], &ev->data.adv.inputs[conf.input_size], conf.input_size);
                 current = ev->data.adv.frame;
                 printf("F:%d, P1:%d P2:%d\n", current, inputs[0].input.value, inputs[1].input.value);
                 // now we can use them to update state.
