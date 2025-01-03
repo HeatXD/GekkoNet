@@ -20,9 +20,6 @@
 #define CELL_WIDTH (WINDOW_WIDTH / GRID_COLUMNS)
 #define CELL_HEIGHT (WINDOW_HEIGHT / GRID_ROWS)
 
-// current mouse postion
-int curr_grid_pos_x, curr_grid_pos_y;
-
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 bool running = false;
@@ -106,10 +103,6 @@ void process_events() {
                 running = false;
             }
             break;
-        case SDL_MOUSEMOTION:
-            SDL_GetMouseState(&curr_grid_pos_x, &curr_grid_pos_y);
-            // printf("Mouse at (%d, %d)\n", curr_grid_pos_x, curr_grid_pos_y);
-            break;
         }
     }
 }
@@ -130,8 +123,10 @@ void update_state(GState& gs, GInput inputs[2], int num_players) {
         if (inputs[player].input.dir.right)gs.px[player] += 2;
 
         // set mouse pos
-        gs.mouse_px[player] = inputs[player].mouse.grid.pos.x;
-        gs.mouse_py[player] = inputs[player].mouse.grid.pos.y;
+        if (inputs[player].mouse.action.value != 0) {
+            gs.mouse_px[player] = inputs[player].mouse.grid.pos.x;
+            gs.mouse_py[player] = inputs[player].mouse.grid.pos.y;
+        }
     }
 }
 
@@ -221,11 +216,19 @@ GInput get_key_inputs() {
     input.input.dir.left = keys[SDL_SCANCODE_A];
     input.input.dir.down = keys[SDL_SCANCODE_S];
     input.input.dir.right = keys[SDL_SCANCODE_D];
+    // get mouse state
+    int mouse_x, mouse_y;
+    auto buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
+    // mouse action
+    input.mouse.action.clicked.left = (buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;
+    input.mouse.action.clicked.right = (buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
     // local mouse position
-    input.mouse.grid.pos.x = curr_grid_pos_x;
-    input.mouse.grid.pos.y = curr_grid_pos_y;
-    // local mouse actions
-    // todo
+    // only send position if there is a mouse action detected.
+    // otherwise we are constantly send new values for the mouse which causes it to rollback almost every frame.
+    if (input.mouse.action.value != 0) {
+        input.mouse.grid.pos.x = mouse_x;
+        input.mouse.grid.pos.y = mouse_y;
+    }
     return input;
 }
 
@@ -278,8 +281,8 @@ int main(int argc, char* args[])
     conf.state_size = sizeof(GState);
     conf.max_spectators = 0;
     conf.input_prediction_window = 10;
-    conf.desync_detection = true;
-    //conf.limited_saving = true;
+    // conf.desync_detection = true;
+    conf.limited_saving = true;
 
     gekko_create(&sess);
     gekko_start(sess, &conf);
@@ -314,7 +317,7 @@ int main(int argc, char* args[])
 
         auto frame_time = GetFrameTime(gekko_frames_ahead(sess));
 
-        std::cout << "ft: " << frame_time.count() << std::endl;
+        // std::cout << "ft: " << frame_time.count() << std::endl;
 
         process_events();
 
