@@ -63,7 +63,7 @@ void Gekko::Session::SetNetAdapter(GekkoNetAdapter* adapter)
 
 i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 {
-    const int ERR = -1;
+    const i32 ERR = -1;
     std::unique_ptr<NetAddress> address;
 
     if (addr) {
