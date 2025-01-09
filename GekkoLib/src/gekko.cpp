@@ -63,6 +63,7 @@ void Gekko::Session::SetNetAdapter(GekkoNetAdapter* adapter)
 
 i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 {
+    const int ERR = -1;
     std::unique_ptr<NetAddress> address;
 
     if (addr) {
@@ -71,20 +72,20 @@ i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 
     if (type == Spectator) {
         if (_msg.spectators.size() >= _config.max_spectators) {
-            return 0;
+            return ERR;
         }
 
-        u32 new_handle = _config.num_players + (u32)_msg.spectators.size() + 1;
+        u32 new_handle = _config.num_players + (u32)_msg.spectators.size();
         _msg.spectators.push_back(std::make_unique<Player>(new_handle, type, address.get()));
 
         return new_handle;
     }
     else {
         if (_started || _msg.locals.size() + _msg.remotes.size() >= _config.num_players) {
-            return 0;
+            return ERR;
         }
 
-        u32 new_handle = (u32)(_msg.locals.size() + _msg.remotes.size()) + 1;
+        u32 new_handle = (u32)(_msg.locals.size() + _msg.remotes.size());
 
         if (type == LocalPlayer) {
             _msg.locals.push_back(std::make_unique<Player>(new_handle, type, address.get()));
@@ -92,7 +93,7 @@ i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
         else {
             // require an address when specifing a remote player
             if (addr == nullptr) {
-                return 0;
+                return ERR;
             }
 
             _msg.remotes.push_back(std::make_unique<Player>(new_handle, type, address.get()));
