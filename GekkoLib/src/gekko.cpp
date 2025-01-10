@@ -45,7 +45,7 @@ void Gekko::Session::Init(GekkoConfig* config)
 
 void Gekko::Session::SetLocalDelay(i32 player, u8 delay)
 {
-    if (player - 1 < 0) {
+    if (player < 0) {
         return;
     }
 
@@ -523,7 +523,7 @@ void Gekko::Session::HandleReceivedInputs()
 		const Frame start = current->input.start_frame;
 
         for (u32 i = 0; i < handles; i++) {
-            Handle handle = spectating ? i + 1 : current->handles[i];
+            Handle handle = spectating ? i : current->handles[i];
             for (u32 j = 1; j <= count; j++) {
                 Frame frame = start + j;
                 u8* input = &current->input.inputs[(player_offset * i) + ((j - 1) * _config.input_size)];
