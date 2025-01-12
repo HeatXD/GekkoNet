@@ -28,28 +28,22 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 
 void Gekko::SyncSystem::AddLocalInput(Handle player, u8* input)
 {
-	// valid handles start from 1 while the input buffers index starts at 0.
-	i32 plyr = player - 1;
-
 	// drop inputs from incorrect handles
-    if (plyr >= _num_players || plyr < 0) {
+    if (player >= _num_players || player < 0) {
         return;
     }
 
-	_input_buffers[plyr].AddLocalInput(_current_frame, input);
+	_input_buffers[player].AddLocalInput(_current_frame, input);
 }
 
 void Gekko::SyncSystem::AddRemoteInput(Handle player, u8* input, Frame frame)
 {
-	// valid handles start from 1 while the input buffers index starts at 0.
-	i32 plyr = player - 1;
-
 	// drop inputs from incorrect handles
-    if (plyr >= _num_players || plyr < 0) {
+    if (player >= _num_players || player < 0) {
         return;
     }
 
-	_input_buffers[plyr].AddInput(frame, input);
+	_input_buffers[player].AddInput(frame, input);
 }
 
 void Gekko::SyncSystem::IncrementFrame()
@@ -95,7 +89,7 @@ bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique
 	inputs.reset();
 	std::unique_ptr<u8[]> all_input(new u8[_input_size * handles.size()]);
 	for (u8 i = 0; i < handles.size(); i++) {
-		auto inp = _input_buffers[handles[i] - 1].GetInput(frame, true);
+		auto inp = _input_buffers[handles[i]].GetInput(frame, true);
 
 		if (inp->frame == GameInput::NULL_FRAME) {	
 			return false;
@@ -109,17 +103,17 @@ bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique
 
 void Gekko::SyncSystem::SetLocalDelay(Handle player, u8 delay)
 {
-	_input_buffers[player - 1].SetDelay(delay);
+	_input_buffers[player].SetDelay(delay);
 }
 
 u8 Gekko::SyncSystem::GetLocalDelay(Handle player)
 {
-	return _input_buffers[player - 1].GetDelay();
+	return _input_buffers[player].GetDelay();
 }
 
 void Gekko::SyncSystem::SetInputPredictionWindow(Handle player, u8 input_window)
 {
-	_input_buffers[player - 1].SetInputPredictionWindow(input_window);
+	_input_buffers[player].SetInputPredictionWindow(input_window);
 }
 
 Frame Gekko::SyncSystem::GetCurrentFrame()
@@ -157,10 +151,8 @@ Frame Gekko::SyncSystem::GetMinReceivedFrame()
 
 Frame Gekko::SyncSystem::GetLastReceivedFrom(Handle player)
 {
-    u32 plyr = player - 1;
-
-    if (plyr >= 0 && plyr < _num_players) {
-        return _input_buffers[plyr].GetLastReceivedFrame();
+    if (player >= 0 && player < _num_players) {
+        return _input_buffers[player].GetLastReceivedFrame();
     }
 
     return GameInput::NULL_FRAME;

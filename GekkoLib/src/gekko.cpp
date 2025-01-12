@@ -59,7 +59,7 @@ void Gekko::Session::SetNetAdapter(GekkoNetAdapter* adapter)
 
 i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 {
-    const int ERR = -1;
+    const i32 ERR = -1;
     std::unique_ptr<NetAddress> address;
 
     if (addr) {
@@ -519,7 +519,7 @@ void Gekko::Session::HandleReceivedInputs()
 		const Frame start = current->input.start_frame;
 
         for (u32 i = 0; i < handles; i++) {
-            Handle handle = spectating ? i + 1 : current->handles[i];
+            Handle handle = spectating ? i : current->handles[i];
             for (u32 j = 1; j <= count; j++) {
                 Frame frame = start + j;
                 u8* input = &current->input.inputs[(player_offset * i) + ((j - 1) * _config.input_size)];
