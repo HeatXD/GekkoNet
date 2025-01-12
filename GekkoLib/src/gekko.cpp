@@ -45,10 +45,6 @@ void Gekko::Session::Init(GekkoConfig* config)
 
 void Gekko::Session::SetLocalDelay(i32 player, u8 delay)
 {
-    if (player - 1 < 0) {
-        return;
-    }
-
     for (u32 i = 0; i < _msg.locals.size(); i++) {
         if (_msg.locals[i]->handle == player) {
             _sync.SetLocalDelay(player, delay);
