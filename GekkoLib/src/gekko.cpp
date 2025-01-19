@@ -282,7 +282,7 @@ void Gekko::Session::SendHealthCheck()
 
     _msg.local_health[confirmed] = sav->checksum;
 
-    _msg.SendHealthCheck(confirmed, sav->checksum);
+    _msg.SendSessionHealth(confirmed, sav->checksum);
 
     for (auto iter = _msg.local_health.begin();
         iter != _msg.local_health.end(); ) {

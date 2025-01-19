@@ -103,7 +103,7 @@ namespace Gekko {
 
 		bool CheckStatusActors();
 
-        void SendHealthCheck(Frame frame, u32 checksum);
+        void SendSessionHealth(Frame frame, u32 checksum);
 
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
@@ -149,7 +149,9 @@ namespace Gekko {
 
         void OnInputAck(NetAddress& addr, NetPacket& pkt);
 
-        void OnHealthCheck(NetAddress& addr, NetPacket& pkt);
+        void OnSessionHealth(NetAddress& addr, NetPacket& pkt);
+
+        void OnNetworkHealth(NetAddress& addr, NetPacket& pkt);
 
 	private:
 		const u32 MAX_PLAYER_SEND_SIZE = 32;

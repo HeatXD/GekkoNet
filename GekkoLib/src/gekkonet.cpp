@@ -110,7 +110,7 @@ static GekkoNetResult** asio_receive(int* length) {
     while (true) {
         const u32 len = (u32)_socket->receive_from(asio::buffer(_buffer), _remote, 0, _ec);
         if (_ec && _ec != asio::error::would_block) {
-            std::cout << "receive failed: " << _ec.message() << std::endl;
+            // std::cout << "receive failed: " << _ec.message() << std::endl;
             continue;
         }
         else if (!_ec) {

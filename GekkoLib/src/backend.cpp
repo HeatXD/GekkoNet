@@ -14,7 +14,8 @@ namespace
         zpp::serializer::make_type<Gekko::SyncMsg, zpp::serializer::make_id("Gekko::SyncMsg")>,
         zpp::serializer::make_type<Gekko::InputMsg, zpp::serializer::make_id("Gekko::InputMsg")>,
         zpp::serializer::make_type<Gekko::InputAckMsg, zpp::serializer::make_id("Gekko::InputAckMsg")>,
-        zpp::serializer::make_type<Gekko::HealthCheckMsg, zpp::serializer::make_id("Gekko::HealthCheckMsg")>
+        zpp::serializer::make_type<Gekko::SessionHealthMsg, zpp::serializer::make_id("Gekko::SessionHealthMsg")>,
+        zpp::serializer::make_type<Gekko::NetworkHealthMsg, zpp::serializer::make_id("Gekko::NetworkHealthMsg")>
     > _;
 }
 
@@ -105,7 +106,7 @@ void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
                 SendDataToAll(pkt.get(), host, true);
             }
 		}
-        else if (pkt->pkt.header.type == HealthCheck) {
+        else if (pkt->pkt.header.type == SessionHealth) {
             // send to remotes
             SendDataToAll(pkt.get(), host);
             // send to spectators
@@ -287,15 +288,15 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	return result == 0;
 }
 
-void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
+void Gekko::MessageSystem::SendSessionHealth(Frame frame, u32 checksum)
 {
     _pending_output.push(std::make_unique<NetData>());
     auto& message = _pending_output.back();
 
     // the address and magic is set later so dont worry about it now
-    message->pkt.header.type = HealthCheck;
+    message->pkt.header.type = SessionHealth;
 
-    auto body = std::make_unique<HealthCheckMsg>();
+    auto body = std::make_unique<SessionHealthMsg>();
     body->frame = frame;
     body->checksum = checksum;
 
@@ -453,8 +454,11 @@ void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
         case InputAck:
             OnInputAck(addr, pkt);
             return;
-        case HealthCheck:
-            OnHealthCheck(addr, pkt);
+        case SessionHealth:
+            OnSessionHealth(addr, pkt);
+            return;
+        case NetworkHealth:
+            OnNetworkHealth(addr, pkt);
             return;
         default:
             printf("cannot process an unknown event!\n");
@@ -592,9 +596,9 @@ void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
     }
 }
 
-void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
+void Gekko::MessageSystem::OnSessionHealth(NetAddress& addr, NetPacket& pkt)
 {
-    auto body = (HealthCheckMsg*)pkt.body.get();
+    auto body = (SessionHealthMsg*)pkt.body.get();
 
     const Frame frame = body->frame;
     const u32 checksum = body->checksum;
@@ -614,6 +618,11 @@ void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
             break;
         }
     }
+}
+
+void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
+{
+    // TODO
 }
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)

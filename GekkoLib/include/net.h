@@ -31,7 +31,8 @@ namespace Gekko {
         InputAck,
         SyncRequest,
         SyncResponse,
-        HealthCheck,
+        SessionHealth,
+        NetworkHealth
     };
 
     struct MsgHeader {
@@ -88,7 +89,17 @@ namespace Gekko {
         }
     };
 
-    struct HealthCheckMsg : MsgBody {
+    struct SessionHealthMsg : MsgBody {
+        Frame frame;
+        u32 checksum;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.frame, s.checksum);
+        }
+    };
+
+    struct NetworkHealthMsg : MsgBody {
         Frame frame;
         u32 checksum;
 
