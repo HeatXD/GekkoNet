@@ -9,18 +9,6 @@
 
 #include "zpp/serializer.h"
 
-#ifndef GEKKONET_NO_ASIO
-
-#ifdef _WIN32
-#define _WIN32_WINNT 0x0A00
-#endif // _WIN32
-
-#define ASIO_STANDALONE 
-
-#include "asio/asio.hpp"
-
-#endif // GEKKONET_NO_ASIO
-
 namespace Gekko {
     struct NetAddress {
         NetAddress();
