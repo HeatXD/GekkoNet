@@ -114,6 +114,9 @@ void Gekko::Session::AddLocalInput(i32 player, void* input)
 
 GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
 {
+    // reset session events
+    _msg.session_events.Reset();
+        
     // connection Handling
     Poll();
 
@@ -141,7 +144,7 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
         }
 
         // send a healthcheck if applicable
-        SendHealthCheck();
+        SendSessionHealthCheck();
 
         // check if the session is still doing alright.
         SessionIntegrityCheck();
@@ -174,6 +177,32 @@ f32 Gekko::Session::FramesAhead()
     }
 
 	return _msg.history.GetAverageAdvantage();
+}
+
+void Gekko::Session::NetworkStats(i32 player, GekkoNetworkStats* stats)
+{
+    std::vector<std::unique_ptr<Player>>* current = &_msg.remotes;
+
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &_msg.spectators;
+        }
+
+        for (auto& actor : *current) {
+            if (actor->handle == player) {
+                stats->last_ping = actor->stats.LastRTT();
+                stats->jitter = actor->stats.CalculateJitter();
+                stats->avg_ping = actor->stats.CalculateAvgRTT();
+                return;
+            }
+        }
+    }
+}
+
+void Gekko::Session::NetworkPoll()
+{
+    Poll();
 }
 
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev)
@@ -257,7 +286,7 @@ bool Gekko::Session::ShouldDelaySpectator()
     return false;
 }
 
-void Gekko::Session::SendHealthCheck()
+void Gekko::Session::SendSessionHealthCheck()
 {
     if (!_config.desync_detection || IsSpectating()) {
         return;
@@ -282,7 +311,7 @@ void Gekko::Session::SendHealthCheck()
 
     _msg.local_health[confirmed] = sav->checksum;
 
-    _msg.SendHealthCheck(confirmed, sav->checksum);
+    _msg.SendSessionHealth(confirmed, sav->checksum);
 
     for (auto iter = _msg.local_health.begin();
         iter != _msg.local_health.end(); ) {
@@ -292,6 +321,16 @@ void Gekko::Session::SendHealthCheck()
             ++iter;
         }
     }
+}
+
+void Gekko::Session::SendNetworkHealthCheck()
+{
+    // we want the session to be synced before trying to determine its network health.
+    if (!_started) {
+        return;
+    }
+
+    _msg.SendNetworkHealth();
 }
 
 void Gekko::Session::SessionIntegrityCheck()
@@ -304,16 +343,16 @@ void Gekko::Session::SessionIntegrityCheck()
         iter != _msg.local_health.end(); ) {
 
         for (auto& player : _msg.remotes) {
-            if (player->health.count(iter->first)) {
-                if (player->health[iter->first] != iter->second) {
+            if (player->session_health.count(iter->first)) {
+                if (player->session_health[iter->first] != iter->second) {
                     _msg.session_events.AddDesyncDetectedEvent(
                         iter->first,
                         player->handle,
                         iter->second,
-                        player->health[iter->first]
+                        player->session_health[iter->first]
                     );
                 }
-                player->health.erase(iter->first);
+                player->session_health.erase(iter->first);
             }
         }
 
@@ -450,9 +489,6 @@ void Gekko::Session::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
 
 void Gekko::Session::Poll()
 {
-    // reset session events
-    _msg.session_events.Reset();
-
 	// return if no host is defined.
     if (!_host) {
         return;
@@ -476,6 +512,9 @@ void Gekko::Session::Poll()
 
 	// send inputs to spectators 
 	SendSpectatorInputs();
+
+    // send network health update
+    SendNetworkHealthCheck();
     
 	// now send data
 	_msg.SendPendingOutput(_host);

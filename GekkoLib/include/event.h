@@ -16,11 +16,11 @@ namespace Gekko {
         void Reset();
 
     private:
-        u32 _input_size;
+        u32 _input_size = 0;
 
-        u16 _index_others;
+        u16 _index_others = 0;
 
-        u16 _index_advance;
+        u16 _index_advance = 0;
 
         std::vector<std::unique_ptr<GekkoGameEvent>> _buffer_advance;
 

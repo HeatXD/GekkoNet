@@ -14,7 +14,8 @@ namespace
         zpp::serializer::make_type<Gekko::SyncMsg, zpp::serializer::make_id("Gekko::SyncMsg")>,
         zpp::serializer::make_type<Gekko::InputMsg, zpp::serializer::make_id("Gekko::InputMsg")>,
         zpp::serializer::make_type<Gekko::InputAckMsg, zpp::serializer::make_id("Gekko::InputAckMsg")>,
-        zpp::serializer::make_type<Gekko::HealthCheckMsg, zpp::serializer::make_id("Gekko::HealthCheckMsg")>
+        zpp::serializer::make_type<Gekko::SessionHealthMsg, zpp::serializer::make_id("Gekko::SessionHealthMsg")>,
+        zpp::serializer::make_type<Gekko::NetworkHealthMsg, zpp::serializer::make_id("Gekko::NetworkHealthMsg")>
     > _;
 }
 
@@ -23,6 +24,7 @@ Gekko::MessageSystem::MessageSystem()
 	_input_size = 0;
 	_last_added_input = GameInput::NULL_FRAME;
 	_last_added_spectator_input = GameInput::NULL_FRAME;
+    _last_sent_network_check = 0;
 
 	// gen magic for session
 	std::srand((unsigned int)std::time(nullptr));
@@ -105,7 +107,7 @@ void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
                 SendDataToAll(pkt.get(), host, true);
             }
 		}
-        else if (pkt->pkt.header.type == HealthCheck) {
+        else if ((pkt->pkt.header.type == SessionHealth || pkt->pkt.header.type == NetworkHealth) && pkt->addr.GetSize() == 0) {
             // send to remotes
             SendDataToAll(pkt.get(), host);
             // send to spectators
@@ -287,19 +289,43 @@ bool Gekko::MessageSystem::CheckStatusActors()
 	return result == 0;
 }
 
-void Gekko::MessageSystem::SendHealthCheck(Frame frame, u32 checksum)
+void Gekko::MessageSystem::SendSessionHealth(Frame frame, u32 checksum)
 {
     _pending_output.push(std::make_unique<NetData>());
     auto& message = _pending_output.back();
 
     // the address and magic is set later so dont worry about it now
-    message->pkt.header.type = HealthCheck;
+    message->pkt.header.type = SessionHealth;
 
-    auto body = std::make_unique<HealthCheckMsg>();
+    auto body = std::make_unique<SessionHealthMsg>();
     body->frame = frame;
     body->checksum = checksum;
 
     message->pkt.body = std::move(body);
+}
+
+void Gekko::MessageSystem::SendNetworkHealth()
+{
+    u64 now = TimeSinceEpoch();
+
+    // dont want to spam the network with network health packets
+    if (_last_sent_network_check + NetStats::NET_CHECK_DELAY > now) {
+        return;
+    }
+
+    _pending_output.push(std::make_unique<NetData>());
+    auto& message = _pending_output.back();
+
+    // the address and magic is set later so dont worry about it now
+    message->pkt.header.type = NetworkHealth;
+
+    auto body = std::make_unique<NetworkHealthMsg>();
+    body->send_time = now;
+    body->received = false;
+
+    message->pkt.body = std::move(body);
+
+    _last_sent_network_check = now;
 }
 
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
@@ -453,8 +479,11 @@ void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
         case InputAck:
             OnInputAck(addr, pkt);
             return;
-        case HealthCheck:
-            OnHealthCheck(addr, pkt);
+        case SessionHealth:
+            OnSessionHealth(addr, pkt);
+            return;
+        case NetworkHealth:
+            OnNetworkHealth(addr, pkt);
             return;
         default:
             printf("cannot process an unknown event!\n");
@@ -592,9 +621,9 @@ void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
     }
 }
 
-void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
+void Gekko::MessageSystem::OnSessionHealth(NetAddress& addr, NetPacket& pkt)
 {
-    auto body = (HealthCheckMsg*)pkt.body.get();
+    auto body = (SessionHealthMsg*)pkt.body.get();
 
     const Frame frame = body->frame;
     const u32 checksum = body->checksum;
@@ -603,15 +632,61 @@ void Gekko::MessageSystem::OnHealthCheck(NetAddress& addr, NetPacket& pkt)
         if (player->address.Equals(addr)) {
             player->SetChecksum(frame, checksum);
 
-            for (auto iter = player->health.begin();
-                iter != player->health.end(); ) {
+            for (auto iter = player->session_health.begin();
+                iter != player->session_health.end(); ) {
                 if (iter->first < (_last_added_input - 100)) {
-                    iter = player->health.erase(iter);
+                    iter = player->session_health.erase(iter);
                 } else {
                     ++iter;
                 }
             }
             break;
+        }
+    }
+}
+
+void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
+{
+    auto body = (NetworkHealthMsg*)pkt.body.get();
+
+    // ok if its not a returned packet then update it and send it back to its specifc peer.
+    if (!body->received) {
+        _pending_output.push(std::make_unique<NetData>());
+        auto& message = _pending_output.back();
+
+        auto player = GetPlayerByHandle(GetHandlesForAddress(&addr).at(0));
+
+        message->pkt.header.magic = player->session_magic;
+        message->pkt.header.type = NetworkHealth;
+
+        auto new_body = std::make_unique<NetworkHealthMsg>();
+        new_body->send_time = body->send_time;
+        new_body->received = true;
+
+        message->pkt.body = std::move(new_body);
+        message->addr.Copy(&addr);
+        return;
+    }
+
+    // else update network stats
+    u16 rtt_ms = (u16)(TimeSinceEpoch() - body->send_time);
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& actor : *current) {
+            // add rtt times to a list 
+            if (addr.Equals(actor->address)) {
+                actor->stats.rtt.push_back(rtt_ms);
+            }
+            // cleanup
+            if (actor->stats.rtt.size() > 10) {
+                actor->stats.rtt.erase(actor->stats.rtt.begin());
+            }
         }
     }
 }

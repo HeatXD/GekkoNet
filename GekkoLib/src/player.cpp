@@ -33,5 +33,5 @@ void Gekko::Player::SetStatus(PlayerStatus type)
 
 void Gekko::Player::SetChecksum(Frame frame, u32 checksum)
 {
-    health[frame] = checksum;
+    session_health[frame] = checksum;
 }

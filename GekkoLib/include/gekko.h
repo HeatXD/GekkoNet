@@ -20,6 +20,8 @@ struct GekkoSession {
     virtual GekkoGameEvent** UpdateSession(i32* count) = 0;
     virtual GekkoSessionEvent** Events(i32* count) = 0;
     virtual f32 FramesAhead() = 0;
+    virtual void NetworkStats(i32 player, GekkoNetworkStats* stats) = 0;
+    virtual void NetworkPoll() = 0;
 };
 
 namespace Gekko {
@@ -43,6 +45,10 @@ namespace Gekko {
         virtual GekkoSessionEvent** Events(i32* count);
 
         virtual f32 FramesAhead();
+
+        virtual void NetworkStats(i32 player, GekkoNetworkStats* stats);
+
+        virtual void NetworkPoll();
 
 	private:
 		void Poll();
@@ -77,7 +83,9 @@ namespace Gekko {
 
         bool ShouldDelaySpectator();
 
-        void SendHealthCheck();
+        void SendSessionHealthCheck();
+
+        void SendNetworkHealthCheck();
 
         void SessionIntegrityCheck();
 

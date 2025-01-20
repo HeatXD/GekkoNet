@@ -31,7 +31,8 @@ namespace Gekko {
         InputAck,
         SyncRequest,
         SyncResponse,
-        HealthCheck,
+        SessionHealth,
+        NetworkHealth
     };
 
     struct MsgHeader {
@@ -88,13 +89,23 @@ namespace Gekko {
         }
     };
 
-    struct HealthCheckMsg : MsgBody {
+    struct SessionHealthMsg : MsgBody {
         Frame frame;
         u32 checksum;
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
             a(s.frame, s.checksum);
+        }
+    };
+
+    struct NetworkHealthMsg : MsgBody {
+        u64 send_time;
+        bool received;
+
+        template <typename Archive, typename Self>
+        static void serialize(Archive& a, Self& s) {
+            a(s.send_time, s.received);
         }
     };
 
@@ -109,13 +120,20 @@ namespace Gekko {
     };
 
     struct NetStats {
-        static const u64 DISCONNECT_TIMEOUT = std::chrono::microseconds(2000).count();
-        static const u64 SYNC_MSG_DELAY = std::chrono::microseconds(200).count();
+        static const u64 DISCONNECT_TIMEOUT = std::chrono::milliseconds(2000).count();
+        static const u64 SYNC_MSG_DELAY = std::chrono::milliseconds(200).count();
+        static const u64 NET_CHECK_DELAY = std::chrono::milliseconds(1000).count();
 
         Frame last_acked_frame;
         u64 last_sent_sync_message;
         u64 last_received_message = -1;
         u64 last_received_frame = 0;
+
+        std::vector<u16> rtt;
+
+        float CalculateJitter();
+        float CalculateAvgRTT();
+        u32 LastRTT();
     };
 
     struct NetInputData {

@@ -157,15 +157,15 @@ GInput get_key_inputs() {
     return input;
 }
 
-micro GetFrameTime(float frames_ahead) {
-    if (frames_ahead >= 1.0f) {
-        return std::chrono::duration_cast<micro>(slow_frame(1));
+float GetFrameTime(float frames_ahead) {
+    if (frames_ahead >= 1.f) {
+        return std::chrono::duration<float>(slow_frame(1)).count();
     }
-    else if (frames_ahead <= -1.0f) {
-        return std::chrono::duration_cast<micro>(fast_frame(1));
+    else if (frames_ahead <= -1.f) {
+        return std::chrono::duration<float>(fast_frame(1)).count();
     }
     else {
-        return std::chrono::duration_cast<micro>(normal_frame(1));
+        return std::chrono::duration<float>(normal_frame(1)).count();
     }
 
 }
@@ -229,90 +229,103 @@ int main(int argc, char* args[])
     }
 
     gekko_set_local_delay(sess, localplayer, 1);
-    // timing
-
-    gtime_point start_time(gclock::now());
-    gtime_point end_time(gclock::now());
 
     int current = 0;
 
+    // timing
+    auto curr_time = gclock::now();
+    auto prev_time(gclock::now());
+
+    float delta_time = 0.f;
+    float accumulator = 0.f;
+    float frame_time = 0.f;
+    float frames_ahead = 0.f;
+
     while (running) {
-        start_time = gclock::now();
+        curr_time = gclock::now();
 
-        auto frame_time = GetFrameTime(gekko_frames_ahead(sess));
+        frames_ahead = gekko_frames_ahead(sess);
+        frame_time = GetFrameTime(frames_ahead);
 
-        std::cout << "ft: " << frame_time.count() << std::endl;
+        delta_time = std::chrono::duration<float>(curr_time - prev_time).count();
+        prev_time = curr_time;
 
-        process_events();
+        accumulator += delta_time;
 
-        //add local inputs to the session
-        auto input = get_key_inputs();
-        gekko_add_local_input(sess, localplayer, &input);
+        gekko_network_poll(sess);
 
-        int count = 0;
-        auto events = gekko_session_events(sess, &count);
-        for (int i = 0; i < count; i++) {
-            auto event = events[i];
+        while (accumulator >= frame_time) {
 
-            printf("EV: %d\n", event->type);
+            GekkoNetworkStats stats{};
+            gekko_network_stats(sess, localplayer == 0 ? 1 : 0, &stats);
 
-            if (event->type == DesyncDetected) {
-                auto desync = event->data.desynced;
-                printf("desync detected, f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle, desync.local_checksum, desync.remote_checksum);
+            std::cout << "ping: " << stats.last_ping
+                << " avg ping: " << stats.avg_ping
+                << " jitter: " << stats.jitter
+                << " ft: " << frame_time
+                << " fa: " << frames_ahead
+                << std::endl;
+
+            process_events();
+
+            //add local inputs to the session
+            auto input = get_key_inputs();
+            gekko_add_local_input(sess, localplayer, &input);
+
+            int count = 0;
+            auto events = gekko_session_events(sess, &count);
+            for (int i = 0; i < count; i++) {
+                auto event = events[i];
+
+                printf("EV: %d\n", event->type);
+
+                if (event->type == DesyncDetected) {
+                    auto desync = event->data.desynced;
+                    printf("desync detected, f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle, desync.local_checksum, desync.remote_checksum);
+                }
+
+                if (event->type == PlayerDisconnected) {
+                    auto disco = event->data.disconnected;
+                    printf("disconnect detected, player: %d\n", disco.handle);
+                }
             }
 
-            if (event->type == PlayerDisconnected) {
-                auto disco = event->data.disconnected;
-                printf("disconnect detected, player: %d\n", disco.handle);
+            count = 0;
+            auto updates = gekko_update_session(sess, &count);
+            for (int i = 0; i < count; i++) {
+                auto ev = updates[i];
+
+                switch (ev->type) {
+                case SaveEvent:
+                    printf("Save frame:%d\n", ev->data.save.frame);
+                    save_state(&state, ev);
+                    break;
+                case LoadEvent:
+                    printf("Load frame:%d\n", ev->data.load.frame);
+                    load_state(&state, ev);
+                    break;
+                case AdvanceEvent:
+                    // on advance event, advance the gamestate using the given inputs
+                    inputs[0].input.value = ev->data.adv.inputs[0];
+                    inputs[1].input.value = ev->data.adv.inputs[1];
+                    current = ev->data.adv.frame;
+                    printf("F:%d, P1:%d P2:%d\n", current, inputs[0].input.value, inputs[1].input.value);
+                    // now we can use them to update state.
+                    update_state(state, inputs, num_players);
+                    break;
+                default:
+                    printf("Unknown Event: %d\n", ev->type);
+                    break;
+                }
             }
+            // frame done.
+            accumulator -= frame_time;
         }
-
-        count = 0;
-        auto updates = gekko_update_session(sess, &count);
-        for (int i = 0; i < count; i++) {
-            auto ev = updates[i];
-
-            switch (ev->type) {
-            case SaveEvent:
-                printf("Save frame:%d\n", ev->data.save.frame);
-                save_state(&state, ev);
-                break;
-            case LoadEvent:
-                printf("Load frame:%d\n", ev->data.load.frame);
-                load_state(&state, ev);
-                break;
-            case AdvanceEvent:
-                // on advance event, advance the gamestate using the given inputs
-                inputs[0].input.value = ev->data.adv.inputs[0];
-                inputs[1].input.value = ev->data.adv.inputs[1];
-                current = ev->data.adv.frame;
-                printf("F:%d, P1:%d P2:%d\n", current, inputs[0].input.value, inputs[1].input.value);
-                // now we can use them to update state.
-                update_state(state, inputs, num_players);
-                break;
-            default:
-                printf("Unknown Event: %d\n", ev->type);
-                break;
-            }
-        }
-
         // draw the state every iteration
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         render_state(state);
         SDL_RenderPresent(renderer);
-
-        end_time = gclock::now();
-
-        auto work_time = std::chrono::duration_cast<micro>(end_time - start_time);
-        // std::cout << "wt: " << work_time.count() << std::endl;
-
-        auto adjusted_sleep = frame_time - work_time;
-        // std::cout << "st: " << adjusted_sleep.count() << std::endl;
-
-        if (adjusted_sleep.count() > 0) {
-            std::this_thread::sleep_for(adjusted_sleep);
-        }
     }
 
     del_window();
