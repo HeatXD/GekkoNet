@@ -61,6 +61,16 @@ float gekko_frames_ahead(GekkoSession* session)
     return session->FramesAhead();
 }
 
+void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* stats)
+{
+    session->NetworkStats(player, stats);
+}
+
+void gekko_network_poll(GekkoSession* session)
+{
+    session->NetworkPoll();
+}
+
 #ifndef GEKKONET_NO_ASIO
 
 #ifdef _WIN32

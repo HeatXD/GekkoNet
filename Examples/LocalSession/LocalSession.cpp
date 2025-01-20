@@ -177,7 +177,7 @@ int main(int argc, char* args[])
             int count = 0;
             auto events = gekko_session_events(sess, &count);
             for (int i = 0; i < count; i++) {
-                printf("ev: %d\n", events[i]->type);
+                printf("s ev: %d\n", events[i]->type);
             }
 
             count = 0;
@@ -185,7 +185,7 @@ int main(int argc, char* args[])
 			for (int i = 0; i < count; i++)
 			{
                 auto ev = updates[i];
-
+                printf("g ev: %d\n", ev->type);
 				switch (ev->type)
 				{
 				case AdvanceEvent:

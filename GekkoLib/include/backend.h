@@ -45,7 +45,7 @@ namespace Gekko {
 
 		NetAddress address;
 
-        std::map<Frame, u32> health;
+        std::map<Frame, u32> session_health;
 
 	private:
         GekkoPlayerType _type;
@@ -104,6 +104,8 @@ namespace Gekko {
 		bool CheckStatusActors();
 
         void SendSessionHealth(Frame frame, u32 checksum);
+
+        void SendNetworkHealth();
 
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
@@ -177,7 +179,7 @@ namespace Gekko {
         std::vector<u8> _bin_buffer;
 
         struct InputSendCache {
-            static const u64 INPUT_RESEND_DELAY = std::chrono::microseconds(200).count();
+            static const u64 INPUT_RESEND_DELAY = std::chrono::milliseconds(200).count();
 
             u64 last_send_time = 0;
             Frame frame = -1;
@@ -187,5 +189,7 @@ namespace Gekko {
         InputSendCache _last_sent_input;
 
         InputSendCache _last_sent_spectator_input;
+
+        u64 _last_sent_network_check;
 	};
 }

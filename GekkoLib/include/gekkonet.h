@@ -159,6 +159,14 @@ typedef struct GekkoSessionEvent {
     } data;
 } GekkoSessionEvent;
 
+typedef struct GekkoNetworkStats {
+    // unsigned int bytes_received;
+    // unsigned int bytes_sent;
+    unsigned short last_ping;
+    float avg_ping;
+    float jitter;
+} GekkoNetworkStats;
+
 // Public Facing API
 GEKKONET_API bool gekko_create(GekkoSession** session);
 
@@ -179,6 +187,10 @@ GEKKONET_API GekkoGameEvent** gekko_update_session(GekkoSession* session, int* c
 GEKKONET_API GekkoSessionEvent** gekko_session_events(GekkoSession* session, int* count);
 
 GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
+
+GEKKONET_API void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* stats);
+
+GEKKONET_API void gekko_network_poll(GekkoSession* session);
 
 #ifndef GEKKONET_NO_ASIO
 
