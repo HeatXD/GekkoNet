@@ -25,9 +25,9 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Event System for notifications for eg. specific players being done with syncing.
 - Desync Detection (Only when limited saving is disabled for now)
 - Automated builds
+- Network Statistics
 
 ### Work in progress
-- Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
 
 ### Maybe Later
