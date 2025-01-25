@@ -12,7 +12,7 @@ u32 Gekko::NetAddress::GetSize()
 Gekko::NetAddress::NetAddress(void* data, u32 size)
 {
     _size = size;
-    _data = std::unique_ptr<u8[]>(new u8[_size]);
+    _data = std::make_unique<u8[]>(_size);
     // copy address data
     std::memcpy(_data.get(), data, _size);
 }
@@ -35,7 +35,7 @@ void Gekko::NetAddress::Copy(NetAddress* other)
         _data.reset();
     }
 
-    _data = std::unique_ptr<u8[]>(new u8[_size]);
+    _data = std::make_unique<u8[]>(_size);
     // copy address data
     std::memcpy(_data.get(), other->GetAddress(), _size);
 }

@@ -8,7 +8,6 @@ namespace Gekko {
 	struct GameInput {
 	public:
 		GameInput();
-		~GameInput();
 
 		void Init(GameInput* other);
 

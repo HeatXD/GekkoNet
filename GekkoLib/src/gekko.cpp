@@ -36,7 +36,7 @@ void Gekko::Session::Init(GekkoConfig* config)
     _storage.Init(_config.input_prediction_window, _config.state_size, _config.limited_saving);
 
     // setup disconnected input for disconnected player within the session
-    _disconnected_input = std::unique_ptr<u8[]>(new u8[_config.input_size]);
+    _disconnected_input = std::make_unique<u8[]>(_config.input_size);
     std::memset(_disconnected_input.get(), 0, _config.input_size);
 
     // we only detect desyncs whenever we are not limited saving for now.

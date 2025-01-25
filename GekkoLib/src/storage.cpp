@@ -13,7 +13,7 @@ void Gekko::StateStorage::Init(u32 num_states, u32 state_size, bool limited)
 
 	for (u32 i = 0; i < _max_num_states; i++) {
 		_states.push_back(std::make_unique<StateEntry>());
-		_states.back().get()->state = std::unique_ptr<u8[]>(new u8[state_size]);
+        _states.back().get()->state = std::make_unique<u8[]>(state_size);
 		_states.back().get()->state_len = state_size;
 	}
 }

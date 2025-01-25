@@ -29,7 +29,7 @@ void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size)
 	_incorrent_predicted_input = GameInput::NULL_FRAME;
 
 	// init GameInput array
-    _empty_input = std::unique_ptr<u8[]>(new u8[_input_size]);
+    _empty_input = std::make_unique<u8[]>(_input_size);
     std::memset(_empty_input.get(), 0, _input_size);
 
 	for (u32 i = 0; i < BUFF_SIZE; i++) {
@@ -192,7 +192,7 @@ u32 Gekko::InputBuffer::PreviousFrame(Frame frame)
 
 std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool prediction)
 {
-	std::unique_ptr<GameInput> inp(new GameInput());
+    auto inp = std::make_unique<GameInput>();
 
 	if (_last_received_input < frame) {
 		// no input? check if we should predict the input
@@ -263,8 +263,4 @@ Gekko::GameInput::GameInput()
 	frame = NULL_FRAME;
 	input_len = 0;
 	input = std::unique_ptr<u8[]>();
-}
-
-Gekko::GameInput::~GameInput()
-{
 }

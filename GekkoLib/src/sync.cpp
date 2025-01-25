@@ -18,8 +18,7 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
 	_num_players = num_players;
 	_current_frame = GameInput::NULL_FRAME + 1;
 
-	_input_buffers = std::unique_ptr<InputBuffer[]>(new InputBuffer[_num_players]);
-
+    _input_buffers = std::make_unique<InputBuffer[]>(num_players);
 	// on creation setup input buffers
 	for (int i = 0; i < _num_players; i++) {
 		_input_buffers[i].Init(0, 0, input_size);
@@ -53,7 +52,7 @@ void Gekko::SyncSystem::IncrementFrame()
 
 bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame frame) 
 {
-	std::unique_ptr<u8[]> all_input(new u8[_input_size * _num_players]);
+    auto all_input = std::make_unique<u8[]>(_input_size * _num_players);
 	for (u8 i = 0; i < _num_players; i++) {
 		auto inp = _input_buffers[i].GetInput(frame, false);
 
@@ -69,7 +68,7 @@ bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame 
 
 bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame)
 {
-	std::unique_ptr<u8[]> all_input(new u8[_input_size * _num_players]);
+    auto all_input = std::make_unique<u8[]>(_input_size * _num_players);
 	for (u8 i = 0; i < _num_players; i++) {
 		auto inp = _input_buffers[i].GetInput(_current_frame, true);
 	
@@ -87,7 +86,7 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 bool Gekko::SyncSystem::GetLocalInputs(std::vector<Handle>& handles, std::unique_ptr<u8[]>& inputs, Frame frame)
 {	
 	inputs.reset();
-	std::unique_ptr<u8[]> all_input(new u8[_input_size * handles.size()]);
+    auto all_input = std::make_unique<u8[]>(_input_size * handles.size());
 	for (u8 i = 0; i < handles.size(); i++) {
 		auto inp = _input_buffers[handles[i]].GetInput(frame, true);
 

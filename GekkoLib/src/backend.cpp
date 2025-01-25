@@ -726,7 +726,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 	const u32 input_count = (u32)send_list.size();
 	const u32 total_size = total_input_size * input_count;
 
-	std::unique_ptr<u8[]> inputs(new u8[total_size]);
+    auto inputs = std::make_unique<u8[]>(total_size);
 
     const u32 offset_per_player = total_size / num_players;
 
