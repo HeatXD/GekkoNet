@@ -92,7 +92,7 @@ void Gekko::InputBuffer::SetDelay(u8 delay)
 		return;
 	}
 
-	// when out current delay is smaller then the new delay 
+	// when our current delay is smaller then the new delay 
 	// all we have to do is expand the delay with the last input we received
 	if (_input_delay < delay)
 	{

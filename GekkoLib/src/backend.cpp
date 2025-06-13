@@ -788,11 +788,13 @@ void Gekko::AdvantageHistory::Update(Frame frame)
 
 	_local[update_frame % HISTORY_SIZE] = _local_frame_adv;
 
-	i8 max = INT8_MIN;
+	i32 sum = 0;
 	for (i8 num : _remote_frame_adv) {
-		max = std::max(max, num);
+        sum += num;
 	}
-	_remote[update_frame % HISTORY_SIZE] = max == INT8_MIN ? 0 : max;
+
+    sum /= HISTORY_SIZE;
+    _remote[update_frame % HISTORY_SIZE] = sum;
 }
 
 f32 Gekko::AdvantageHistory::GetAverageAdvantage()

@@ -581,11 +581,10 @@ void Gekko::Session::SendLocalInputs()
 			handles.push_back(_msg.locals[i]->handle);
 		}
 
-		const u8 delay = GetMinLocalDelay();
 		const Frame current = _msg.GetLastAddedInput(false) + 1;
 
 		std::unique_ptr<u8[]> inputs;
-		for (Frame frame = current; frame <= current + delay; frame++) {
+		for (Frame frame = current; frame <= current; frame++) {
 			if (!_sync.GetLocalInputs(handles, inputs, frame)) {
 				break;
 			}

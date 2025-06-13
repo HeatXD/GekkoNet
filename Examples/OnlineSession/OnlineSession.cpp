@@ -158,16 +158,12 @@ GInput get_key_inputs() {
 }
 
 float GetFrameTime(float frames_ahead) {
-    if (frames_ahead >= 1.f) {
+    if (frames_ahead > 1.f) {
         return std::chrono::duration<float>(slow_frame(1)).count();
-    }
-    else if (frames_ahead <= -1.f) {
-        return std::chrono::duration<float>(fast_frame(1)).count();
     }
     else {
         return std::chrono::duration<float>(normal_frame(1)).count();
     }
-
 }
 
 int main(int argc, char* args[])
@@ -178,7 +174,7 @@ int main(int argc, char* args[])
         all_args.assign(args + 1, args + argc);
     }
 
-    if (all_args.size() != 3) {
+    if (all_args.size() != 4) {
         printf("args found = %d\n", (int)all_args.size());
         return 0;
     }
@@ -186,6 +182,7 @@ int main(int argc, char* args[])
     int localplayer = std::stoi(all_args[0]);
     const int localport = std::stoi(all_args[1]);
     std::string remote_address = std::move(all_args[2]);
+    int localdelay = std::stoi(all_args[3]);
 
     printf("lplayer:%d, lport:%d, rem_addr:%s\n", localplayer, localport, remote_address.c_str());
 
@@ -228,7 +225,7 @@ int main(int argc, char* args[])
         localplayer = gekko_add_actor(sess, LocalPlayer, nullptr);
     }
 
-    gekko_set_local_delay(sess, localplayer, 1);
+    gekko_set_local_delay(sess, localplayer, localdelay);
 
     int current = 0;
 
@@ -297,11 +294,9 @@ int main(int argc, char* args[])
 
                 switch (ev->type) {
                 case SaveEvent:
-                    printf("Save frame:%d\n", ev->data.save.frame);
                     save_state(&state, ev);
                     break;
                 case LoadEvent:
-                    printf("Load frame:%d\n", ev->data.load.frame);
                     load_state(&state, ev);
                     break;
                 case AdvanceEvent:
@@ -309,7 +304,6 @@ int main(int argc, char* args[])
                     inputs[0].input.value = ev->data.adv.inputs[0];
                     inputs[1].input.value = ev->data.adv.inputs[1];
                     current = ev->data.adv.frame;
-                    printf("F:%d, P1:%d P2:%d\n", current, inputs[0].input.value, inputs[1].input.value);
                     // now we can use them to update state.
                     update_state(state, inputs, num_players);
                     break;
