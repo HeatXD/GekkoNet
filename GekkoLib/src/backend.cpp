@@ -811,7 +811,7 @@ f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 	f32 avg_remote = sum_remote / HISTORY_SIZE;
 
 	// return the frames ahead
-	return (avg_local - avg_remote) / 2.f;
+	return (avg_local - avg_remote);
 }
 
 void Gekko::AdvantageHistory::SetLocalAdvantage(i8 adv) {

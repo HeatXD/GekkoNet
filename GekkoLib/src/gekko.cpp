@@ -248,7 +248,7 @@ void Gekko::Session::UpdateLocalFrameAdvantage()
 
 	const Frame min = _sync.GetMinReceivedFrame();
 	const Frame current = _sync.GetCurrentFrame();
-	const i32 local_advantage = current - min;
+    const i32 local_advantage = current - min;
 
 	_msg.history.SetLocalAdvantage(local_advantage);
 }
@@ -582,9 +582,10 @@ void Gekko::Session::SendLocalInputs()
 		}
 
 		const Frame current = _msg.GetLastAddedInput(false) + 1;
+        const Frame delay = GetMinLocalDelay();
 
 		std::unique_ptr<u8[]> inputs;
-		for (Frame frame = current; frame <= current; frame++) {
+		for (Frame frame = current; frame <= current + delay; frame++) {
 			if (!_sync.GetLocalInputs(handles, inputs, frame)) {
 				break;
 			}

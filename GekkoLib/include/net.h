@@ -120,7 +120,7 @@ namespace Gekko {
     };
 
     struct NetStats {
-        static const u64 DISCONNECT_TIMEOUT = std::chrono::milliseconds(2000).count();
+        static const u64 DISCONNECT_TIMEOUT = std::chrono::milliseconds(10000).count();
         static const u64 SYNC_MSG_DELAY = std::chrono::milliseconds(200).count();
         static const u64 NET_CHECK_DELAY = std::chrono::milliseconds(1000).count();
 

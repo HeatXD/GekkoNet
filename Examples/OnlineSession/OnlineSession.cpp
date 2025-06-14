@@ -17,9 +17,9 @@ bool running = false;
 using micro = std::chrono::microseconds;
 using gduration = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
 using gtime_point = std::chrono::time_point<std::chrono::steady_clock>;
-using slow_frame = std::chrono::duration<unsigned int, std::ratio<1, 58>>;
+using slow_frame = std::chrono::duration<unsigned int, std::ratio<1, 59>>;
 using normal_frame = std::chrono::duration<unsigned int, std::ratio<1, 60>>;
-using fast_frame = std::chrono::duration<unsigned int, std::ratio<1, 62>>;
+using fast_frame = std::chrono::duration<unsigned int, std::ratio<1, 61>>;
 using gclock = std::chrono::steady_clock;
 
 bool init_window(void) {
@@ -158,7 +158,7 @@ GInput get_key_inputs() {
 }
 
 float GetFrameTime(float frames_ahead) {
-    if (frames_ahead > 1.f) {
+    if (frames_ahead >= 0.75f) {
         return std::chrono::duration<float>(slow_frame(1)).count();
     }
     else {
