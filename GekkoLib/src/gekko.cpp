@@ -326,7 +326,7 @@ void Gekko::Session::SendSessionHealthCheck()
 void Gekko::Session::SendNetworkHealthCheck()
 {
     // we want the session to be synced before trying to determine its network health.
-    if (!_started) {
+    if (!_started || IsSpectating()) {
         return;
     }
 
