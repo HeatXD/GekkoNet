@@ -32,6 +32,9 @@ include_directories(${PROJECT_SOURCE_DIR}/thirdparty)
 
 if(NOT NO_ASIO_BUILD) 
     include_directories(${PROJECT_SOURCE_DIR}/thirdparty/asio)
+    if(WIN32)
+        target_link_libraries(GekkoNet PRIVATE ws2_32)
+    endif()
 endif()
 
 # Manually list all your source files
