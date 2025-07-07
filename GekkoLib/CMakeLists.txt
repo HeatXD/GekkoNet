@@ -77,7 +77,7 @@ endif()
 if(NO_ASIO_BUILD)
     target_compile_definitions(GekkoNet PRIVATE GEKKONET_NO_ASIO)
 elseif(WIN32 AND NOT NO_ASIO_BUILD)
-        target_link_libraries(GekkoNet PRIVATE ws2_32)
+    target_link_libraries(GekkoNet PRIVATE ws2_32)
 endif()
 
 # Documentation configuration
