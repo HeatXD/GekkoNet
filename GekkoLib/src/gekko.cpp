@@ -3,6 +3,8 @@
 
 #include <cassert>
 
+GekkoSession::~GekkoSession() = default;
+
 Gekko::Session::Session()
 {
 	_host = nullptr;
@@ -116,11 +118,11 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
 {
     // reset session events
     _msg.session_events.Reset();
-        
+
     // connection Handling
     Poll();
 
-    // clear GameEvents 
+    // clear GameEvents
     _current_game_events.clear();
 
     // gameplay
@@ -510,12 +512,12 @@ void Gekko::Session::Poll()
 	// add local input for the network
 	SendLocalInputs();
 
-	// send inputs to spectators 
+	// send inputs to spectators
 	SendSpectatorInputs();
 
     // send network health update
     SendNetworkHealthCheck();
-    
+
 	// now send data
 	_msg.SendPendingOutput(_host);
 }
