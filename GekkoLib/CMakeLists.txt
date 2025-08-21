@@ -55,15 +55,15 @@ set_target_properties(GekkoNet PROPERTIES OUTPUT_NAME "GekkoNet${TARGET_SUFFIX}"
 
 # Set properties for Windows DLL export macros (if building a DLL)
 if(WIN32 AND BUILD_SHARED_LIBS)
-    target_compile_definitions(GekkoNet PRIVATE GEKKONET_DLL_EXPORT)
+    target_compile_definitions(GekkoNet PUBLIC GEKKONET_DLL_EXPORT)
 else()
-    target_compile_definitions(GekkoNet PRIVATE GEKKONET_STATIC)
+    target_compile_definitions(GekkoNet PUBLIC GEKKONET_STATIC)
 endif()
 
 if(NO_ASIO_BUILD)
-    target_compile_definitions(GekkoNet PRIVATE GEKKONET_NO_ASIO)
+    target_compile_definitions(GekkoNet PUBLIC GEKKONET_NO_ASIO)
 elseif(WIN32 AND NOT NO_ASIO_BUILD)
-    target_link_libraries(GekkoNet PRIVATE ws2_32)
+    target_link_libraries(GekkoNet PUBLIC ws2_32)
 endif()
 
 # Documentation configuration
