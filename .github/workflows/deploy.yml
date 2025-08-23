@@ -20,17 +20,21 @@ jobs:
         build_type: [static, shared]
         asio: [with_asio, no_asio]
         toolchain: [msvc, mingw]
-        include:
-          - os: windows-latest
-            platform: windows-msvc
-            toolchain: msvc
-          - os: windows-latest
-            platform: windows-mingw
-            toolchain: mingw
-          - os: ubuntu-latest
-            platform: linux
-          - os: macos-latest
-            platform: macos
+        platform: [windows-msvc, windows-mingw, linux, macos]
+      # Exclude irrelevant combinations
+      exclude:
+        - os: ubuntu-latest
+          toolchain: msvc
+        - os: ubuntu-latest
+          toolchain: mingw
+        - os: macos-latest
+          toolchain: msvc
+        - os: macos-latest
+          toolchain: mingw
+        - os: windows-latest
+          platform: linux
+        - os: windows-latest
+          platform: macos
 
     steps:
       - name: Checkout
@@ -43,12 +47,18 @@ jobs:
       - name: Configure
         shell: bash
         run: |
-          if [[ "${{ matrix.toolchain }}" == "msvc" ]]; then
-            cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release \
+          if [[ "${{ matrix.platform }}" == "windows-msvc" ]]; then
+            cmake -B build -G "Ninja" -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
+              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+          elif [[ "${{ matrix.platform }}" == "windows-mingw" ]]; then
+            cmake -B build -G "Ninja" -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+              -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
               -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
           else
-            # MinGW, Linux, macOS → Ninja
+            # Linux/macOS → Ninja
             cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
               -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
@@ -56,26 +66,25 @@ jobs:
 
       - name: Build
         shell: bash
-        run: |
-          if [[ "${{ matrix.toolchain }}" == "msvc" ]]; then
-            cmake --build build --config Release
-          else
-            cmake --build build
-          fi
+        run: cmake --build build
 
       - name: Package
         shell: bash
         run: |
           mkdir -p package/${{ matrix.platform }}/{lib,include}
 
-          # Copy libraries based on platform/toolchain
-          if [[ "${{ matrix.toolchain }}" == "msvc" ]]; then
+          # Copy libraries
+          if [[ "${{ matrix.platform }}" == "windows-msvc" ]]; then
             find build -type f \( -name "*.lib" -o -name "*.dll" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
-          else
-            find build -type f \( -name "*.a" -o -name "*.dll" -o -name "*.so" -o -name "*.dylib" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
+          elif [[ "${{ matrix.platform }}" == "windows-mingw" ]]; then
+            find build -type f \( -name "*.a" -o -name "*.dll" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
+          elif [[ "${{ matrix.platform }}" == "linux" ]]; then
+            find build -type f \( -name "*.a" -o -name "*.so" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
+          elif [[ "${{ matrix.platform }}" == "macos" ]]; then
+            find build -type f \( -name "*.a" -o -name "*.dylib" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
           fi
 
-          # Copy only GekkoNet.h header
+          # Copy header
           cp GekkoLib/include/gekkonet.h package/${{ matrix.platform }}/include/ || true
 
       - name: Upload
