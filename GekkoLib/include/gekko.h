@@ -10,7 +10,7 @@
 #include "sync.h"
 #include "storage.h"
 
-// define GekkoSession internally 
+// define GekkoSession internally
 struct GekkoSession {
     virtual void Init(GekkoConfig* config) = 0;
     virtual void SetLocalDelay(i32 player, u8 delay) = 0;
@@ -22,6 +22,7 @@ struct GekkoSession {
     virtual f32 FramesAhead() = 0;
     virtual void NetworkStats(i32 player, GekkoNetworkStats* stats) = 0;
     virtual void NetworkPoll() = 0;
+    virtual ~GekkoSession();
 };
 
 namespace Gekko {
