@@ -21,17 +21,29 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: '*'
+          merge-multiple: false
 
       - name: Generate release tag
         run: echo "TAG=v$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+      - name: Verify artifacts
+        run: |
+          echo "Checking artifacts..."
+          ls -R artifacts || true
+          if [ ! "$(find artifacts -type f | wc -l)" -gt 0 ]; then
+            echo "No artifacts found. Failing release job."
+            exit 1
+          fi
+
       - name: Create packages
+        shell: bash
         run: |
           for platform_dir in artifacts/*; do
-            pkg_name=$(basename "$platform_dir")
-            mkdir -p "GekkoNet-$pkg_name"
-            cp -r "$platform_dir/"* "GekkoNet-$pkg_name/" || true
-            if [ "$(find "GekkoNet-$pkg_name" -type f | wc -l)" -gt 0 ]; then
+            if [ -d "$platform_dir" ] && [ "$(find "$platform_dir" -type f | wc -l)" -gt 0 ]; then
+              pkg_name=$(basename "$platform_dir")
+              mkdir -p "GekkoNet-$pkg_name"
+              cp -r "$platform_dir/"* "GekkoNet-$pkg_name/"
               tar -czf "GekkoNet-$pkg_name-Release.tar.gz" -C "GekkoNet-$pkg_name" .
             fi
           done
