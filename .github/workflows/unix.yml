@@ -1,10 +1,7 @@
 name: Unix Build
 
 on:
-  workflow_run:
-    workflows: ["Windows Build"]
-    types:
-      - completed
+  workflow_call:
 
 permissions:
   contents: write
