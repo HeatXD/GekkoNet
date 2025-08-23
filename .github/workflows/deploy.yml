@@ -44,18 +44,14 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          mkdir -p package/${{ matrix.platform }}/{lib,bin,include}
+          mkdir -p package/${{ matrix.platform }}/{lib,include}
           
-          # Copy libraries (Linux .so/.a, macOS .dylib, Windows .lib/.dll)
-          find build -type f \( -name "*.a" -o -name "*.so" -o -name "*.dylib" -o -name "*.lib" \) \
+          # Copy static + shared libs and DLLs
+          find build -type f \( -name "*.a" -o -name "*.so" -o -name "*.dylib" -o -name "*.lib" -o -name "*.dll" \) \
             -exec cp {} package/${{ matrix.platform }}/lib/ \;
           
-          # Copy executables and DLLs to bin
-          find build -type f \( -name "*.exe" -o -name "*.dll" \) \
-            -exec cp {} package/${{ matrix.platform }}/bin/ \;
-          
-          # Copy headers
-          cp -r GekkoLib/include/* package/${{ matrix.platform }}/include/ || true
+          # Copy only GekkoNet.h header
+          cp GekkoLib/include/GekkoNet.h package/${{ matrix.platform }}/include/ || true
           
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -85,12 +81,16 @@ jobs:
           for platform in windows linux macos; do
             mkdir -p "GekkoNet-$platform"
             for variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
-              if [ -d "artifacts/${platform}-${variant}/$platform" ]; then
-                cp -r "artifacts/${platform}-${variant}/$platform"/* "GekkoNet-$platform/" 2>/dev/null || true
+              ARTIFACT_DIR="artifacts/${platform}-${variant}/${platform}"
+              if [ -d "$ARTIFACT_DIR" ]; then
+                # Copy only lib/ and include/ folders
+                cp -r "$ARTIFACT_DIR/lib" "GekkoNet-$platform/" 2>/dev/null || true
+                cp -r "$ARTIFACT_DIR/include" "GekkoNet-$platform/" 2>/dev/null || true
               fi
             done
+            # Only create archive if there are files
             if [ "$(find "GekkoNet-$platform" -type f | wc -l)" -gt 0 ]; then
-              tar -czf "GekkoNet-$platform-Release.tar.gz" "GekkoNet-$platform"
+              tar -czf "GekkoNet-$platform-Release.tar.gz" -C "GekkoNet-$platform" .
             fi
           done
       
