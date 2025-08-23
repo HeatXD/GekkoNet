@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - main
-
+      
+permissions:
+  contents: write
+  
 jobs:
   unix:
     uses: ./.github/workflows/unix.yml
