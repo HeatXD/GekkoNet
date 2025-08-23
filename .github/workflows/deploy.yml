@@ -39,7 +39,6 @@ jobs:
         run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
       
       - name: Build
-        shell: bash
         run: cmake --build build
 
       - name: Package
@@ -71,11 +70,12 @@ jobs:
         with:
           path: artifacts
       
+      - name: Generate release tag
+        run: echo "TAG=v$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Create packages
         shell: bash
         run: |
-          version="$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)"
-          
           for platform in windows linux macos; do
             mkdir -p "GekkoNet-$platform"
             for variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
@@ -91,7 +91,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)
+          tag_name: ${{ env.TAG }}
           files: GekkoNet-*-Release.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
