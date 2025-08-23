@@ -47,11 +47,8 @@ jobs:
             cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
               -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-          elif [[ "${{ matrix.toolchain }}" == "mingw" ]]; then
-            cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
           else
+            # MinGW, Linux, macOS → Ninja
             cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
               -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
@@ -74,12 +71,8 @@ jobs:
           # Copy libraries based on platform/toolchain
           if [[ "${{ matrix.toolchain }}" == "msvc" ]]; then
             find build -type f \( -name "*.lib" -o -name "*.dll" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
-          elif [[ "${{ matrix.toolchain }}" == "mingw" ]]; then
-            find build -type f \( -name "*.a" -o -name "*.dll" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
-          elif [[ "${{ matrix.os }}" == "linux" ]]; then
-            find build -type f \( -name "*.a" -o -name "*.so" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
-          elif [[ "${{ matrix.os }}" == "macos" ]]; then
-            find build -type f \( -name "*.a" -o -name "*.dylib" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
+          else
+            find build -type f \( -name "*.a" -o -name "*.dll" -o -name "*.so" -o -name "*.dylib" \) -exec cp {} package/${{ matrix.platform }}/lib/ \;
           fi
 
           # Copy only GekkoNet.h header
