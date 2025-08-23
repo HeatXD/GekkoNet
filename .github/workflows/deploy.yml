@@ -44,12 +44,18 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          mkdir -p package/${{ matrix.platform }}/{lib,include}
+          mkdir -p package/${{ matrix.platform }}/{lib,bin,include}
           
-          find build/GekkoLib -name "*.lib" -o -name "*.a" -o -name "*.so" -o -name "*.dll" -o -name "*.dylib" \
+          # Copy libraries (Linux .so/.a, macOS .dylib, Windows .lib/.dll)
+          find build -type f \( -name "*.a" -o -name "*.so" -o -name "*.dylib" -o -name "*.lib" \) \
             -exec cp {} package/${{ matrix.platform }}/lib/ \;
           
-          cp -r GekkoLib/include/* package/${{ matrix.platform }}/include/
+          # Copy executables and DLLs to bin
+          find build -type f \( -name "*.exe" -o -name "*.dll" \) \
+            -exec cp {} package/${{ matrix.platform }}/bin/ \;
+          
+          # Copy headers
+          cp -r GekkoLib/include/* package/${{ matrix.platform }}/include/ || true
           
       - name: Upload
         uses: actions/upload-artifact@v4
