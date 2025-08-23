@@ -58,6 +58,7 @@ jobs:
           fi
 
       - name: Build
+        shell: bash
         run: |
           if [[ "${{ matrix.toolchain }}" == "msvc" ]]; then
             cmake --build build --config Release
