@@ -51,7 +51,7 @@ jobs:
             -exec cp {} package/${{ matrix.platform }}/lib/ \;
           
           # Copy only GekkoNet.h header
-          cp GekkoLib/include/GekkoNet.h package/${{ matrix.platform }}/include/ || true
+          cp GekkoLib/include/gekkonet.h package/${{ matrix.platform }}/include/ || true
           
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -81,16 +81,12 @@ jobs:
           for platform in windows linux macos; do
             mkdir -p "GekkoNet-$platform"
             for variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
-              ARTIFACT_DIR="artifacts/${platform}-${variant}/${platform}"
-              if [ -d "$ARTIFACT_DIR" ]; then
-                # Copy only lib/ and include/ folders
-                cp -r "$ARTIFACT_DIR/lib" "GekkoNet-$platform/" 2>/dev/null || true
-                cp -r "$ARTIFACT_DIR/include" "GekkoNet-$platform/" 2>/dev/null || true
+              if [ -d "artifacts/${platform}-${variant}/$platform" ]; then
+                cp -r "artifacts/${platform}-${variant}/$platform"/* "GekkoNet-$platform/" 2>/dev/null || true
               fi
             done
-            # Only create archive if there are files
             if [ "$(find "GekkoNet-$platform" -type f | wc -l)" -gt 0 ]; then
-              tar -czf "GekkoNet-$platform-Release.tar.gz" -C "GekkoNet-$platform" .
+              tar -czf "GekkoNet-$platform-Release.tar.gz" "GekkoNet-$platform"
             fi
           done
       
