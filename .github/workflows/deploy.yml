@@ -1,14 +1,13 @@
 name: Create Release
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 permissions:
   contents: write
   packages: write
   deployments: write
   pages: write
   id-token: write
-
 jobs:
   build:
     strategy:
@@ -24,122 +23,113 @@ jobs:
           - os: macos-latest
             platform: macos
     runs-on: ${{ matrix.os }}
-
+    
     steps:
       - uses: actions/checkout@v4
       
-      - name: Configure CMake
+      - name: Create build directory
+        run: cmake -E make_directory build
+      
+      - name: Configure CMake (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: >-
+          cmake -B build 
+          -DCMAKE_BUILD_TYPE=Release 
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=GekkoLib/out
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=GekkoLib/out
+          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} 
+          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+          .
+
+      - name: Configure CMake (Unix)
+        if: matrix.os != 'windows-latest'
         run: |
           cmake -B build \
           -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=out \
-          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=out \
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=GekkoLib/out \
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=GekkoLib/out \
           -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
           -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
           .
-        shell: bash
       
       - name: Build
         run: cmake --build build --config Release
         
-      - name: Verify Build Output
+      - name: List output directory contents
         run: |
-          if [ -d "out" ]; then
-            echo "Build output:"
-            find out -type f -name "*.dll" -o -name "*.so" -o -name "*.dylib" -o -name "*.lib" -o -name "*.a"
+          if [ -d "GekkoLib/out" ];then
+            ls -R GekkoLib/out
           else
-            echo "ERROR: No output directory found!"
-            exit 1
+            echo "Output directory does not exist!"
           fi
       
-      - name: Prepare Artifacts
+      - name: Prepare files for packaging
         run: |
-          # Create platform-specific directory structure
-          mkdir -p artifacts/${{ matrix.platform }}/${{ matrix.build_type }}/${{ matrix.asio }}/lib
-          mkdir -p artifacts/${{ matrix.platform }}/include
+          mkdir -p package/Release/${{ matrix.platform }}/lib
           
-          # Copy built libraries
-          if [ -d "out" ]; then
-            cp -r out/* artifacts/${{ matrix.platform }}/${{ matrix.build_type }}/${{ matrix.asio }}/lib/
+          if [ -d "GekkoLib/out" ]; then
+            cp -r GekkoLib/out/* package/Release/${{ matrix.platform }}/lib/ || true
+          else
+            echo "No binaries found in GekkoLib/out/!"
           fi
           
-          # Copy header files
-          cp GekkoLib/include/gekkonet.h artifacts/${{ matrix.platform }}/include/
-          
-      - name: Upload Artifacts
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}
-          path: artifacts/
+          name: ${{ matrix.platform }}-builds-${{ matrix.build_type }}-${{ matrix.asio }}
+          path: package/Release
           retention-days: 1
 
   create_release:
     needs: build
     runs-on: ubuntu-latest
+    if: ${{ success() }}
     permissions:
       contents: write
-
+    
     steps:
       - uses: actions/checkout@v4
         
-      - name: Get Version
+      - name: Get version
         id: version
         run: |
           echo "version=$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       
-      - name: Download Artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: downloaded_artifacts
-          
-      - name: Prepare Release Packages
+          path: downloads
+      
+      - name: Create OS-specific packages
         run: |
-          # Create platform-specific packages
-          for platform in windows linux macos; do
-            if [ -d "downloaded_artifacts/${platform}-" ]; then
-              mkdir -p "GekkoNet-${platform}/include"
+          for os_platform in windows linux macos; do
+            mkdir -p "GekkoNet-${os_platform}"
+            mkdir -p "GekkoNet-${os_platform}/${os_platform}/include"
+
+            cp -r GekkoLib/include/gekkonet.h "GekkoNet-${os_platform}/${os_platform}/include" || true
               
-              # Copy header files (from any artifact)
-              find downloaded_artifacts -name "gekkonet.h" -exec cp {} "GekkoNet-${platform}/include/" \; -quit
-              
-              # Copy all libraries for this platform
-              for artifact_path in downloaded_artifacts/${platform}-*; do
-                if [ -d "$artifact_path" ]; then
-                  # Extract build type and asio from artifact name
-                  artifact_name=$(basename "$artifact_path")
-                  IFS='-' read -r _ build_type asio <<< "$artifact_name"
-                  
-                  # Copy libraries
-                  lib_src="$artifact_path/$platform/$build_type/$asio/lib"
-                  lib_dest="GekkoNet-${platform}/lib/${build_type}/${asio}"
-                  
-                  if [ -d "$lib_src" ]; then
-                    mkdir -p "$lib_dest"
-                    cp -r "$lib_src"/* "$lib_dest/"
-                  fi
-                fi
-              done
-              
-              # Create archive
-              tar -czf "GekkoNet-${platform}-Release.tar.gz" "GekkoNet-${platform}"
-            fi
+            for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
+              cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
+            done
+            tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
           done
-          
-          # List created archives
-          ls -la *.tar.gz
       
       - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
+          draft: true
+          prerelease: false
           files: GekkoNet-*-Release.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   generate_docs:
     needs: create_release
     runs-on: ubuntu-latest
+    if: ${{ success() }}
     permissions:
       contents: write
       pages: write
@@ -148,16 +138,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Doxygen
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
 
-      - name: Generate Documentation
+      - name: Configure CMake for Documentation
         run: |
-          cmake -B build -DBUILD_DOCS=ON .
-          cmake --build build --target docs
+          cmake -B build \
+          -DBUILD_DOCS=ON \
+          -DCMAKE_BUILD_TYPE=Release \
+          .
+
+      - name: Generate Documentation
+        run: cmake --build build --target docs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Documentation
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/docs/html'
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/docs/html
+        id: deployment
+        uses: actions/deploy-pages@v4
