@@ -27,6 +27,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: . 
 
     steps:
       - uses: actions/checkout@v4
@@ -82,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-builds-${{ matrix.build_type }}-${{ matrix.asio }}
-          path: GekkoLib/package/Release
+          path: package/Release
           retention-days: 1
 
   create_release:
@@ -115,10 +116,14 @@ jobs:
             mkdir -p "GekkoNet-${os_platform}"
             mkdir -p "GekkoNet-${os_platform}/${os_platform}/include"
 
+            # Copy header from the correct location
             cp -r GekkoLib/include/gekkonet.h "GekkoNet-${os_platform}/${os_platform}/include" || true
               
             for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
-              cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
+              # Copy from the correct artifact path
+              if [ -d "downloads/${os_platform}-builds-${build_variant}" ]; then
+                cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" || true
+              fi
             done
             tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
           done
@@ -154,7 +159,7 @@ jobs:
           cmake -B build \
           -DBUILD_DOCS=ON \
           -DCMAKE_BUILD_TYPE=Release \
-          GekkoLib
+          .
 
       - name: Generate Documentation
         run: cmake --build build --target docs
