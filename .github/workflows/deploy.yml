@@ -35,12 +35,15 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@v4
 
       - name: Configure
+        shell: bash
         run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
       
       - name: Build
+        shell: bash
         run: cmake --build build
 
       - name: Package
+        shell: bash
         run: |
           mkdir -p package/${{ matrix.platform }}/{lib,include}
           
@@ -69,18 +72,24 @@ jobs:
           path: artifacts
       
       - name: Create packages
+        shell: bash
         run: |
           version="$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)"
           
           for platform in windows linux macos; do
             mkdir -p "GekkoNet-$platform"
             for variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
-              cp -r artifacts/${platform}-${variant}/$platform/* "GekkoNet-$platform/" 2>/dev/null || true
+              if [ -d "artifacts/${platform}-${variant}/$platform" ]; then
+                cp -r "artifacts/${platform}-${variant}/$platform"/* "GekkoNet-$platform/" 2>/dev/null || true
+              fi
             done
-            tar -czf "GekkoNet-$platform-Release.tar.gz" "GekkoNet-$platform"
+            if [ "$(find "GekkoNet-$platform" -type f | wc -l)" -gt 0 ]; then
+              tar -czf "GekkoNet-$platform-Release.tar.gz" "GekkoNet-$platform"
+            fi
           done
       
       - name: Release
+        shell: bash
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)
@@ -97,19 +106,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Doxygen
+        shell: bash
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
 
       - name: Build docs
+        shell: bash
         run: |
           cmake -B build -DBUILD_DOCS=ON
           cmake --build build --target docs
 
-      - name: Deploy
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: github-pages
-          
       - name: Upload docs
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/GekkoLib/docs/html
+          
+      - name: Deploy
+        uses: actions/deploy-pages@v4
