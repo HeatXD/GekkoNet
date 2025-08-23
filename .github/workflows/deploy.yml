@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.os }} ${{ matrix.toolchain || '' }} (${{ matrix.build_type }}, ${{ matrix.asio }})
+    name: Build ${{ matrix.os }} ${{ matrix.toolchain || 'default' }} (${{ matrix.build_type }}, ${{ matrix.asio }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -25,36 +25,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Setup MSVC environment for Windows MSVC builds
+      # Only needed for MSVC
       - name: Setup MSBuild (MSVC)
         if: matrix.os == 'windows-latest' && matrix.toolchain == 'msvc'
         uses: microsoft/setup-msbuild@v1
 
-      - name: Setup Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v4
-        if: matrix.os != 'windows-latest' || matrix.toolchain == 'mingw'
-
-      - name: Configure
-        shell: ${{ matrix.os == 'windows-latest' && matrix.toolchain == 'msvc' && 'cmd' || 'bash' }}
+      - name: Configure (MSVC)
+        if: matrix.os == 'windows-latest' && matrix.toolchain == 'msvc'
+        shell: cmd
         run: |
-          if "%OS%"=="Windows_NT" && "${{ matrix.toolchain }}"=="msvc" (
-            cmake -B build -G "Ninja" ^
-              -DCMAKE_BUILD_TYPE=Release ^
-              -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) ^
-              -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
-          ) else if "%OS%"=="Windows_NT" && "${{ matrix.toolchain }}"=="mingw" (
+          cmake -B build -G "Ninja" ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) ^
+            -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
+
+      - name: Configure (Unix / MinGW)
+        if: matrix.os != 'windows-latest' || matrix.toolchain == 'mingw'
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.toolchain }}" == "mingw" ]]; then
             cmake -B build -G "Ninja" -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
               -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) \
-              -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
-          ) else (
+              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
+              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+          else
             cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) \
-              -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
-          )
+              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
+              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
+          fi
 
-      - name: Build
-        shell: ${{ matrix.os == 'windows-latest' && matrix.toolchain == 'msvc' && 'cmd' || 'bash' }}
+      - name: Build (MSVC)
+        if: matrix.os == 'windows-latest' && matrix.toolchain == 'msvc'
+        shell: cmd
+        run: cmake --build build
+
+      - name: Build (Unix / MinGW)
+        if: matrix.os != 'windows-latest' || matrix.toolchain == 'mingw'
+        shell: bash
         run: cmake --build build
 
       - name: Package
