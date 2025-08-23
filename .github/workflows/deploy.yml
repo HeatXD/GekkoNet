@@ -25,50 +25,55 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup MSVC environment for Windows MSVC builds
+      - name: Setup MSBuild (MSVC)
+        if: matrix.os == 'windows-latest' && matrix.toolchain == 'msvc'
+        uses: microsoft/setup-msbuild@v1
+
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
         if: matrix.os != 'windows-latest' || matrix.toolchain == 'mingw'
 
       - name: Configure
-        shell: bash
+        shell: ${{ matrix.os == 'windows-latest' && matrix.toolchain == 'msvc' && 'cmd' || 'bash' }}
         run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.toolchain }}" == "msvc" ]]; then
-            cmake -B build -G "Ninja" -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-          elif [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.toolchain }}" == "mingw" ]]; then
+          if "%OS%"=="Windows_NT" && "${{ matrix.toolchain }}"=="msvc" (
+            cmake -B build -G "Ninja" ^
+              -DCMAKE_BUILD_TYPE=Release ^
+              -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) ^
+              -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
+          ) else if "%OS%"=="Windows_NT" && "${{ matrix.toolchain }}"=="mingw" (
             cmake -B build -G "Ninja" -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
               -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-          else
-            # Linux/macOS
+              -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) \
+              -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
+          ) else (
             cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-              -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-          fi
+              -DBUILD_SHARED_LIBS=$([[ "${{ matrix.build_type }}" == "shared" ]] && echo ON || echo OFF) \
+              -DNO_ASIO_BUILD=$([[ "${{ matrix.asio }}" == "no_asio" ]] && echo ON || echo OFF)
+          )
 
       - name: Build
-        shell: bash
+        shell: ${{ matrix.os == 'windows-latest' && matrix.toolchain == 'msvc' && 'cmd' || 'bash' }}
         run: cmake --build build
 
       - name: Package
         shell: bash
         run: |
-          mkdir -p package/${{ matrix.os }}-{${{ matrix.toolchain || 'default' }}}/{lib,include}
+          pkg_dir="package/${{ matrix.os }}-${{ matrix.toolchain || 'default' }}"
+          mkdir -p "$pkg_dir"/{lib,include}
 
           if [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.toolchain }}" == "msvc" ]]; then
-            find build -type f \( -name "*.lib" -o -name "*.dll" \) -exec cp {} package/${{ matrix.os }}-msvc/lib/ \;
+            find build -type f \( -name "*.lib" -o -name "*.dll" \) -exec cp {} "$pkg_dir/lib/" \;
           elif [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.toolchain }}" == "mingw" ]]; then
-            find build -type f \( -name "*.a" -o -name "*.dll" \) -exec cp {} package/${{ matrix.os }}-mingw/lib/ \;
+            find build -type f \( -name "*.a" -o -name "*.dll" \) -exec cp {} "$pkg_dir/lib/" \;
           elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            find build -type f \( -name "*.a" -o -name "*.so" \) -exec cp {} package/linux/lib/ \;
+            find build -type f \( -name "*.a" -o -name "*.so" \) -exec cp {} "$pkg_dir/lib/" \;
           elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            find build -type f \( -name "*.a" -o -name "*.dylib" \) -exec cp {} package/macos/lib/ \;
+            find build -type f \( -name "*.a" -o -name "*.dylib" \) -exec cp {} "$pkg_dir/lib/" \;
           fi
 
-          cp GekkoLib/include/gekkonet.h package/${{ matrix.os }}-{${{ matrix.toolchain || 'default' }}}/include/ || true
+          cp GekkoLib/include/gekkonet.h "$pkg_dir/include/" || true
 
       - name: Upload
         uses: actions/upload-artifact@v4
