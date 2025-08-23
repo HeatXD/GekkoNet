@@ -1,16 +1,20 @@
-name: Create Release
+name: Build and Release
+
 on:
   push:
     branches: [ main ]
+
 permissions:
   contents: write
-  packages: write
-  deployments: write
   pages: write
   id-token: write
+
 jobs:
   build:
+    name: Build ${{ matrix.platform }} (${{ matrix.build_type }}, ${{ matrix.asio }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         build_type: [static, shared]
@@ -22,171 +26,94 @@ jobs:
             platform: linux
           - os: macos-latest
             platform: macos
-    runs-on: ${{ matrix.os }}
     
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Create build directory
-        run: cmake -E make_directory build
-      
-      - name: Configure CMake (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: cmd
-        run: >-
-          cmake -B build 
-          -DCMAKE_BUILD_TYPE=Release 
-          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} 
-          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
-          .
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
 
-      - name: Configure CMake (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Configure
         run: |
-          cmake -B build \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
-          -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }} \
-          .
+          cmake -B build -G "Ninja" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=${{ matrix.build_type == 'shared' && 'ON' || 'OFF' }} \
+            -DNO_ASIO_BUILD=${{ matrix.asio == 'no_asio' && 'ON' || 'OFF' }}
       
       - name: Build
         run: cmake --build build
-        
-      - name: List output directory contents
+
+      - name: Package
         run: |
-          echo "Checking expected output directory (GekkoLib/out):"
-          if [ -d "GekkoLib/out" ]; then
-            echo "Contents of GekkoLib/out:"
-            ls -la GekkoLib/out
-          else
-            echo "GekkoLib/out directory does not exist!"
-          fi
+          mkdir -p package/${{ matrix.platform }}/{lib,include}
           
-          echo "Searching for all built libraries:"
-          find . -name "*.lib" -o -name "*.a" -o -name "*.so" -o -name "*.dll" -o -name "*.dylib" 2>/dev/null || echo "No libraries found"
-      
-      - name: Prepare files for packaging
-        run: |
-          mkdir -p package/Release/${{ matrix.platform }}/lib
-          mkdir -p package/Release/${{ matrix.platform }}/include
+          find build/GekkoLib -name "*.lib" -o -name "*.a" -o -name "*.so" -o -name "*.dll" -o -name "*.dylib" \
+            -exec cp {} package/${{ matrix.platform }}/lib/ \;
           
-          # Copy libraries from the expected output directory
-          if [ -d "GekkoLib/out" ]; then
-            echo "Copying libraries from GekkoLib/out"
-            cp GekkoLib/out/* package/Release/${{ matrix.platform }}/lib/ 2>/dev/null || echo "No files to copy from out directory"
-          else
-            echo "GekkoLib/out not found, searching for libraries elsewhere..."
-            find . -name "*.lib" -o -name "*.a" -o -name "*.so" -o -name "*.dll" -o -name "*.dylib" -exec cp {} package/Release/${{ matrix.platform }}/lib/ \; 2>/dev/null || echo "No libraries found to copy"
-          fi
+          cp -r GekkoLib/include/* package/${{ matrix.platform }}/include/
           
-          # Copy headers
-          if [ -d "GekkoLib/include" ]; then
-            cp -r GekkoLib/include/* package/Release/${{ matrix.platform }}/include/ 2>/dev/null || echo "No headers to copy"
-          fi
-          
-          # List what we actually packaged
-          echo "Packaged files:"
-          find package -type f 2>/dev/null || echo "No files packaged"
-          
-      - name: Upload Build Artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-builds-${{ matrix.build_type }}-${{ matrix.asio }}
-          path: package/Release
-          retention-days: 1
+          name: ${{ matrix.platform }}-${{ matrix.build_type }}-${{ matrix.asio }}
+          path: package/
 
-  create_release:
+  release:
+    name: Create Release
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ success() }}
-    permissions:
-      contents: write
-    
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         
-      - name: Get version
-        id: version
-        run: |
-          echo "version=$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: downloads
+          path: artifacts
       
-      - name: Create OS-specific packages
+      - name: Create packages
         run: |
-          for os_platform in windows linux macos; do
-            mkdir -p "GekkoNet-${os_platform}"
-            
-            # Merge all build variants for this platform
-            for build_variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
-              if [ -d "downloads/${os_platform}-builds-${build_variant}" ]; then
-                cp -r downloads/${os_platform}-builds-${build_variant}/* "GekkoNet-${os_platform}/" 2>/dev/null || true
-              fi
+          version="$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)"
+          
+          for platform in windows linux macos; do
+            mkdir -p "GekkoNet-$platform"
+            for variant in static-with_asio static-no_asio shared-with_asio shared-no_asio; do
+              cp -r artifacts/${platform}-${variant}/$platform/* "GekkoNet-$platform/" 2>/dev/null || true
             done
-            
-            # Only create archive if directory has content
-            if [ "$(ls -A GekkoNet-${os_platform} 2>/dev/null)" ]; then
-              tar -czf "GekkoNet-${os_platform}-Release.tar.gz" "GekkoNet-${os_platform}"
-            else
-              echo "Warning: No files found for ${os_platform}, skipping archive creation"
-            fi
+            tar -czf "GekkoNet-$platform-Release.tar.gz" "GekkoNet-$platform"
           done
       
-      - name: Create Release
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)
+          files: GekkoNet-*-Release.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: false
-          files: GekkoNet-*-Release.tar.gz
 
-  generate_docs:
-    needs: create_release
+  docs:
+    name: Documentation
+    needs: release
     runs-on: ubuntu-latest
-    if: ${{ success() }}
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install Doxygen
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
 
-      - name: Configure CMake for Documentation
+      - name: Build docs
         run: |
-          cmake -B build \
-          -DBUILD_DOCS=ON \
-          -DCMAKE_BUILD_TYPE=Release \
-          .
+          cmake -B build -DBUILD_DOCS=ON
+          cmake --build build --target docs
 
-      - name: Generate Documentation
-        run: cmake --build build --target docs
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload Documentation
+      - name: Deploy
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
+          
+      - name: Upload docs
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'build/GekkoLib/docs/html'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          path: build/GekkoLib/docs/html
