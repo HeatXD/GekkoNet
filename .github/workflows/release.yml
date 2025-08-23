@@ -28,54 +28,28 @@ jobs:
         run: |
           echo "Checking artifacts..."
           ls -R artifacts || true
-          count=$(find artifacts -type f | wc -l)
-          if [ "$count" -eq 0 ]; then
+          if [ ! "$(find artifacts -type f | wc -l)" -gt 0 ]; then
             echo "No artifacts found. Failing release job."
             exit 1
           fi
 
-      - name: Create packages by platform
+      - name: Create packages
         shell: bash
         run: |
-          mkdir -p packages
-          declare -A platform_dirs
-          platform_dirs[windows]=""
-          platform_dirs[ubuntu]=""
-          platform_dirs[macos]=""
-
-          # assign folders to exact platform names
-          for dir in artifacts/*; do
-            if [ -d "$dir" ]; then
-              name=$(basename "$dir" | tr '[:upper:]' '[:lower:]')
-              case "$name" in
-                *windows*) platform_dirs[windows]+="$dir " ;;
-                *ubuntu*)  platform_dirs[ubuntu]+="$dir " ;;
-                *macos*)   platform_dirs[macos]+="$dir " ;;
-              esac
+          for platform_dir in artifacts/*; do
+            if [ -d "$platform_dir" ] && [ "$(find "$platform_dir" -type f | wc -l)" -gt 0 ]; then
+              pkg_name=$(basename "$platform_dir")
+              mkdir -p "GekkoNet-$pkg_name"
+              cp -r "$platform_dir/"* "GekkoNet-$pkg_name/"
+              tar -czf "GekkoNet-$pkg_name-Release.tar.gz" -C "GekkoNet-$pkg_name" .
             fi
           done
-
-          # create archives per platform
-          for plat in "${!platform_dirs[@]}"; do
-            dirs=${platform_dirs[$plat]}
-            if [ -n "$dirs" ]; then
-              mkdir -p "tmp-$plat"
-              for d in $dirs; do
-                cp -r "$d/"* "tmp-$plat/"
-              done
-              tar -czf "packages/GekkoNet-$plat-Release.tar.gz" -C "tmp-$plat" .
-              rm -rf "tmp-$plat"
-            fi
-          done
-
-          echo "Created the following packages:"
-          ls packages
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          files: packages/*.tar.gz
+          files: GekkoNet-*-Release.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -84,15 +58,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
-
       - run: |
           cmake -B build -DBUILD_DOCS=ON
           cmake --build build --target docs
-
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/GekkoLib/docs/html
-
       - uses: actions/deploy-pages@v4
