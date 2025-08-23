@@ -1,0 +1,17 @@
+name: Main Build & Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  unix:
+    uses: ./.github/workflows/unix.yml
+
+  windows:
+    uses: ./.github/workflows/windows.yml
+
+  release:
+    needs: [unix, windows]
+    uses: ./.github/workflows/release.yml
