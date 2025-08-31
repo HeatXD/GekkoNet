@@ -36,9 +36,9 @@ int gekko_add_actor(GekkoSession* session, GekkoPlayerType player_type, GekkoNet
     return session->AddActor(player_type, !addr ? nullptr : addr);
 }
 
-void gekko_remove_actor(GekkoSession* session, int player)
+void gekko_remove_actor(GekkoSession* session, const GekkoNetAddress* addr)
 {
-    session->RemoveActor(player);
+    session->RemoveActor(addr);
 }
 
 void gekko_set_local_delay(GekkoSession* session, int player, unsigned char delay)
