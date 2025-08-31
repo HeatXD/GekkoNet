@@ -16,7 +16,7 @@ struct GekkoSession {
     virtual void SetLocalDelay(i32 player, u8 delay) = 0;
     virtual void SetNetAdapter(GekkoNetAdapter* adapter) = 0;
     virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) = 0;
-    virtual void RemoveActor(const GekkoNetAddress* addr) = 0;
+    virtual void RemoveActor(GekkoNetAddress addr) = 0;
     virtual void AddLocalInput(i32 player, void* input) = 0;
     virtual GekkoGameEvent** UpdateSession(i32* count) = 0;
     virtual GekkoSessionEvent** Events(i32* count) = 0;
@@ -40,7 +40,7 @@ namespace Gekko {
 
         virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr);
 
-        virtual void RemoveActor(const GekkoNetAddress* addr);
+        virtual void RemoveActor(GekkoNetAddress addr);
 
         virtual void AddLocalInput(i32 player, void* input);
 

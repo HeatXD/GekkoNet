@@ -102,9 +102,9 @@ i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
     }
 }
 
-void Gekko::Session::RemoveActor(const GekkoNetAddress* addr)
+void Gekko::Session::RemoveActor(GekkoNetAddress addr)
 {
-    NetAddress net_addr(addr->data, addr->size);
+    NetAddress net_addr(addr.data, addr.size);
     for (const auto& remote : _msg.remotes) {
         if (remote->address.Equals(net_addr)) {
             remote->SetStatus(Disconnected);
