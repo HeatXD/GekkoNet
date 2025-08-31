@@ -102,6 +102,22 @@ i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
     }
 }
 
+void Gekko::Session::RemoveActor(i32 player)
+{
+    for (const auto& local : _msg.locals) {
+        if (local->handle == player) {
+            local->SetStatus(Disconnected);
+            return;
+        }
+    }
+    for (const auto& remote : _msg.remotes) {
+        if (remote->handle == player) {
+            remote->SetStatus(Disconnected);
+            return;
+        }
+    }
+}
+
 void Gekko::Session::AddLocalInput(i32 player, void* input)
 {
     u8* inp = (u8*)input;
