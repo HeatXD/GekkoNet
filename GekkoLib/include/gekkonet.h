@@ -178,7 +178,7 @@ GEKKONET_API void gekko_net_adapter_set(GekkoSession* session, GekkoNetAdapter* 
 
 GEKKONET_API int gekko_add_actor(GekkoSession* session, GekkoPlayerType player_type, GekkoNetAddress* addr);
 
-GEKKONET_API void gekko_remove_actor(GekkoSession* session, int player);
+GEKKONET_API void gekko_remove_actor(GekkoSession* session, const GekkoNetAddress* addr);
 
 GEKKONET_API void gekko_set_local_delay(GekkoSession* session, int player, unsigned char delay);
 
