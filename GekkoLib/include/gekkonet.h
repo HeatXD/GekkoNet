@@ -170,7 +170,7 @@ typedef struct GekkoNetworkStats {
 // Public Facing API
 GEKKONET_API bool gekko_create(GekkoSession** session);
 
-GEKKONET_API bool gekko_destroy(GekkoSession* session);
+GEKKONET_API bool gekko_destroy(GekkoSession** session);
 
 GEKKONET_API void gekko_start(GekkoSession* session, GekkoConfig* config);
 

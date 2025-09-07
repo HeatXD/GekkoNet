@@ -11,10 +11,11 @@ bool gekko_create(GekkoSession** session)
     return true;
 }
 
-bool gekko_destroy(GekkoSession* session)
+bool gekko_destroy(GekkoSession** session)
 {
-    if (session) {
-        delete session;
+    if (session && *session) {
+        delete *session;
+        *session = nullptr;
         return true;
     }
 
