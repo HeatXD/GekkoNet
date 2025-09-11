@@ -331,33 +331,19 @@ void Gekko::MessageSystem::SendNetworkHealth()
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
     const u64 now = TimeSinceEpoch();
-
-	const u32 max_diff = spectator ? MAX_SPECTATOR_SEND_SIZE : MAX_PLAYER_SEND_SIZE;
-	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
-
-	for (auto& player : spectator ? spectators : remotes) {
-		if (player->GetStatus() == Connected) {
-            const u64 input_diff = now - player->stats.last_received_frame;
-
-            if (!spectator && input_diff > NetStats::DISCONNECT_TIMEOUT) {
-                // give them one chance to redeem themselves
-                if (player->stats.last_received_frame == 0) {
-                    player->stats.last_received_frame = now;
-                    return;
-                }
-                session_events.AddPlayerDisconnectedEvent(player->handle);
-                player->SetStatus(Disconnected);
-                player->sync_num = 0;
-                return;
+	for (auto& actor : spectator ? spectators : remotes) {
+		if (actor->GetStatus() == Connected) {
+            // give the actor a chance to save itself.
+            if (actor->stats.last_received_message == 0) {
+                actor->stats.last_received_message = now;
+                continue;
             }
-
-			const u32 ack_diff = last_added - player->stats.last_acked_frame;
-            const u64 msg_diff = now - player->stats.last_received_message;
-
-			if (ack_diff > max_diff || msg_diff > NetStats::DISCONNECT_TIMEOUT) {
-                session_events.AddPlayerDisconnectedEvent(player->handle);
-                player->SetStatus(Disconnected);
-                player->sync_num = 0;
+            // check whether messages are being sent if not disconnect.
+            const u64 msg_diff = now - actor->stats.last_received_message;
+			if (msg_diff > NetStats::DISCONNECT_TIMEOUT) {
+                session_events.AddPlayerDisconnectedEvent(actor->handle);
+                actor->SetStatus(Disconnected);
+                actor->sync_num = 0;
 			}
 		}
 	}
@@ -486,7 +472,7 @@ void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
             OnNetworkHealth(addr, pkt);
             return;
         default:
-            printf("cannot process an unknown event!\n");
+            assert(false && "cannot process an unknown event!");
             return;
         }
     }
@@ -538,7 +524,11 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
         }
 
         for (auto& player : *current) {
-            if (player->GetStatus() == Connected) continue;
+            if (player->GetStatus() == Connected) {
+                // connected but the remote is still asking ? maybe high packet loss? send a response again
+                should_send++;
+                continue;
+            }
 
             if (player->address.Equals(addr)) {
                 player->session_magic = body->rng_data;
