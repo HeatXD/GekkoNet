@@ -46,7 +46,7 @@ namespace Gekko {
 
 		Frame GetIncorrectPredictionFrame();
 
-		std::unique_ptr<GameInput> GetInput(Frame frame, bool prediction = true);
+		std::unique_ptr<GameInput> GetInput(Frame frame, bool prediction = false);
 
 		Frame GetLastReceivedFrame();
 

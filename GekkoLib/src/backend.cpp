@@ -22,8 +22,6 @@ namespace
 Gekko::MessageSystem::MessageSystem()
 {
 	_input_size = 0;
-	_last_added_input = GameInput::NULL_FRAME;
-	_last_added_spectator_input = GameInput::NULL_FRAME;
     _last_sent_network_check = 0;
 
 	// gen magic for session
@@ -34,64 +32,63 @@ Gekko::MessageSystem::MessageSystem()
     session_events = SessionEventSystem();
 }
 
-void Gekko::MessageSystem::Init(u32 input_size)
+void Gekko::MessageSystem::Init(u8 num_players, u32 input_size)
 {
+    _net_player_queue.resize(num_players);
 	_input_size = input_size;
-	_last_added_input = GameInput::NULL_FRAME;
-	_last_added_spectator_input = GameInput::NULL_FRAME;
-
 	history.Init();
 }
 
 
-void Gekko::MessageSystem::AddInput(Frame input_frame, u8 input[])
+void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[], bool remote)
 {
-	if (_last_added_input + 1 == input_frame) {
-		_last_added_input++;
-		_player_input_send_list.push_back(new u8[_input_size * locals.size()]);
-		std::memcpy(_player_input_send_list.back(), input, _input_size * locals.size());
+    auto& input_q = _net_player_queue[player];
+	if (input_q.last_added_input + 1 == input_frame) {
+        input_q.last_added_input++;
+        input_q.inputs.push_back(std::make_unique<u8[]>(_input_size));
+        std::memcpy(input_q.inputs.back().get(), input, _input_size);
 
-		// update history
-		history.Update(input_frame);
+		// update history // TODO REDO WITH BACKEND REWORK..
+        if (!remote) {
+            history.Update(input_frame);
+        }
 	}
 
-	const Frame min_ack = GetMinLastAckedFrame(false);
-	const u32 diff = _last_added_input - min_ack;
-
-	if (_player_input_send_list.size() > std::min(MAX_PLAYER_SEND_SIZE, diff)) {
-		delete _player_input_send_list.front();
-		_player_input_send_list.pop_front();
+    auto found_player = GetPlayerByHandle(player);
+    u32 diff = remote ? UINT32_MAX : input_q.last_added_input - found_player->stats.last_acked_frame;
+    // move the input queues along. but also try to keep the queues smaller if possible.
+	if (input_q.inputs.size() >= std::min(diff, MAX_INPUT_QUEUE_SIZE)) {
+        input_q.inputs.pop_front();
 	}
 }
 
 void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 {
-	if (_last_added_spectator_input + 1 == input_frame) {
-		_last_added_spectator_input++;
-		_spectator_input_send_list.push_back(new u8[_input_size * (locals.size() + remotes.size())]);
-		std::memcpy(_spectator_input_send_list.back(), input, _input_size * (locals.size() + remotes.size()));
+    auto& input_q = _net_spectator_queue;
+	if (input_q.last_added_input + 1 == input_frame) {
+        input_q.last_added_input++;
+        const size_t num_players = locals.size() + remotes.size();
+        input_q.inputs.push_back(std::make_unique<u8[]>(_input_size * num_players));
+        std::memcpy(input_q.inputs.back().get(), input, _input_size * num_players);
 	}
 
-	const Frame min_ack = GetMinLastAckedFrame(true);
-	const u32 diff = _last_added_spectator_input - min_ack;
-
-	if (_spectator_input_send_list.size() > std::min(MAX_SPECTATOR_SEND_SIZE, diff)) {
-		delete _spectator_input_send_list.front();
-		_spectator_input_send_list.pop_front();
-	}
+    // move the input queues along
+    if (input_q.inputs.size() >= MAX_INPUT_QUEUE_SIZE) {
+        input_q.inputs.pop_front();
+    }
 }
 
 void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 {
 	// add input packet
-	if (!_player_input_send_list.empty() && !remotes.empty()) {
+	if (!remotes.empty() && !locals.empty()) {
 		AddPendingInput(false);
         // check for disconnects
         HandleTooFarBehindActors(false);
 	}
 
 	// add spectator input packet
-	if (!_spectator_input_send_list.empty() && !spectators.empty()) {
+	if (!spectators.empty() && !locals.empty()) {
 		AddPendingInput(true);
         // check for disconnects
         HandleTooFarBehindActors(true);
@@ -215,7 +212,7 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
     message->pkt.body = std::move(body);
 }
 
-std::vector<Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
+std::vector<Handle> Gekko::MessageSystem::GetRemoteHandlesForAddress(NetAddress* addr)
 {
 	auto result = std::vector<Handle>();
 	for (auto& player: remotes) {
@@ -228,11 +225,20 @@ std::vector<Handle> Gekko::MessageSystem::GetHandlesForAddress(NetAddress* addr)
 
 Gekko::Player* Gekko::MessageSystem::GetPlayerByHandle(Handle handle) 
 {
-	for (auto& player: remotes) {
-		if (player->handle == handle) {
-			return player.get();
-		}
-	}
+    std::vector<std::unique_ptr<Player>>* current = &locals;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &remotes;
+        }
+
+        for (auto& player : *current) {
+            if (player->handle == handle) {
+                return player.get();
+            }
+        }
+    }
+
 	return nullptr;
 }
 
@@ -249,7 +255,14 @@ Frame Gekko::MessageSystem::GetMinLastAckedFrame(bool spectator)
 
 Frame Gekko::MessageSystem::GetLastAddedInput(bool spectator)
 {
-	return spectator ? _last_added_spectator_input : _last_added_input;
+    if (spectator) return _net_spectator_queue.last_added_input;
+
+    Frame result = INT_MAX;
+    for (auto& local : locals) {
+        result = std::min(_net_player_queue[local->handle].last_added_input, result);
+    }
+
+    return result;
 }
 
 bool Gekko::MessageSystem::CheckStatusActors()
@@ -352,7 +365,7 @@ void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 u64 Gekko::MessageSystem::TimeSinceEpoch()
 {
 	using namespace std::chrono;
-	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+	return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
 }
 
 void Gekko::MessageSystem::SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bool spectators_only)
@@ -562,23 +575,25 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
 void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 {
     auto body = (InputMsg*)pkt.body.get();
-    auto net_input = std::make_unique<NetInputData>();
 
-    net_input->handles = GetHandlesForAddress(&addr);
-    net_input->input.inputs = Compression::RLEDecode(body->inputs.data(), (u32)body->inputs.size());
+    auto handles = GetRemoteHandlesForAddress(&addr);
 
-    net_input->input.input_count = body->input_count;
-    net_input->input.start_frame = body->start_frame;
-    net_input->input.total_size = (u16)net_input->input.inputs.size();
+    const size_t player_count = handles.size();
+    const Frame start_frame = body->start_frame;
+    const u32 input_count = body->input_count;
 
-    for (auto handle : net_input->handles) {
-        auto player = GetPlayerByHandle(handle);
+    for (int i = 0; i < player_count; i++) {
+        for (int recv_frame = start_frame; recv_frame < start_frame + input_count; recv_frame++) {
+            u32 input_idx = recv_frame - start_frame;
+            u8* input = &body->inputs[(i * input_count) + input_idx];
+            AddInput(recv_frame, handles[i], input, true);
+        }
+
+        auto player = GetPlayerByHandle(handles[i]);
         if (player) {
             player->stats.last_received_frame = TimeSinceEpoch();
         }
     }
-
-    _received_inputs.push(std::move(net_input));
 }
 
 void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
@@ -624,7 +639,7 @@ void Gekko::MessageSystem::OnSessionHealth(NetAddress& addr, NetPacket& pkt)
 
             for (auto iter = player->session_health.begin();
                 iter != player->session_health.end(); ) {
-                if (iter->first < (_last_added_input - 100)) {
+                if (iter->first < (_net_player_queue[player->handle].last_added_input - 128)) {
                     iter = player->session_health.erase(iter);
                 } else {
                     ++iter;
@@ -644,7 +659,7 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
         _pending_output.push(std::make_unique<NetData>());
         auto& message = _pending_output.back();
 
-        auto player = GetPlayerByHandle(GetHandlesForAddress(&addr).at(0));
+        auto player = GetPlayerByHandle(GetRemoteHandlesForAddress(&addr).at(0));
 
         message->pkt.header.magic = player->session_magic;
         message->pkt.header.type = NetworkHealth;
@@ -683,83 +698,46 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
 {
-    u64 now = TimeSinceEpoch();
+    const u32 MAX_INPUT_SIZE = 1024; // max 1 kbyte of input data per packet
 
-	const auto& send_list = spectator ? _spectator_input_send_list : _player_input_send_list;
-
-    auto& cache = spectator ? _last_sent_spectator_input : _last_sent_input;
-	const Frame last_added = spectator ? _last_added_spectator_input : _last_added_input;
-
-    // just copy and resend the same data instead of doing calculations
-    if (cache.frame != GameInput::NULL_FRAME && last_added == cache.frame) {
-        // only resend if enough time has passed. we dont want to spam.
-        if (cache.last_send_time + InputSendCache::INPUT_RESEND_DELAY > now) {
-            return;
-        }
-
-        _pending_output.push(std::make_unique<NetData>());
-        auto& message = _pending_output.back();
-
-        message->pkt.header.type = spectator ? SpectatorInputs : Inputs;
-
-        auto body = std::make_unique<InputMsg>();
-        body->Copy(&cache.data);
-
-        message->pkt.body = std::move(body);
-
-        cache.last_send_time = now;
-        return;
+    if (spectator) {
+        assert(false && "unimplemented");
     }
+    else {
+        const u32 num_players = (u32)locals.size();
+        const u32 inputs_per_packet = MAX_INPUT_SIZE / (_input_size * num_players);
+        const u32 q_size = (u32)_net_player_queue[locals[0]->handle].inputs.size();
 
-	const u32 num_players = spectator ? (u32)(locals.size() + remotes.size()) : (u32)locals.size();
-	const u32 total_input_size = _input_size * num_players;
-	const u32 input_count = (u32)send_list.size();
-	const u32 total_size = total_input_size * input_count;
+        // calc num packets accounting for when the queue is empty. 
+        const u32 packet_count = (q_size == 0) ? 0 : (q_size + inputs_per_packet - 1) / inputs_per_packet;
 
-    auto inputs = std::make_unique<u8[]>(total_size);
+        const Frame start_frame = _net_player_queue[locals[0]->handle].last_added_input - q_size;
 
-    const u32 offset_per_player = total_size / num_players;
+        for (u32 pc = 0; pc < packet_count; pc++) {
+            const u32 input_start_idx = pc * inputs_per_packet;
+            const u32 input_end_idx = std::min(q_size, input_start_idx + inputs_per_packet);
 
-	u32 idx = 0;
-	for (auto& input : send_list) {
-        // line up all players input in series.
-        // this should make RLE encoding more efficent in the end.
-        // before P1|P2|P1|P2 now P1|P1|P2|P2
-        // i should probably not be copying this much. fix this later TODO
-        if (num_players > 1) {
-            for (u32 i = 0; i < num_players; i++) {
-                auto dst = &inputs[(idx * _input_size) + (i * offset_per_player)];
-                auto src = &input[i * _input_size];
-                std::memcpy(dst, src, _input_size);
+            _pending_output.push(std::make_unique<NetData>());
+
+            auto& packet_ref = _pending_output.back();
+            packet_ref->pkt.header.type = Inputs;
+
+            auto message = std::make_unique<InputMsg>();
+            message->start_frame = start_frame + input_start_idx;
+
+            for (u32 player = 0; player < num_players; player++) {
+                for (u32 i = input_start_idx; i < input_end_idx; i++) {
+                    auto& p_input = _net_player_queue[locals[player]->handle].inputs.at(i);
+                    message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size);
+                }
             }
+
+            message->total_size = (u16)message->inputs.size();
+            message->input_count = input_end_idx - input_start_idx;
+
+            packet_ref->pkt.body = std::move(message);
         }
-        else {
-            std::memcpy(&inputs[idx * _input_size], input, _input_size);
-        }
-		idx++;
-	}
-
-    auto comp = Compression::RLEEncode(inputs.get(), total_size);
-
-    _pending_output.push(std::make_unique<NetData>());
-	auto& message = _pending_output.back();
-
-    message->pkt.header.type = spectator ? SpectatorInputs : Inputs;
-
-    auto body = std::make_unique<InputMsg>();
-
-    body->total_size = (u16)comp.size();
-	body->input_count = (u8)send_list.size();
-	body->start_frame = last_added - (u32)send_list.size();
-
-    body->inputs = std::move(comp);
-
-    // save to the cache for later use.
-    cache.frame = last_added;
-    cache.data.Copy(body.get());
-    cache.last_send_time = now;
-
-    message->pkt.body = std::move(body);
+    }
 }
 
 void Gekko::AdvantageHistory::Init()

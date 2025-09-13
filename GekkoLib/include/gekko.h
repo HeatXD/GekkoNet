@@ -54,7 +54,7 @@ namespace Gekko {
 	private:
 		void Poll();
 
-		bool AllPlayersValid();
+		bool AllActorsValid();
 
 		void HandleReceivedInputs();
 

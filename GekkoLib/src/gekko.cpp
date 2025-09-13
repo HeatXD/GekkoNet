@@ -29,7 +29,7 @@ void Gekko::Session::Init(GekkoConfig* config)
     _sync.Init(_config.num_players, _config.input_size);
 
     // setup message system.
-    _msg.Init(_config.input_size);
+    _msg.Init(_config.num_players, _config.input_size);
 
     //setup game event system
     _game_event_buffer.Init(_config.input_size * _config.num_players);
@@ -126,7 +126,7 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
     _current_game_events.clear();
 
     // gameplay
-    if (AllPlayersValid()) {
+    if (AllActorsValid()) {
         // reset the game event buffer before doing anything else
         _game_event_buffer.Reset();
 
@@ -522,7 +522,7 @@ void Gekko::Session::Poll()
 	_msg.SendPendingOutput(_host);
 }
 
-bool Gekko::Session::AllPlayersValid()
+bool Gekko::Session::AllActorsValid()
 {
 	if (!_started) {
 		if (!_msg.CheckStatusActors()) {
@@ -578,20 +578,17 @@ void Gekko::Session::HandleReceivedInputs()
 void Gekko::Session::SendLocalInputs()
 {
 	if (!_msg.locals.empty() && _started) {
-		std::vector<Handle> handles;
-		for (u32 i = 0; i < _msg.locals.size(); i++) {
-			handles.push_back(_msg.locals[i]->handle);
-		}
-
 		const Frame current = _msg.GetLastAddedInput(false) + 1;
         const Frame delay = GetMinLocalDelay();
 
-		std::unique_ptr<u8[]> inputs;
+		auto input = std::make_unique<u8[]>(_config.input_size);
 		for (Frame frame = current; frame <= current + delay; frame++) {
-			if (!_sync.GetLocalInputs(handles, inputs, frame)) {
-				break;
-			}
-			_msg.AddInput(frame, inputs.get());
+            for (auto& player : _msg.locals) {
+                if (!_sync.GetLocalInput(player->handle, input, frame)) {
+                    return;
+                }
+                _msg.AddInput(frame, player->handle, input.get());
+            }
 		}
 	}
 }

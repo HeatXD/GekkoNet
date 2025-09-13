@@ -50,9 +50,9 @@ namespace Gekko {
 
     struct InputMsg : MsgBody {
         Frame start_frame;
-        u8 input_count;
+        u16 input_count;
         u16 total_size;
-
+        
         std::vector<u8> inputs;
 
         void Copy(const InputMsg* other) {
@@ -120,7 +120,7 @@ namespace Gekko {
     };
 
     struct NetStats {
-        static const u64 DISCONNECT_TIMEOUT = std::chrono::milliseconds(10000).count();
+        static const u64 DISCONNECT_TIMEOUT = std::chrono::milliseconds(5000).count();
         static const u64 SYNC_MSG_DELAY = std::chrono::milliseconds(200).count();
         static const u64 NET_CHECK_DELAY = std::chrono::milliseconds(500).count();
 
