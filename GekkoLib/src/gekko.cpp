@@ -547,32 +547,7 @@ bool Gekko::Session::AllActorsValid()
 
 void Gekko::Session::HandleReceivedInputs()
 {
-	auto& received_inputs = _msg.LastReceivedInputs();
-	while(received_inputs.size() > 0) {
-        // fetch input to be processed
-		auto current = received_inputs.front().get();
-
-		// handle it as a spectator input if there are no local players.
-        const bool spectating = IsSpectating();
-		const u32 count = current->input.input_count;
-		const u32 handles = spectating ? _config.num_players : (u32)current->handles.size();
-		const u32 player_offset = current->input.total_size / handles;
-		const Frame start = current->input.start_frame;
-
-        for (u32 i = 0; i < handles; i++) {
-            Handle handle = spectating ? i : current->handles[i];
-            for (u32 j = 1; j <= count; j++) {
-                Frame frame = start + j;
-                u8* input = &current->input.inputs[(player_offset * i) + ((j - 1) * _config.input_size)];
-                _sync.AddRemoteInput(handle, input, frame);
-                if (j == count) {
-                    _msg.SendInputAck(spectating ? current->handles[0] : handle, frame);
-                }
-            }
-        }
-
-        received_inputs.pop();
-	}
+    assert(false && "unimplemented");
 }
 
 void Gekko::Session::SendLocalInputs()

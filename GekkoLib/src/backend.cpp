@@ -185,11 +185,6 @@ void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u16 magic)
     message->pkt.body = std::move(body);
 }
 
-std::queue<std::unique_ptr<Gekko::NetInputData>>& Gekko::MessageSystem::LastReceivedInputs()
-{
-	return _received_inputs;
-}
-
 void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
 {
 	auto plyr = GetPlayerByHandle(player);

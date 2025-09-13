@@ -95,8 +95,6 @@ namespace Gekko {
 
 		void HandleData(GekkoNetAdapter* host, GekkoNetResult** data, u32 length);
 
-        std::queue<std::unique_ptr<NetInputData>>& LastReceivedInputs();
-
 		void SendInputAck(Handle player, Frame frame);
 
 		Frame GetLastAddedInput(bool spectator = false);
@@ -183,8 +181,6 @@ namespace Gekko {
         NetInputQueue _net_spectator_queue;
 
 		std::queue<std::unique_ptr<NetData>> _pending_output;
-
-		std::queue<std::unique_ptr<NetInputData>> _received_inputs;
 
         std::vector<u8> _bin_buffer;
 
