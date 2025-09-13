@@ -580,7 +580,7 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
     for (int i = 0; i < player_count; i++) {
         for (int recv_frame = start_frame; recv_frame < start_frame + input_count; recv_frame++) {
             u32 input_idx = recv_frame - start_frame;
-            u8* input = &body->inputs[(i * input_count) + input_idx];
+            u8* input = &body->inputs[(i * input_count) + (input_idx * _input_size)];
             AddInput(recv_frame, handles[i], input, true);
         }
 
