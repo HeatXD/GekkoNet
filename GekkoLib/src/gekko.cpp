@@ -328,7 +328,7 @@ void Gekko::Session::SendSessionHealthCheck()
 void Gekko::Session::SendNetworkHealthCheck()
 {
     // we want the session to be synced before trying to determine its network health.
-    if (!_started || IsSpectating()) {
+    if (IsSpectating()) {
         return;
     }
 
@@ -547,7 +547,28 @@ bool Gekko::Session::AllActorsValid()
 
 void Gekko::Session::HandleReceivedInputs()
 {
-    assert(false && "unimplemented");
+    assert(!(_started && IsSpectating()) && "unimplemented");
+
+    for (auto& remote : _msg.remotes) {
+        if (remote->GetStatus() != Connected) continue;
+
+        auto handle = remote->handle;
+        const Frame last_recv = _sync.GetLastReceivedFrom(handle) + 1;
+        const Frame last_added = _msg.GetLastAddedInputFrom(handle);
+
+        assert(last_added - last_recv <= 128); // more then 128 frames behind sounds incorrect.
+
+        auto& input_q = _msg.GetNetPlayerQueue(handle);
+        const Frame min_frame = last_added - (i32)input_q.size() + 1;
+        for (int i = last_recv; i <= last_added; i++) {
+            if (i >= min_frame) {
+                int current_idx = i - min_frame;
+                u8* input = input_q[current_idx].get();
+                _sync.AddRemoteInput(handle, input, i);
+                _msg.SendInputAck(handle, i);
+            }
+        }
+    }
 }
 
 void Gekko::Session::SendLocalInputs()

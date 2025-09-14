@@ -21,6 +21,7 @@ namespace
 
 Gekko::MessageSystem::MessageSystem()
 {
+    _num_players = 0;
 	_input_size = 0;
     _last_sent_network_check = 0;
 
@@ -34,8 +35,11 @@ Gekko::MessageSystem::MessageSystem()
 
 void Gekko::MessageSystem::Init(u8 num_players, u32 input_size)
 {
-    _net_player_queue.resize(num_players);
+    _num_players = num_players;
 	_input_size = input_size;
+
+    _net_player_queue.resize(num_players);
+
 	history.Init();
 }
 
@@ -54,10 +58,8 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
         }
 	}
 
-    auto found_player = GetPlayerByHandle(player);
-    u32 diff = remote ? UINT32_MAX : input_q.last_added_input - found_player->stats.last_acked_frame;
-    // move the input queues along. but also try to keep the queues smaller if possible.
-	if (input_q.inputs.size() >= std::min(diff, MAX_INPUT_QUEUE_SIZE)) {
+    // move it along discarding old inputs
+	if (input_q.inputs.size() > MAX_INPUT_QUEUE_SIZE) {
         input_q.inputs.pop_front();
 	}
 }
@@ -73,7 +75,7 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 	}
 
     // move the input queues along
-    if (input_q.inputs.size() >= MAX_INPUT_QUEUE_SIZE) {
+    if (input_q.inputs.size() > MAX_INPUT_QUEUE_SIZE) {
         input_q.inputs.pop_front();
     }
 }
@@ -336,6 +338,16 @@ void Gekko::MessageSystem::SendNetworkHealth()
     _last_sent_network_check = now;
 }
 
+Frame Gekko::MessageSystem::GetLastAddedInputFrom(Handle player)
+{
+    return _net_player_queue[player].last_added_input;
+}
+
+std::deque<std::unique_ptr<u8[]>>& Gekko::MessageSystem::GetNetPlayerQueue(Handle player)
+{
+    return _net_player_queue[player].inputs;
+}
+
 void Gekko::MessageSystem::HandleTooFarBehindActors(bool spectator)
 {
     const u64 now = TimeSinceEpoch();
@@ -569,6 +581,8 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 {
+    assert(pkt.header.type != SpectatorInputs && "unimplemented");
+
     auto body = (InputMsg*)pkt.body.get();
 
     auto handles = GetRemoteHandlesForAddress(&addr);
@@ -576,9 +590,10 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
     const size_t player_count = handles.size();
     const Frame start_frame = body->start_frame;
     const u32 input_count = body->input_count;
+    const Frame end_frame = start_frame + input_count;
 
     for (int i = 0; i < player_count; i++) {
-        for (int recv_frame = start_frame; recv_frame < start_frame + input_count; recv_frame++) {
+        for (int recv_frame = start_frame; recv_frame < end_frame; recv_frame++) {
             u32 input_idx = recv_frame - start_frame;
             u8* input = &body->inputs[(i * input_count) + (input_idx * _input_size)];
             AddInput(recv_frame, handles[i], input, true);
@@ -706,7 +721,7 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
         // calc num packets accounting for when the queue is empty. 
         const u32 packet_count = (q_size == 0) ? 0 : (q_size + inputs_per_packet - 1) / inputs_per_packet;
 
-        const Frame start_frame = _net_player_queue[locals[0]->handle].last_added_input - q_size;
+        const Frame start_frame = _net_player_queue[locals[0]->handle].last_added_input - q_size + 1;
 
         for (u32 pc = 0; pc < packet_count; pc++) {
             const u32 input_start_idx = pc * inputs_per_packet;

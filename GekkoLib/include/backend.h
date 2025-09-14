@@ -105,6 +105,10 @@ namespace Gekko {
 
         void SendNetworkHealth();
 
+        Frame GetLastAddedInputFrom(Handle player);
+
+        std::deque<std::unique_ptr<u8[]>>& GetNetPlayerQueue(Handle player);
+
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
 
@@ -117,6 +121,19 @@ namespace Gekko {
         SessionEventSystem session_events;
 
         std::map<Frame, u32> local_health;
+
+        struct NetInputQueue {
+            Frame last_added_input = -1;
+            std::deque<std::unique_ptr<u8[]>> inputs;
+
+            NetInputQueue(const NetInputQueue&) = delete;
+            NetInputQueue& operator=(const NetInputQueue&) = delete;
+
+            NetInputQueue(NetInputQueue&&) = default;
+            NetInputQueue& operator=(NetInputQueue&&) = default;
+
+            NetInputQueue() = default;
+        };
 
 	private:
 		void SendSyncRequest(NetAddress* addr);
@@ -161,18 +178,7 @@ namespace Gekko {
 
 		u16 _session_magic;
 
-        struct NetInputQueue {
-            Frame last_added_input = -1;
-            std::deque<std::unique_ptr<u8[]>> inputs;
-
-            NetInputQueue(const NetInputQueue&) = delete;
-            NetInputQueue& operator=(const NetInputQueue&) = delete;
-
-            NetInputQueue(NetInputQueue&&) = default;
-            NetInputQueue& operator=(NetInputQueue&&) = default;
-
-            NetInputQueue() = default;
-        };
+        u8  _num_players;
 
         // input queue for each player for either sending or receiving
         std::vector<NetInputQueue> _net_player_queue;
