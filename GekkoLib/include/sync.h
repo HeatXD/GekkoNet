@@ -41,6 +41,8 @@ namespace Gekko {
 
         Frame GetLastReceivedFrom(Handle player);
 
+        void ClearIncorrectFramesUpTo(Frame clear_limit);
+
 	private:
 		u8 _num_players;
 

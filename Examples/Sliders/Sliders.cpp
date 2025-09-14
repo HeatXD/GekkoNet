@@ -138,7 +138,8 @@ int main(int argc, char* argv[]) {
     config.num_players = num_players;
 
     gekko_start(session, &config);
-    gekko_net_adapter_set(session, gekko_default_adapter(ports[local_player]));
+    GekkoNetAdapter* adapter = gekko_default_adapter(ports[local_player]);
+    gekko_net_adapter_set(session, adapter);
 
     for (int i = 0; i < num_players; i++) {
         if (i == local_player) {
@@ -237,7 +238,8 @@ int main(int argc, char* argv[]) {
         );
     }
 
-    gekko_destroy(&session);
+    assert(gekko_default_adapter_destroy(adapter));
+    assert(gekko_destroy(&session));
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

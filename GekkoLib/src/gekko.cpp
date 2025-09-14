@@ -137,7 +137,7 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
         HandleRollback(_current_game_events);
 
         // check if we need to save the confirmed frame
-        // HandleSavingConfirmedFrame(_current_game_events);
+        HandleSavingConfirmedFrame(_current_game_events);
 
         // spectator session buffer
         if (ShouldDelaySpectator()) {
@@ -425,6 +425,9 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 		}
 		_sync.IncrementFrame();
 	}
+
+    // clear the marked mispredictions up to this point in the input buffer
+    _sync.ClearIncorrectFramesUpTo(current);
 
 	// make sure that we are back where we started.
 	assert(_sync.GetCurrentFrame() == current);

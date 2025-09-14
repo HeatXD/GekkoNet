@@ -149,3 +149,10 @@ Frame Gekko::SyncSystem::GetLastReceivedFrom(Handle player)
 
     return GameInput::NULL_FRAME;
 }
+
+void Gekko::SyncSystem::ClearIncorrectFramesUpTo(Frame clear_limit)
+{
+    for (i32 i = 0; i < _num_players; i++) {
+        _input_buffers[i].ClearIncorrectFrames(clear_limit);
+    }
+}
