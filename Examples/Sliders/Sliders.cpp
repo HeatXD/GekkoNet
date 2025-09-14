@@ -143,6 +143,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < num_players; i++) {
         if (i == local_player) {
             gekko_add_actor(session, LocalPlayer, nullptr);
+            gekko_set_local_delay(session, local_player, 6);
         }
         else {
             GekkoNetAddress addr = {};
@@ -180,19 +181,20 @@ int main(int argc, char* argv[]) {
             case DesyncDetected:
                 auto desync = event->data.desynced;
                 printf(
-                    "DESYNC!!! f:%d, rh:%d, lc:%u, rc:%u", desync.frame, desync.remote_handle,
+                    "DESYNC!!! f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle,
                     desync.local_checksum, desync.remote_checksum
                 );
+                assert(false);
                 break;
 
             case PlayerConnected: 
                 auto connect = event->data.connected;
-                printf("Player %i connected", connect.handle);
+                printf("Player %i connected\n", connect.handle);
                 break;
 
             case PlayerDisconnected:
                 auto disconnect = event->data.disconnected;
-                printf("Player %i disconnected", disconnect.handle);
+                printf("Player %i disconnected\n", disconnect.handle);
                 break;
             }
         }
@@ -213,9 +215,12 @@ int main(int argc, char* argv[]) {
                 break;
 
             case AdvanceEvent:
+                printf("f%d,", event->data.adv.frame);
                 for (int j = 0; j < num_players; j++) {
                     inputs[j] = ((Input*)(event->data.adv.inputs))[j];
+                    printf(" p%d %d%d", j, inputs[j].left, inputs[j].right);
                 }
+                printf("\n");
                 game.tick(inputs);
                 break;
             }

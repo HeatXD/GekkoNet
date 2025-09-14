@@ -137,7 +137,7 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
         HandleRollback(_current_game_events);
 
         // check if we need to save the confirmed frame
-        HandleSavingConfirmedFrame(_current_game_events);
+        // HandleSavingConfirmedFrame(_current_game_events);
 
         // spectator session buffer
         if (ShouldDelaySpectator()) {
