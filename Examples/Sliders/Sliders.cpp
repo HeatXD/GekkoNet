@@ -144,6 +144,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < num_players; i++) {
         if (i == local_player) {
             gekko_add_actor(session, LocalPlayer, nullptr);
+            gekko_set_local_delay(session, i, 2);
         }
         else {
             GekkoNetAddress addr = {};

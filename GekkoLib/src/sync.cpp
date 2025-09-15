@@ -73,7 +73,6 @@ bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& f
 		auto inp = _input_buffers[i].GetInput(_current_frame, true);
 	
 		if (inp->frame == GameInput::NULL_FRAME) {
-            //printf("failed input fetch p%d\n", i);
 			return false;
 		}
 
