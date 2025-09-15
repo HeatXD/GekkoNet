@@ -183,7 +183,7 @@ GekkoNetAdapter* gekko_default_adapter(unsigned short port) {
     return &default_sock;
 }
 
-bool gekko_default_adapter_destroy(GekkoNetAdapter* adapter)
+bool gekko_default_adapter_destroy()
 {
     if (_socket) {
         delete _socket;

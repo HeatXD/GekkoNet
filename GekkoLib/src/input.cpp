@@ -52,38 +52,50 @@ void Gekko::InputBuffer::AddLocalInput(Frame frame, u8* input)
 
 void Gekko::InputBuffer::AddInput(Frame frame, u8* input)
 {
-	if (frame == _last_received_input + 1) {
-		if (_input_prediction_window > 0 && _first_predicted_input == frame) {
-			if (!_inputs[frame % BUFF_SIZE]->IsEqualTo(input)) {
-				// first mark the incorrect prediction 
-				_incorrent_predicted_inputs.push_back(_first_predicted_input);
+    // only allow sequential input insertion
+    if (frame != _last_received_input + 1) {
+        return;
+    }
 
-				// then clear all the predictions made starting from the marked prediction 
-				// since theyre most likely also incorrect.
-				const Frame diff = _last_predicted_input - _first_predicted_input;
-				for (Frame i = 0; i <= diff; i++) {
-					_inputs[(_first_predicted_input + i) % BUFF_SIZE]->Clear();
-				}
+    const Frame idx = frame % BUFF_SIZE;
+    if (_input_prediction_window > 0 && _first_predicted_input == frame) {
+        if (!_inputs[idx]->IsEqualTo(input)) {
+            // incorrect prediction
+            _incorrent_predicted_inputs.push_back(_first_predicted_input);
+            //printf("wf%d: %d vs %d\n", frame, *_inputs[idx]->input.get(), *input);
 
-				// then we reset the prediction values and proceed like normal
-				ResetPrediction();
-			}
-			else {
-				// if it was correct and the pred values are the same then we reset the pred values
-				// otherwise we move the first predicted input forward to the next frame
-				if (_first_predicted_input == _last_predicted_input) {
-					ResetPrediction();
-				} else {
-					_first_predicted_input++;
-				}
-				// advance since the input was correct.
-				_last_received_input++;
-				return;
-			}
-		}
-		_last_received_input++;
-		_inputs[frame % BUFF_SIZE]->Init(frame, input, _input_size);
-	}
+            // last prediction frame ? add correct input and reset prediction
+            if (_first_predicted_input == _last_predicted_input) {
+                _inputs[idx]->Init(frame, input, _input_size);
+                ResetPrediction();
+            } else {
+
+                // repeat the correct inputs instead of the wrong one.
+                const Frame diff = _last_predicted_input - _first_predicted_input;
+                for (Frame i = 0; i <= diff; i++) {
+                    const Frame pred_frame = _first_predicted_input + i;
+                    _inputs[pred_frame % BUFF_SIZE]->Init(pred_frame, input, _input_size);
+                }
+
+                // move along this frame since the previous is verified now.
+                _first_predicted_input++;
+            }
+        } else {
+
+            // correct prediction
+            if (_first_predicted_input == _last_predicted_input) {
+                ResetPrediction();
+            } else {
+                _first_predicted_input++;
+            }
+        }
+    } else {
+        // not a predicted input
+        _inputs[idx]->Init(frame, input, _input_size);
+    }
+
+    // always advance the buffer
+    _last_received_input++;
 }
 
 void Gekko::InputBuffer::SetDelay(u8 delay)
@@ -137,7 +149,7 @@ Frame Gekko::InputBuffer::GetIncorrectPredictionFrame()
 void Gekko::InputBuffer::ResetPrediction()
 {
 	_first_predicted_input = GameInput::NULL_FRAME;
-	_last_predicted_input = GameInput::NULL_FRAME;
+    _last_predicted_input = GameInput::NULL_FRAME;
 }
 
 Frame Gekko::InputBuffer::GetLastReceivedFrame()
@@ -147,7 +159,8 @@ Frame Gekko::InputBuffer::GetLastReceivedFrame()
 
 void Gekko::InputBuffer::ClearIncorrectFrames(Frame clear_limit)
 {
-    while (!_incorrent_predicted_inputs.empty() && _incorrent_predicted_inputs.front() < clear_limit) {
+    while (!_incorrent_predicted_inputs.empty() && _incorrent_predicted_inputs.front() <= clear_limit) {
+       // printf("clr:%d, cl:%d\n", _incorrent_predicted_inputs.front(), clear_limit);
         _incorrent_predicted_inputs.pop_front();
     }
 }
@@ -186,9 +199,9 @@ bool Gekko::InputBuffer::HandleInputPrediction(Frame frame)
 
 bool Gekko::InputBuffer::CanPredictInput() {
 	const Frame diff = std::abs(_last_predicted_input) - std::abs(_first_predicted_input) + 1;
+    //printf("lpi%d fpi%d diff%d\n", _last_predicted_input, _first_predicted_input, diff);
 	return _input_prediction_window > 0 && diff < _input_prediction_window;
 }
-
 
 u32 Gekko::InputBuffer::PreviousFrame(Frame frame)
 {
@@ -200,10 +213,19 @@ std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool
     auto inp = std::make_unique<GameInput>();
 
 	if (_last_received_input < frame) {
+        //printf("A lrf%d rqf%d p%d cp%d\n", _last_received_input, frame, prediction, CanPredictInput());
 		// no input? check if we should predict the input
-		if (prediction && CanPredictInput()) {
-			if (HandleInputPrediction(frame)) {
+		if (prediction) {
+            if (_last_predicted_input != GameInput::NULL_FRAME &&
+                frame <= _last_predicted_input) {
+                // return existing prediction
+                inp->Init(_inputs[frame % BUFF_SIZE].get());
+                printf("B.1\n");
+
+            } else if (CanPredictInput() && HandleInputPrediction(frame)) {
+                // generate new prediction
 				inp->Init(_inputs[frame % BUFF_SIZE].get());
+                printf("B.2\n");
 			}
 		}
 		return inp;
@@ -211,10 +233,12 @@ std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool
 
     if (_inputs[frame % BUFF_SIZE]->frame != frame ||
         _inputs[frame % BUFF_SIZE]->frame == GameInput::NULL_FRAME) {
+        printf("C\n");
         return inp;
     }
 
 	inp->Init(_inputs[frame % BUFF_SIZE].get());
+    printf("D\n");
 	return inp;
 }
 

@@ -144,7 +144,6 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < num_players; i++) {
         if (i == local_player) {
             gekko_add_actor(session, LocalPlayer, nullptr);
-            gekko_set_local_delay(session, local_player, 6);
         }
         else {
             GekkoNetAddress addr = {};
@@ -213,6 +212,7 @@ int main(int argc, char* argv[]) {
 
             case LoadEvent:
                 memcpy(&game, event->data.load.state, sizeof(State));
+                printf("rb start\n");
                 break;
 
             case AdvanceEvent:
@@ -238,7 +238,7 @@ int main(int argc, char* argv[]) {
         );
     }
 
-    assert(gekko_default_adapter_destroy(adapter));
+    assert(gekko_default_adapter_destroy());
     assert(gekko_destroy(&session));
 
     SDL_DestroyRenderer(renderer);

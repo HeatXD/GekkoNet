@@ -419,12 +419,14 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 	_sync.IncrementFrame();
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
-		AddAdvanceEvent(ev);
+        assert(AddAdvanceEvent(ev));
 		if (!_config.limited_saving || frame == frame_to_save) {
 			AddSaveEvent(ev);
 		}
 		_sync.IncrementFrame();
 	}
+
+    //printf("rb, s:%d, e:%d\n", sync_frame + 1, current);
 
     // clear the marked mispredictions up to this point in the input buffer
     _sync.ClearIncorrectFramesUpTo(current);
@@ -451,7 +453,7 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev)
     if (event->data.adv.inputs) {
         std::memcpy(event->data.adv.inputs, inputs.get(), event->data.adv.input_len);
     }
-
+    //printf("adv ev f:%d\n", frame);
 	return true;
 }
 
@@ -474,6 +476,7 @@ void Gekko::Session::AddSaveEvent(std::vector<GekkoGameEvent*>& ev)
 	event->data.save.state_len = &state->state_len;
 
 	_last_saved_frame = frame_to_save;
+    //printf("sav ev f:%d\n", frame_to_save);
 }
 
 void Gekko::Session::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
@@ -490,6 +493,8 @@ void Gekko::Session::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
     event->data.load.frame = frame_to_load;
 	event->data.load.state = state->state.get();
 	event->data.load.state_len = state->state_len;
+
+    //printf("load ev f:%d\n", frame_to_load);
 }
 
 void Gekko::Session::Poll()

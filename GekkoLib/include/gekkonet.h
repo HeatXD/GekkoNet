@@ -196,7 +196,7 @@ GEKKONET_API void gekko_network_poll(GekkoSession* session);
 
 GEKKONET_API GekkoNetAdapter* gekko_default_adapter(unsigned short port);
 
-GEKKONET_API bool gekko_default_adapter_destroy(GekkoNetAdapter* adapter);
+GEKKONET_API bool gekko_default_adapter_destroy();
 
 #endif // GEKKONET_NO_ASIO
 
