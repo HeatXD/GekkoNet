@@ -59,7 +59,8 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
 	}
 
     // move it along discarding old inputs
-	if (input_q.inputs.size() > MAX_INPUT_QUEUE_SIZE) {
+    // TODO make the local input send queues variable in size by checking diff to last acked input.
+	while (input_q.inputs.size() > MAX_INPUT_QUEUE_SIZE) {
         input_q.inputs.pop_front();
 	}
 }
@@ -592,10 +593,19 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
     const u32 input_count = body->input_count;
     const Frame end_frame = start_frame + input_count;
 
+    //printf("recv inputs bytes:\n");
+    //uint8_t* inputs_start = (uint8_t*)body->inputs.data();
+    //for (size_t i = 0; i < body->inputs.size(); i++) {
+    //    printf("%02X ", inputs_start[i]);
+    //    if ((i + 1) % 16 == 0) printf("\n");
+    //    else if ((i + 1) % _input_size == 0) printf(" ");
+    //}
+    //printf("\n");
+
     for (int i = 0; i < player_count; i++) {
         for (int recv_frame = start_frame; recv_frame < end_frame; recv_frame++) {
             u32 input_idx = recv_frame - start_frame;
-            u8* input = &body->inputs[(i * input_count) + (input_idx * _input_size)];
+            u8* input = &body->inputs[(i * input_count * _input_size) + (input_idx * _input_size)];
             AddInput(recv_frame, handles[i], input, true);
         }
 
@@ -708,7 +718,7 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
 {
-    const u32 MAX_INPUT_SIZE = 1024; // max 1 kbyte of input data per packet
+    const u32 MAX_INPUT_SIZE = 512; // max 512 byte of input data per packet
 
     if (spectator) {
         assert(false && "unimplemented");

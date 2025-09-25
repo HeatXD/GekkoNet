@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string>
 #include <cassert>
+#include <vector>
+#include <sstream>
 
 #define MAX_PLAYERS 4
 #define MAP_SIZE 400
@@ -23,6 +25,7 @@ constexpr uint8_t PLAYER_COLORS[4 * MAX_PLAYERS] = {
 struct Input {
     uint8_t left : 1;
     uint8_t right : 1;
+    uint16_t padd = 0;
 };
 
 struct State {
@@ -86,18 +89,42 @@ static void handle_frame_time(
 int main(int argc, char* argv[]) {
     // get network info
     if (argc < 4) {
-        printf("Usage: %s <local_player> <port1> <port2> <port3> <port4>\n", argv[0]);
+        printf("Usage: %s <local_player1,local_player2,...> <port1> <port2> <port3> <port4>\n", argv[0]);
         return 1;
     }
 
-    // parse local player number
+    // parse local player numbers
     int num_players = argc - 2;
     printf("num_players: %d\n", num_players);
-    int local_player = atoi(argv[1]);
-    if (local_player < 0 || local_player >= MAX_PLAYERS || local_player > num_players - 1) {
-        printf("Invalid local player index. Must be 0-%d\n", num_players - 1);
-        return 1;
+
+    // parse comma-separated local player numbers using C++ methods
+    std::string local_players_str = argv[1];
+    std::vector<int> local_players;
+    std::istringstream ss(local_players_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        try {
+            int player_num = std::stoi(token);
+            if (player_num < 0 || player_num >= MAX_PLAYERS || player_num > num_players - 1) {
+                printf("Invalid local player index: %d. Must be 0-%d\n", player_num, num_players - 1);
+                return 1;
+            }
+            local_players.push_back(player_num);
+        }
+        catch (const std::exception&) {
+            printf("Invalid number format: %s\n", token.c_str());
+            return 1;
+        }
     }
+
+    int num_local_players = local_players.size();
+
+    printf("Local players: ");
+    for (int player : local_players) {
+        printf("%d ", player);
+    }
+    printf("\n");
 
     // parse ports
     int ports[MAX_PLAYERS] = {};
@@ -109,8 +136,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // print for verification
-    printf("Local player: %d\n", local_player);
     for (int i = 0; i < MAX_PLAYERS; i++) {
         printf("Player %d port: %d\n", i, ports[i]);
     }
@@ -138,15 +163,21 @@ int main(int argc, char* argv[]) {
     config.num_players = num_players;
 
     gekko_start(session, &config);
-    GekkoNetAdapter* adapter = gekko_default_adapter(ports[local_player]);
-    gekko_net_adapter_set(session, adapter);
+    gekko_net_adapter_set(session, gekko_default_adapter(ports[local_players[0]]));
 
     for (int i = 0; i < num_players; i++) {
-        if (i == local_player) {
-            gekko_add_actor(session, LocalPlayer, nullptr);
-            gekko_set_local_delay(session, i, 2);
+        bool is_local = false;
+        for (int j = 0; j < num_local_players; j++) {
+            if (local_players[j] == i) {
+                is_local = true;
+                break;
+            }
         }
-        else {
+
+        if (is_local) {
+            gekko_add_actor(session, LocalPlayer, nullptr);
+            gekko_set_local_delay(session, i, 1);
+        } else {
             GekkoNetAddress addr = {};
             std::string address_str = "127.0.0.1:" + std::to_string(ports[i]);
             addr.data = (void*)address_str.c_str();
@@ -172,7 +203,9 @@ int main(int argc, char* argv[]) {
         }
 
         auto local_input = game.poll_input();
-        gekko_add_local_input(session, local_player, &local_input);
+        for (int i = 0; i < num_local_players; i++) {
+            gekko_add_local_input(session, local_players[i], &local_input);
+        }
 
         int count = 0;
         GekkoSessionEvent** events = gekko_session_events(session, &count);
