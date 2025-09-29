@@ -97,7 +97,6 @@ int main(int argc, char* argv[]) {
     int num_players = argc - 2;
     printf("num_players: %d\n", num_players);
 
-    // parse comma-separated local player numbers using C++ methods
     std::string local_players_str = argv[1];
     std::vector<int> local_players;
     std::istringstream ss(local_players_str);

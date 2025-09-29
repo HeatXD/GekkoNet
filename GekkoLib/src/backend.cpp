@@ -582,36 +582,41 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 {
-    assert(pkt.header.type != SpectatorInputs && "unimplemented");
-
     auto body = (InputMsg*)pkt.body.get();
 
-    auto handles = GetRemoteHandlesForAddress(&addr);
-
-    const size_t player_count = handles.size();
     const Frame start_frame = body->start_frame;
     const u32 input_count = body->input_count;
     const Frame end_frame = start_frame + input_count;
 
-    //printf("recv inputs bytes:\n");
-    //uint8_t* inputs_start = (uint8_t*)body->inputs.data();
-    //for (size_t i = 0; i < body->inputs.size(); i++) {
-    //    printf("%02X ", inputs_start[i]);
-    //    if ((i + 1) % 16 == 0) printf("\n");
-    //    else if ((i + 1) % _input_size == 0) printf(" ");
-    //}
-    //printf("\n");
+    const bool is_spectator = (pkt.header.type == SpectatorInputs);
 
-    for (int i = 0; i < player_count; i++) {
-        for (int recv_frame = start_frame; recv_frame < end_frame; recv_frame++) {
-            u32 input_idx = recv_frame - start_frame;
-            u8* input = &body->inputs[(i * input_count * _input_size) + (input_idx * _input_size)];
-            AddInput(recv_frame, handles[i], input, true);
+    if (is_spectator) {
+        for (u32 frame_idx = 0; frame_idx < input_count; frame_idx++) {
+            const Frame recv_frame = start_frame + frame_idx;
+            const u32 frame_offset = frame_idx * _num_players * _input_size;
+
+            for (u32 player = 0; player < _num_players; player++) {
+                u8* input = &body->inputs[frame_offset + player * _input_size];
+                AddInput(recv_frame, player, input, true);
+            }
         }
+    } else {
+        auto handles = GetRemoteHandlesForAddress(&addr);
+        const u32 player_count = (u32)handles.size();
 
-        auto player = GetPlayerByHandle(handles[i]);
-        if (player) {
-            player->stats.last_received_frame = TimeSinceEpoch();
+        for (u32 i = 0; i < player_count; i++) {
+            const u32 player_offset = i * input_count * _input_size;
+
+            for (u32 frame_idx = 0; frame_idx < input_count; frame_idx++) {
+                const Frame recv_frame = start_frame + frame_idx;
+                u8* input = &body->inputs[player_offset + frame_idx * _input_size];
+                AddInput(recv_frame, handles[i], input, true);
+            }
+
+            auto player = GetPlayerByHandle(handles[i]);
+            if (player) {
+                player->stats.last_received_frame = TimeSinceEpoch();
+            }
         }
     }
 }
@@ -718,45 +723,51 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::AddPendingInput(bool spectator)
 {
-    const u32 MAX_INPUT_SIZE = 512; // max 512 byte of input data per packet
+    const u32 MAX_INPUT_SIZE = 512;
 
-    if (spectator) {
-        assert(false && "unimplemented");
-    }
-    else {
-        const u32 num_players = (u32)locals.size();
-        const u32 inputs_per_packet = MAX_INPUT_SIZE / (_input_size * num_players);
-        const u32 q_size = (u32)_net_player_queue[locals[0]->handle].inputs.size();
+    const u32 num_players = spectator ? _num_players : (u32)locals.size();
+    const u32 inputs_per_packet = MAX_INPUT_SIZE / (_input_size * num_players);
 
-        // calc num packets accounting for when the queue is empty. 
-        const u32 packet_count = (q_size == 0) ? 0 : (q_size + inputs_per_packet - 1) / inputs_per_packet;
+    auto& queue = spectator ? _net_spectator_queue : _net_player_queue[locals[0]->handle];
+    const u32 q_size = (u32)queue.inputs.size();
 
-        const Frame start_frame = _net_player_queue[locals[0]->handle].last_added_input - q_size + 1;
+    if (q_size == 0) return;
 
-        for (u32 pc = 0; pc < packet_count; pc++) {
-            const u32 input_start_idx = pc * inputs_per_packet;
-            const u32 input_end_idx = std::min(q_size, input_start_idx + inputs_per_packet);
+    const u32 packet_count = (q_size + inputs_per_packet - 1) / inputs_per_packet;
+    const Frame start_frame = queue.last_added_input - q_size + 1;
+    const auto packet_type = spectator ? SpectatorInputs : Inputs;
 
-            _pending_output.push(std::make_unique<NetData>());
+    for (u32 pc = 0; pc < packet_count; pc++) {
+        const u32 input_start_idx = pc * inputs_per_packet;
+        const u32 input_end_idx = std::min(q_size, input_start_idx + inputs_per_packet);
+        const u32 input_count = input_end_idx - input_start_idx;
 
-            auto& packet_ref = _pending_output.back();
-            packet_ref->pkt.header.type = Inputs;
+        _pending_output.push(std::make_unique<NetData>());
+        auto& packet = _pending_output.back();
+        packet->pkt.header.type = packet_type;
 
-            auto message = std::make_unique<InputMsg>();
-            message->start_frame = start_frame + input_start_idx;
+        auto message = std::make_unique<InputMsg>();
+        message->start_frame = start_frame + input_start_idx;
+        message->inputs.reserve(input_count * _input_size * num_players);
 
+        if (spectator) {
+            for (u32 i = input_start_idx; i < input_end_idx; i++) {
+                const auto& p_input = queue.inputs.at(i);
+                message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size);
+            }
+        } else {
             for (u32 player = 0; player < num_players; player++) {
+                const auto& player_queue = _net_player_queue[locals[player]->handle];
                 for (u32 i = input_start_idx; i < input_end_idx; i++) {
-                    auto& p_input = _net_player_queue[locals[player]->handle].inputs.at(i);
+                    const auto& p_input = player_queue.inputs.at(i);
                     message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size);
                 }
             }
-
-            message->total_size = (u16)message->inputs.size();
-            message->input_count = input_end_idx - input_start_idx;
-
-            packet_ref->pkt.body = std::move(message);
         }
+
+        message->total_size = (u16)message->inputs.size();
+        message->input_count = input_count;
+        packet->pkt.body = std::move(message);
     }
 }
 
