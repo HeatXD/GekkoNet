@@ -748,12 +748,11 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 
         auto message = std::make_unique<InputMsg>();
         message->start_frame = start_frame + input_start_idx;
-        message->inputs.reserve(input_count * _input_size * num_players);
 
         if (spectator) {
             for (u32 i = input_start_idx; i < input_end_idx; i++) {
                 const auto& p_input = queue.inputs.at(i);
-                message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size);
+                message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size * num_players);
             }
         } else {
             for (u32 player = 0; player < num_players; player++) {
