@@ -21,7 +21,7 @@ int main() {
     using namespace GekkoGame;
     // window init
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Example", FIELD_SIZE, FIELD_SIZE * 1.15, 0);
+    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Pong Example", FIELD_SIZE, FIELD_SIZE * 1.15, 0);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     // timing
@@ -30,7 +30,7 @@ int main() {
     uint64_t frame_start = 0, frame_time_ns = 0;
     // 
     Gamestate gs = {};
-    gs.Init(4);
+    gs.Init(2);
 
     bool running = true;
     while (running) {

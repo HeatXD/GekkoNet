@@ -1,4 +1,6 @@
 #include "game.h"
+#include <cstdlib>
+#include <algorithm>
 //#include <cstdio>
 
 namespace GekkoGame {
@@ -8,7 +10,7 @@ namespace GekkoGame {
         state.flags.balls = 0;
         state.flags.started = true;
         state.flags.finished = false;
-        // setup pedal positions
+        // setup paddle positions
         for (int i = 0; i <= state.flags.players; i++) {
             if (i <= 1) {
                 state.e_px[i] = (FIELD_SIZE * i) * GAME_SCALE;
@@ -22,8 +24,8 @@ namespace GekkoGame {
         for (int i = MAX_PLAYERS; i <= MAX_PLAYERS + state.flags.balls; i++) {
             state.e_px[i] = FIELD_SIZE / 2 * GAME_SCALE;
             state.e_py[i] = FIELD_SIZE / 2 * GAME_SCALE;
-            state.e_vx[i] = -8000;
-            state.e_vy[i] = 5000;
+            state.e_vx[i] = -4500;
+            state.e_vy[i] = 0;
         }
     }
 
@@ -108,7 +110,6 @@ namespace GekkoGame {
 
         // screen wrapping paddles
         for (int i = 0; i <= state.flags.players; i++) {
-            ///printf("[%d] x:%d,y:%d\n", i, state.e_px[i], state.e_py[i]);
             if (i <= 1) {
                 if (state.e_py[i] < 0) state.e_py[i] = FIELD_SIZE * GAME_SCALE;
                 if (state.e_py[i] > FIELD_SIZE * GAME_SCALE) state.e_py[i] = 0;
@@ -118,11 +119,98 @@ namespace GekkoGame {
             }
         }
 
-        // make balls bounce of walls
-        for (int i = MAX_PLAYERS; i <= MAX_PLAYERS + state.flags.balls; i++){
-            if (state.e_px[i] < 0 || state.e_px[i] > FIELD_SIZE * GAME_SCALE) state.e_vx[i] *= -1;
-            if (state.e_py[i] < 0 || state.e_py[i] > FIELD_SIZE * GAME_SCALE) state.e_vy[i] *= -1;
+
+        // make balls bounce of paddles
+        for (int i = MAX_PLAYERS; i <= MAX_PLAYERS + state.flags.balls; i++) {
+            for (int j = 0; j <= state.flags.players; j++) {
+                const bool horizontal = j <= 1;
+                const Rect* paddle_box = horizontal ? &BOX_TYPES[0] : &BOX_TYPES[1];
+                const Rect* ball_box = &BOX_TYPES[2];
+
+                if (DoesCollide({*ball_box, state.e_px[i], state.e_py[i]}, {*paddle_box, state.e_px[j], state.e_py[j]})) {
+                    int& ball_pos = horizontal ? state.e_px[i] : state.e_py[i];
+                    int& ball_vel = horizontal ? state.e_vx[i] : state.e_vy[i];
+                    int& cross_vel = horizontal ? state.e_vy[i] : state.e_vx[i];
+
+                    const int ball_cross = horizontal ? state.e_py[i] : state.e_px[i];
+                    const int paddle_cross = horizontal ? state.e_py[j] : state.e_px[j];
+                    const int paddle_pos = horizontal ? state.e_px[j] : state.e_py[j];
+                    const int paddle_cross_half = horizontal ? paddle_box->hh : paddle_box->hw;
+
+                    // determine segment (0-7)
+                    const int offset = ball_cross - paddle_cross;
+                    const int segment_size = (paddle_cross_half * 2) / 8;
+                    const int segment = std::min(7, std::max(0, (offset + paddle_cross_half) / segment_size));
+
+                    // half table (segments 0-3), mirror for 4-7
+                    const int velocities[4][2] = {
+                        {3000, 5000},   // steepest
+                        {3500, 3500},   // 45°
+                        {4000, 2000},
+                        {4500, 0}    // straight
+                    };
+
+                    const int idx = segment < 4 ? segment : 7 - segment;
+                    const int cross_sign = segment < 4 ? -1 : 1;
+
+                    // determine which side of paddle the ball is on
+                    const int side_sign = (ball_pos > paddle_pos) ? 1 : -1;
+
+                    // set new velocities (ball bounces away from paddle)
+                    ball_vel = side_sign * velocities[idx][0];
+                    cross_vel = cross_sign * velocities[idx][1];
+
+                    // push ball outside paddle boundary
+                    const int ball_half = horizontal ? ball_box->hw : ball_box->hh;
+                    const int paddle_half = horizontal ? paddle_box->hw : paddle_box->hh;
+                    ball_pos = paddle_pos + side_sign * (paddle_half + ball_half + 2);
+                }
+            }
         }
+
+        // make balls bounce of walls or respawn when a player gets scored on
+        for (int i = MAX_PLAYERS; i <= MAX_PLAYERS + state.flags.balls; i++){
+            bool respawn = false;
+            const int limit = FIELD_SIZE * GAME_SCALE;
+
+            int& x = state.e_px[i];
+            int& y = state.e_py[i];
+            int& vx = state.e_vx[i];
+            int& vy = state.e_vy[i];
+
+            if (x < 0 || x > limit) {
+                const bool hitLeft = (x < 0);
+                const int  playerId = hitLeft ? 0 : 1;
+
+                if (state.flags.players >= playerId) respawn = true;
+                else vx = -vx;
+
+                x = std::clamp(x, 0, limit);
+            }
+
+            if (y < 0 || y > limit) {
+                const bool hitTop = (y < 0);
+                const int  playerId = hitTop ? 2 : 3;
+
+                if (state.flags.players >= playerId) respawn = true;
+                else vy = -vy;
+
+                y = std::clamp(y, 0, limit);
+            }
+
+            if (respawn) {
+                x = FIELD_SIZE / 2 * GAME_SCALE;
+                y = FIELD_SIZE / 2 * GAME_SCALE;
+                vx = -4500;
+                vy = 0;
+            }
+        }
+    }
+
+    bool Gamestate::DoesCollide(const AABB& a, const AABB& b) {
+        bool overlapX = std::abs(a.x - b.x) <= (a.ext.hw + b.ext.hw);
+        bool overlapY = std::abs(a.y - b.y) <= (a.ext.hh + b.ext.hh);
+        return overlapX && overlapY;
     }
 }
 

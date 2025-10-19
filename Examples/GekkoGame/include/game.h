@@ -23,6 +23,11 @@ namespace GekkoGame {
         int32_t hw, hh;
     };
 
+    struct AABB {
+        Rect ext;
+        int32_t x, y;
+    };
+
     const Rect BOX_TYPES[3] = {
        {15 * GAME_SCALE, 60 * GAME_SCALE}, // p1/p2 paddle
        {60 * GAME_SCALE, 15 * GAME_SCALE}, // p3/p4 paddle
@@ -38,11 +43,13 @@ namespace GekkoGame {
 
     struct Gamestate {
         struct NoState {
-            int32_t prev_e_px[MAX_ENTITIES * EPOS_HISTORY], prev_e_py[MAX_ENTITIES * EPOS_HISTORY];
+            int32_t prev_e_px[MAX_ENTITIES * EPOS_HISTORY];
+            int32_t prev_e_py[MAX_ENTITIES * EPOS_HISTORY];
         } nostate = {};
         struct State {
-            uint32_t frame = 0;
             Input inputs[MAX_PLAYERS];
+
+            uint32_t frame = 0;
 
             uint8_t hp[MAX_PLAYERS];
             int32_t e_px[MAX_ENTITIES], e_py[MAX_ENTITIES]; // entity (center) position
@@ -63,5 +70,6 @@ namespace GekkoGame {
     private:
         void ApplyInput(Input inputs[MAX_PLAYERS]);
         void HandleGame();
+        bool DoesCollide(const AABB& a, const AABB& b);
     };
 }
