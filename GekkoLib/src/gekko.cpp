@@ -152,7 +152,7 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
         SessionIntegrityCheck();
 
         // then advance the session
-        if (AddAdvanceEvent(_current_game_events)) {
+        if (AddAdvanceEvent(_current_game_events, false)) {
             if (!_config.limited_saving ||
                 (IsSpectating() || IsPlayingLocally()) &&
                 _sync.GetCurrentFrame() % _config.input_prediction_window == 0) {
@@ -231,7 +231,7 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev
 	_sync.IncrementFrame();
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
-		AddAdvanceEvent(ev);
+		AddAdvanceEvent(ev, true);
 		if (frame == frame_to_save) {
 			AddSaveEvent(ev);
 		}
@@ -419,7 +419,7 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 	_sync.IncrementFrame();
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
-		AddAdvanceEvent(ev);
+		AddAdvanceEvent(ev, true);
 		if (!_config.limited_saving || frame == frame_to_save) {
 			AddSaveEvent(ev);
 		}
@@ -430,7 +430,7 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 	assert(_sync.GetCurrentFrame() == current);
 }
 
-bool Gekko::Session::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev)
+bool Gekko::Session::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back)
 {
 	Frame frame = GameInput::NULL_FRAME;
 	std::unique_ptr<u8[]> inputs;
@@ -444,6 +444,7 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev)
 
 	event->type = AdvanceEvent;
     event->data.adv.frame = frame;
+    event->data.adv.rolling_back = rolling_back;
 
     if (event->data.adv.inputs) {
         std::memcpy(event->data.adv.inputs, inputs.get(), event->data.adv.input_len);
