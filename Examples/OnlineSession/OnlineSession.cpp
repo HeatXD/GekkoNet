@@ -30,7 +30,7 @@ int main() {
     uint64_t frame_start = 0, frame_time_ns = 0;
     // 
     Gamestate gs = {};
-    gs.Init(2);
+    gs.Init(4);
 
     bool running = true;
     while (running) {
@@ -44,10 +44,6 @@ int main() {
         }
 
         Input inputs[MAX_PLAYERS] = {};
-        inputs[0].up = true;
-        inputs[1].down = true;
-        inputs[2].right = true;
-        inputs[3].left = true;
 
         gs.Update(inputs);
         gs.Draw(renderer);
