@@ -72,7 +72,7 @@ namespace Gekko {
 
 		void HandleRollback(std::vector<GekkoGameEvent*>& ev);
 
-		bool AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev);
+		bool AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back);
 
 		void AddSaveEvent(std::vector<GekkoGameEvent*>& ev);
 

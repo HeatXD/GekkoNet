@@ -28,6 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef __cplusplus
 extern "C" {
+#else
+#include <stdbool.h>
 #endif
 
 #ifdef _WIN32
@@ -109,6 +111,7 @@ typedef struct GekkoGameEvent {
             int frame;
             unsigned int input_len;
             unsigned char* inputs;
+            bool rolling_back;
         } adv;
         struct Save {
             int frame;
