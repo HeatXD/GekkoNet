@@ -419,7 +419,7 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 	_sync.IncrementFrame();
 
 	for (Frame frame = sync_frame + 1; frame < current; frame++) {
-        assert(AddAdvanceEvent(ev, true));
+        AddAdvanceEvent(ev, true);
 		if (!_config.limited_saving || frame == frame_to_save) {
 			AddSaveEvent(ev);
 		}

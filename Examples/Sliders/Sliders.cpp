@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
     // gekkonet
     GekkoSession* session = nullptr;
 
-    assert(gekko_create(&session));
+    gekko_create(&session);
 
     GekkoConfig config {};
 
