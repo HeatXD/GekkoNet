@@ -540,11 +540,6 @@ bool Gekko::Session::AllActorsValid()
 		return true;
 	}
 
-	if (_config.post_sync_joining) {
-		// TODO ACTUALLY HANDLE POST SYNC JOINING
-		_msg.CheckStatusActors();
-	}
-
 	return true;
 }
 

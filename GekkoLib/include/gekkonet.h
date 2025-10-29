@@ -63,7 +63,6 @@ typedef struct GekkoConfig {
     unsigned int input_size;
     unsigned int state_size;
     bool limited_saving;
-    bool post_sync_joining;
     bool desync_detection;
 } GekkoConfig;
 
@@ -203,6 +202,6 @@ GEKKONET_API bool gekko_default_adapter_destroy();
 
 #endif // GEKKONET_NO_ASIO
 
-#ifdef __cplusplus
+#ifdef __cplusplus  
 }
 #endif

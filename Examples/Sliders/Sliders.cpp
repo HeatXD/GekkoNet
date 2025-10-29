@@ -271,8 +271,8 @@ int main(int argc, char* argv[]) {
         );
     }
 
-    assert(gekko_default_adapter_destroy());
-    assert(gekko_destroy(&session));
+    gekko_default_adapter_destroy();
+    gekko_destroy(&session);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
