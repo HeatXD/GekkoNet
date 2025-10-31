@@ -25,7 +25,7 @@ namespace GekkoGame {
         for (int i = MAX_PLAYERS; i <= MAX_PLAYERS + state.flags.balls; i++) {
             state.e_pos[i].x = FIELD_SIZE / 2 * GAME_SCALE;
             state.e_pos[i].y = FIELD_SIZE / 2 * GAME_SCALE;
-            state.e_vel[i].x = -900;
+            state.e_vel[i].x = -1800;
             state.e_vel[i].y = 0;
         }
     }
@@ -81,6 +81,16 @@ namespace GekkoGame {
         HandleGame();
     }
 
+    Input Gamestate::PollInput() {
+        Input inp = {};
+        const bool* keys = SDL_GetKeyboardState(NULL);
+        inp.left = keys[SDL_SCANCODE_LEFT];
+        inp.right = keys[SDL_SCANCODE_RIGHT];
+        inp.up = keys[SDL_SCANCODE_UP];
+        inp.down = keys[SDL_SCANCODE_DOWN];
+        return inp;
+    }
+
     void Gamestate::ApplyInput(Input inputs[MAX_PLAYERS]) {
         memcpy(state.inputs, inputs, sizeof(Input) * MAX_PLAYERS);
     }
@@ -90,12 +100,12 @@ namespace GekkoGame {
         // move paddles
         for (int i = 0; i <= state.flags.players; i++) {
             if (i <= 1) {
-                if (state.inputs[i].up) state.e_vel[i].y = -2000;
-                else if (state.inputs[i].down) state.e_vel[i].y = 2000;
+                if (state.inputs[i].up) state.e_vel[i].y = -4000;
+                else if (state.inputs[i].down) state.e_vel[i].y = 4000;
                 else state.e_vel[i].y = 0;
             } else {
-                if (state.inputs[i].left) state.e_vel[i].x = -2000;
-                else if (state.inputs[i].right) state.e_vel[i].x = 2000;
+                if (state.inputs[i].left) state.e_vel[i].x = -4000;
+                else if (state.inputs[i].right) state.e_vel[i].x = 4000;
                 else state.e_vel[i].x = 0;
             }
         }
@@ -160,10 +170,10 @@ namespace GekkoGame {
 
                     // half table (segments 0-3), mirror for 4-7
                     const int velocities[4][2] = {
-                        {600, 1000},   // steepest
-                        {700, 700},   // 45°
-                        {800, 400},
-                        {900, 0}       // straight
+                        {1200, 2000},   // steepest
+                        {1400, 1400},   // 45°
+                        {1600, 800},
+                        {1800, 0}       // straight
                     };
 
                     const int idx = segment < 4 ? segment : 7 - segment;
@@ -182,7 +192,7 @@ namespace GekkoGame {
                     *ball_pos = paddle_pos + side_sign * (paddle_half + ball_half + 2);
 
                     // put paddle and ball into hitstop
-                    const uint8_t speed = state.move_speed[i] / 3u;
+                    const uint8_t speed = state.move_speed[i];
                     const uint8_t duration = std::clamp(speed, (uint8_t)0, (uint8_t)14);
                     state.hitstop[i] = duration;
                     state.hitstop[j] = duration;
@@ -222,7 +232,7 @@ namespace GekkoGame {
                 state.move_speed[i] = 1;
                 pos.x = FIELD_SIZE / 2 * GAME_SCALE;
                 pos.y = FIELD_SIZE / 2 * GAME_SCALE;
-                vel.x = -900;
+                vel.x = -1800;
                 vel.y = 0;
             }
         }

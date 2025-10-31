@@ -74,6 +74,8 @@ namespace GekkoGame {
         void Draw(SDL_Renderer* renderer);
         void Update(Input inputs[MAX_PLAYERS]);
 
+        Input PollInput();
+
     private:
         void ApplyInput(Input inputs[MAX_PLAYERS]);
         void HandleGame();

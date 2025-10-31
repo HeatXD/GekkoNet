@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
 
     // window init
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Example", MAP_SIZE * 2, MAP_SIZE, 0);
+    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Sliders Example", MAP_SIZE * 2, MAP_SIZE, 0);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     // timing
     const uint64_t frame_delay_ns = (1000000000 / 60); // ns/frame
@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
     config.input_size = sizeof(Input);
     config.state_size = sizeof(State);
     config.max_spectators = 0;
-    config.input_prediction_window = 8;
+    config.input_prediction_window = 0;
     config.num_players = num_players;
 
     gekko_start(session, &config);
@@ -238,6 +238,7 @@ int main(int argc, char* argv[]) {
             GekkoGameEvent* event = updates[i];
             switch (event->type) {
             case SaveEvent:
+                printf("sav ev\n");
                 *event->data.save.state_len = sizeof(State);
                 *event->data.save.checksum = SDL_crc32(0, &game, sizeof(State));
                 memcpy(event->data.save.state, &game, sizeof(State));
