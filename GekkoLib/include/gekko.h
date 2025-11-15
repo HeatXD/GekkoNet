@@ -66,6 +66,8 @@ namespace Gekko {
 
 		bool IsPlayingLocally();
 
+        bool IsLockstepActive() const;
+
 		void AddDisconnectedPlayerInputs();
 
 		void SendSpectatorInputs();

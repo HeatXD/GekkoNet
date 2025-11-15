@@ -209,7 +209,8 @@ void Gekko::Session::NetworkPoll()
 
 void Gekko::Session::HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev)
 {
-	if (!_config.limited_saving || IsSpectating() || IsPlayingLocally()) {
+	if (IsLockstepActive() || !_config.limited_saving ||
+        IsSpectating() || IsPlayingLocally()) {
 		return;
 	}
 
@@ -398,7 +399,7 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 		_sync.IncrementFrame();
 	}
 
-	if (_config.input_prediction_window == 0 || IsSpectating() || IsPlayingLocally()) {
+	if (IsLockstepActive() || IsSpectating() || IsPlayingLocally()) {
         return;
     }
 
@@ -615,4 +616,9 @@ bool Gekko::Session::IsSpectating()
 bool Gekko::Session::IsPlayingLocally()
 {
 	return _msg.remotes.empty() && !_msg.locals.empty();
+}
+
+bool Gekko::Session::IsLockstepActive() const
+{
+    return _config.input_prediction_window == 0;
 }
