@@ -65,14 +65,6 @@ namespace GekkoGame {
             SDL_FRect rect = { px, py, w, h };
             SDL_RenderFillRect(renderer, &rect);
         }
-        // draw hud
-        // bg
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_FRect hud_rect = { 0, FIELD_SIZE, FIELD_SIZE, FIELD_SIZE * 1.15 - FIELD_SIZE };
-        SDL_RenderFillRect(renderer, &hud_rect);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderRect(renderer, &hud_rect);
-        //
         SDL_RenderPresent(renderer);
     }
 
