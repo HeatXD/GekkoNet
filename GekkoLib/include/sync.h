@@ -23,7 +23,7 @@ namespace Gekko {
 
 		bool GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame frame);
 
-		bool GetLocalInputs(std::vector<Handle>& handles, std::unique_ptr<u8[]>& inputs, Frame frame);
+		bool GetLocalInput(Handle player, std::unique_ptr<u8[]>& input, Frame frame);
 
 		void SetLocalDelay(Handle player, u8 delay);
 		
@@ -40,6 +40,8 @@ namespace Gekko {
 		Frame GetMinReceivedFrame();
 
         Frame GetLastReceivedFrom(Handle player);
+
+        void ClearIncorrectFramesUpTo(Frame clear_limit);
 
 	private:
 		u8 _num_players;

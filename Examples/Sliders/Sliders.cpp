@@ -1,17 +1,76 @@
 #include <SDL3/SDL.h>
-#include <stdio.h>
-
-#include "../GekkoGame/include/game.h"
 
 #define GEKKONET_STATIC
 
 #include <gekkonet.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <cassert>
 #include <vector>
 #include <sstream>
+
+#define MAX_PLAYERS 4
+#define MAP_SIZE 400
+#define GAME_SCALE 1000
+
+constexpr uint8_t PLAYER_COLORS[4 * MAX_PLAYERS] = {
+    255, 0, 0, 255,
+    0, 255, 0, 255,
+    71, 167, 199, 255,
+    255, 0, 255, 255,
+};
+
+struct Input {
+    uint8_t left : 1;
+    uint8_t right : 1;
+    uint16_t padd = 0;
+};
+
+struct State {
+    int entt_px[MAX_PLAYERS];
+
+    void draw(SDL_Renderer* renderer) const {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        float compY = MAP_SIZE / MAX_PLAYERS;
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            const uint8_t* col = &PLAYER_COLORS[i * 4];
+            SDL_SetRenderDrawColor(renderer, col[0], col[1], col[2], col[3]);
+            float px = (float)entt_px[i] / GAME_SCALE;
+            float py = compY * i;
+            float w = compY;
+            float h = compY;
+            SDL_FRect rect = { px, py, w, h };
+            SDL_RenderFillRect(renderer, &rect);
+        }
+        SDL_RenderPresent(renderer);
+    }
+
+    void tick(Input inputs[MAX_PLAYERS]) {
+        // move sliders
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            if (inputs[i].left) entt_px[i] -= 6000;
+            else if (inputs[i].right) entt_px[i] += 6000;
+        }
+
+        // clamp to screen
+        const int max = GAME_SCALE * (MAP_SIZE * 2 - MAP_SIZE / MAX_PLAYERS);
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            if (entt_px[i] > max) entt_px[i] = max;
+            else if (entt_px[i] < 0) entt_px[i] = 0;
+        }
+    }
+
+    Input poll_input() const {
+        Input inp = {};
+        const bool* keys = SDL_GetKeyboardState(NULL);
+        inp.left = keys[SDL_SCANCODE_LEFT];
+        inp.right = keys[SDL_SCANCODE_RIGHT];
+        return inp;
+    }
+};
 
 static void handle_frame_time(
     const uint64_t& frame_start,
@@ -22,14 +81,13 @@ static void handle_frame_time(
     uint64_t frame_end = SDL_GetPerformanceCounter();
     frame_time_ns = ((frame_end - frame_start) * 1000000000) / perf_freq;
     if (frame_delay_ns > frame_time_ns) {
-        uint64_t delay_ns = frames_ahead > .5f ? frame_delay_ns * 1.016 : frame_delay_ns - frame_time_ns;
+        uint64_t delay_ns = frames_ahead > .5f ? frame_delay_ns * 1.016 : frame_delay_ns -  frame_time_ns;
         SDL_DelayNS(delay_ns);
     }
 }
 
 int main(int argc, char* argv[]) {
-    using namespace GekkoGame;
-
+    // get network info
     if (argc < 4) {
         printf("Usage: %s <local_player1,local_player2,...> <port1> <port2> <port3> <port4>\n", argv[0]);
         return 1;
@@ -83,26 +141,24 @@ int main(int argc, char* argv[]) {
 
     // window init
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Pong Example", FIELD_SIZE, FIELD_SIZE, 0);
+    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Sliders Example", MAP_SIZE * 2, MAP_SIZE, 0);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     // timing
-    const uint64_t frame_delay_ns = (1000000000 / TARGET_FPS); // ns/frame
+    const uint64_t frame_delay_ns = (1000000000 / 60); // ns/frame
     const uint64_t performance_frequency = SDL_GetPerformanceFrequency();
     uint64_t frame_start = 0, frame_time_ns = 0;
-
-    // gekkonet setup
+    // gekkonet
     GekkoSession* session = nullptr;
 
     gekko_create(&session);
 
-    GekkoConfig config{};
+    GekkoConfig config {};
 
     config.desync_detection = true;
     config.input_size = sizeof(Input);
-    config.state_size = sizeof(Gamestate::State);
+    config.state_size = sizeof(State);
     config.max_spectators = 0;
-    config.input_prediction_window = 10;
+    config.input_prediction_window = 0;
     config.num_players = num_players;
 
     gekko_start(session, &config);
@@ -120,8 +176,7 @@ int main(int argc, char* argv[]) {
         if (is_local) {
             gekko_add_actor(session, LocalPlayer, nullptr);
             gekko_set_local_delay(session, i, 1);
-        }
-        else {
+        } else {
             GekkoNetAddress addr = {};
             std::string address_str = "127.0.0.1:" + std::to_string(ports[i]);
             addr.data = (void*)address_str.c_str();
@@ -130,9 +185,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // setup game
-    Gamestate gs = {};
-    gs.Init(num_players);
+    // game
+    State game = {};
+    Input inputs[MAX_PLAYERS] = {};
 
     bool running = true;
     while (running) {
@@ -146,7 +201,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        auto local_input = gs.PollInput();
+        auto local_input = game.poll_input();
         for (int i = 0; i < num_local_players; i++) {
             gekko_add_local_input(session, local_players[i], &local_input);
         }
@@ -165,7 +220,7 @@ int main(int argc, char* argv[]) {
                 assert(false);
                 break;
 
-            case PlayerConnected:
+            case PlayerConnected: 
                 auto connect = event->data.connected;
                 printf("Player %i connected\n", connect.handle);
                 break;
@@ -173,11 +228,6 @@ int main(int argc, char* argv[]) {
             case PlayerDisconnected:
                 auto disconnect = event->data.disconnected;
                 printf("Player %i disconnected\n", disconnect.handle);
-                break;
-
-            case PlayerSyncing:
-                auto sync = event->data.syncing;
-                printf("Player %i is connecting %d/%d\n", sync.handle, sync.current, sync.max);
                 break;
             }
         }
@@ -188,29 +238,30 @@ int main(int argc, char* argv[]) {
             GekkoGameEvent* event = updates[i];
             switch (event->type) {
             case SaveEvent:
-                *event->data.save.state_len = sizeof(Gamestate::State);
-                *event->data.save.checksum = SDL_crc32(0, &gs.state, sizeof(Gamestate::State));
-                memcpy(event->data.save.state, &gs.state, sizeof(Gamestate::State));
+                printf("sav ev\n");
+                *event->data.save.state_len = sizeof(State);
+                *event->data.save.checksum = SDL_crc32(0, &game, sizeof(State));
+                memcpy(event->data.save.state, &game, sizeof(State));
                 break;
 
             case LoadEvent:
-                memcpy(&gs.state, event->data.load.state, sizeof(Gamestate::State));
+                memcpy(&game, event->data.load.state, sizeof(State));
+                printf("rb start\n");
                 break;
 
             case AdvanceEvent:
-                Input inputs[MAX_PLAYERS] = {};
                 printf("f%d,", event->data.adv.frame);
                 for (int j = 0; j < num_players; j++) {
                     inputs[j] = ((Input*)(event->data.adv.inputs))[j];
                     printf(" p%d %d%d", j, inputs[j].left, inputs[j].right);
                 }
                 printf("\n");
-                gs.Update(inputs);
+                game.tick(inputs);
                 break;
             }
         }
 
-        gs.Draw(renderer);
+        game.draw(renderer);
 
         handle_frame_time(
             frame_start,
@@ -230,3 +281,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+

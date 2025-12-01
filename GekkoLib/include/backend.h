@@ -85,17 +85,15 @@ namespace Gekko {
 	public:
 		MessageSystem();
 
-		void Init(u32 input_size);
+        void Init(u8 num_players, u32 input_size);
 
-		void AddInput(Frame input_frame, u8 input[]);
+		void AddInput(Frame input_frame, Handle player, u8 input[], bool remote = false);
 
 		void AddSpectatorInput(Frame input_frame, u8 input[]);
 
 		void SendPendingOutput(GekkoNetAdapter* host);
 
 		void HandleData(GekkoNetAdapter* host, GekkoNetResult** data, u32 length);
-
-        std::queue<std::unique_ptr<NetInputData>>& LastReceivedInputs();
 
 		void SendInputAck(Handle player, Frame frame);
 
@@ -106,6 +104,10 @@ namespace Gekko {
         void SendSessionHealth(Frame frame, u32 checksum);
 
         void SendNetworkHealth();
+
+        Frame GetLastAddedInputFrom(Handle player);
+
+        std::deque<std::unique_ptr<u8[]>>& GetNetPlayerQueue(Handle player);
 
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
@@ -120,6 +122,19 @@ namespace Gekko {
 
         std::map<Frame, u32> local_health;
 
+        struct NetInputQueue {
+            Frame last_added_input = -1;
+            std::deque<std::unique_ptr<u8[]>> inputs;
+
+            NetInputQueue(const NetInputQueue&) = delete;
+            NetInputQueue& operator=(const NetInputQueue&) = delete;
+
+            NetInputQueue(NetInputQueue&&) = default;
+            NetInputQueue& operator=(NetInputQueue&&) = default;
+
+            NetInputQueue() = default;
+        };
+
 	private:
 		void SendSyncRequest(NetAddress* addr);
 
@@ -127,7 +142,7 @@ namespace Gekko {
 
 		void AddPendingInput(bool spectator = false);
 
-		std::vector<Handle> GetHandlesForAddress(NetAddress* addr);
+		std::vector<Handle> GetRemoteHandlesForAddress(NetAddress* addr);
 
 		Player* GetPlayerByHandle(Handle handle);
 
@@ -156,39 +171,24 @@ namespace Gekko {
         void OnNetworkHealth(NetAddress& addr, NetPacket& pkt);
 
 	private:
-		const u32 MAX_PLAYER_SEND_SIZE = 64;
-		const u32 MAX_SPECTATOR_SEND_SIZE = 64;
+		const u32 MAX_INPUT_QUEUE_SIZE = 128;
 	    const u32 NUM_TO_SYNC = 4;
 
 		u32 _input_size;
 
 		u16 _session_magic;
 
-		Frame _last_added_input;
+        u8  _num_players;
 
-		Frame _last_added_spectator_input;
+        // input queue for each player for either sending or receiving
+        std::vector<NetInputQueue> _net_player_queue;
 
-		std::list<u8*> _player_input_send_list;
-
-		std::list<u8*> _spectator_input_send_list;
+        // input queue for spectator inputs
+        NetInputQueue _net_spectator_queue;
 
 		std::queue<std::unique_ptr<NetData>> _pending_output;
 
-		std::queue<std::unique_ptr<NetInputData>> _received_inputs;
-
         std::vector<u8> _bin_buffer;
-
-        struct InputSendCache {
-            static const u64 INPUT_RESEND_DELAY = std::chrono::milliseconds(200).count();
-
-            u64 last_send_time = 0;
-            Frame frame = -1;
-            InputMsg data;
-        };
-
-        InputSendCache _last_sent_input;
-
-        InputSendCache _last_sent_spectator_input;
 
         u64 _last_sent_network_check;
 	};

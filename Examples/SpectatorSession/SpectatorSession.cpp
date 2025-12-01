@@ -30,56 +30,33 @@ static void handle_frame_time(
 int main(int argc, char* argv[]) {
     using namespace GekkoGame;
 
-    if (argc < 4) {
-        printf("Usage: %s <local_player1,local_player2,...> <port1> <port2> <port3> <port4>\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage:\n");
+        printf("  Host:     %s -h <local_port> <remote_port>\n", argv[0]);
+        printf("  Spectate: %s -s <local_port> <remote_port>\n", argv[0]);
         return 1;
     }
 
-    // parse local player numbers
-    int num_players = argc - 2;
-    printf("num_players: %d\n", num_players);
+    std::string mode = argv[1];
+    bool is_spectator = (mode == "-s");
 
-    std::string local_players_str = argv[1];
-    std::vector<int> local_players;
-    std::istringstream ss(local_players_str);
-    std::string token;
-
-    while (std::getline(ss, token, ',')) {
-        try {
-            int player_num = std::stoi(token);
-            if (player_num < 0 || player_num >= MAX_PLAYERS || player_num > num_players - 1) {
-                printf("Invalid local player index: %d. Must be 0-%d\n", player_num, num_players - 1);
-                return 1;
-            }
-            local_players.push_back(player_num);
-        }
-        catch (const std::exception&) {
-            printf("Invalid number format: %s\n", token.c_str());
-            return 1;
-        }
+    if (mode != "-h" && mode != "-s") {
+        printf("Invalid mode. Use '-h' for host or '-s' for spectate\n");
+        return 1;
     }
 
-    int num_local_players = local_players.size();
+    int local_port = atoi(argv[2]);
+    int remote_port = atoi(argv[3]);
 
-    printf("Local players: ");
-    for (int player : local_players) {
-        printf("%d ", player);
-    }
-    printf("\n");
-
-    // parse ports
-    int ports[MAX_PLAYERS] = {};
-    for (int i = 0; i < argc - 2; i++) {
-        ports[i] = atoi(argv[i + 2]);
-        if (ports[i] <= 0 || ports[i] > 65535) {
-            printf("Invalid port: %d\n", ports[i]);
-            return 1;
-        }
+    if (local_port <= 0 || local_port > 65535 || remote_port <= 0 || remote_port > 65535) {
+        printf("Invalid port numbers. Must be between 1-65535\n");
+        return 1;
     }
 
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        printf("Player %d port: %d\n", i, ports[i]);
-    }
+    const int NUM_PLAYERS = 2;
+
+    printf("%s mode - Local port: %d, Remote port: %d\n",
+        is_spectator ? "Spectator" : "Host", local_port, remote_port);
 
     // window init
     SDL_Init(SDL_INIT_VIDEO);
@@ -101,38 +78,34 @@ int main(int argc, char* argv[]) {
     config.desync_detection = true;
     config.input_size = sizeof(Input);
     config.state_size = sizeof(Gamestate::State);
-    config.max_spectators = 0;
+    config.max_spectators = 1;
     config.input_prediction_window = 10;
-    config.num_players = num_players;
+    config.num_players = NUM_PLAYERS;
 
     gekko_start(session, &config);
-    gekko_net_adapter_set(session, gekko_default_adapter(ports[local_players[0]]));
+    gekko_net_adapter_set(session, gekko_default_adapter(local_port));
 
-    for (int i = 0; i < num_players; i++) {
-        bool is_local = false;
-        for (int j = 0; j < num_local_players; j++) {
-            if (local_players[j] == i) {
-                is_local = true;
-                break;
-            }
-        }
+    GekkoNetAddress rem_addr = {};
+    std::string address_str = "127.0.0.1:" + std::to_string(remote_port);
+    rem_addr.data = (void*)address_str.c_str();
+    rem_addr.size = address_str.size();
 
-        if (is_local) {
+    if (!is_spectator) {
+        // add local players
+        for (int i = 0; i < NUM_PLAYERS; i++) {
             gekko_add_actor(session, LocalPlayer, nullptr);
             gekko_set_local_delay(session, i, 1);
         }
-        else {
-            GekkoNetAddress addr = {};
-            std::string address_str = "127.0.0.1:" + std::to_string(ports[i]);
-            addr.data = (void*)address_str.c_str();
-            addr.size = address_str.size();
-            gekko_add_actor(session, RemotePlayer, &addr);
-        }
+        // add spectator
+        gekko_add_actor(session, Spectator, &rem_addr);
+    } else {
+        // add spectator host
+        gekko_add_actor(session, RemotePlayer, &rem_addr);
     }
 
     // setup game
     Gamestate gs = {};
-    gs.Init(num_players);
+    gs.Init(NUM_PLAYERS);
 
     bool running = true;
     while (running) {
@@ -147,8 +120,8 @@ int main(int argc, char* argv[]) {
         }
 
         auto local_input = gs.PollInput();
-        for (int i = 0; i < num_local_players; i++) {
-            gekko_add_local_input(session, local_players[i], &local_input);
+        for (int i = 0; i < NUM_PLAYERS; i++) {
+            gekko_add_local_input(session, i, &local_input);
         }
 
         int count = 0;
@@ -200,7 +173,7 @@ int main(int argc, char* argv[]) {
             case AdvanceEvent:
                 Input inputs[MAX_PLAYERS] = {};
                 printf("f%d,", event->data.adv.frame);
-                for (int j = 0; j < num_players; j++) {
+                for (int j = 0; j < NUM_PLAYERS; j++) {
                     inputs[j] = ((Input*)(event->data.adv.inputs))[j];
                     printf(" p%d %d%d", j, inputs[j].left, inputs[j].right);
                 }

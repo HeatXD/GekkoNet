@@ -1,3 +1,5 @@
+<img src="docs/images/gekko_logo-cropped.svg" width="100%">
+
 # GekkoNet
 ### C/C++ Peer To Peer Game Networking SDK
 Traditional online networking techniques account for transmission delays by adding input lag, often resulting in a slow feeling, unresponsive feel. GekkoNet leverages rollback networking with input prediction and speculative execution, allowing player inputs to be processed immediately, creating a seamless, low-latency experience. This means that players enjoy consistent timing, reaction speeds, and muscle memory both online and offline, without the impact of added network lag. Inspired by [GGPO](https://github.com/pond3r/ggpo) and [GGRS](https://github.com/gschup/ggrs)
@@ -18,16 +20,15 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Remote Player Input Prediction Settings
 - Spectator Sessions
 	- Spectator Delay Settings.
-	- The added ability to spectate spectators. This might be handy if you have a seperate spectating service which propegates the inputs to more spectators.
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
 - Abstracted socket manager.
 - Event System for notifications for eg. specific players being done with syncing.
 - Desync Detection (Only when limited saving is disabled for now)
 - Automated builds
-- Network Statistics
 
 ### Work in progress
+- Network Statistics
 - Joining a session that's already in progress as a spectator (and maybe as a player later)
 
 ### Maybe Later
@@ -109,8 +110,12 @@ Documentation will be available in the `build/docs` directory as HTML files.
 ---
 
 ## Projects using GekkoNet
-- GekkoNet SteamPort by @lolriley
-	- https://github.com/lolriley/GekkoNet/tree/steamport
+- 3sx - Street Fighter 3rd Strike PC port
+    - https://github.com/crowded-street/3sx
+- Klawiatura - Mario Forever with rollback netcode.
+    - https://github.com/toggins/Klawiatura
+- bsnes netplay
+    - https://github.com/HeatXD/bsnes-netplay 
 
 
 If you have a project using GekkoNet please let me know!
@@ -118,3 +123,5 @@ If you have a project using GekkoNet please let me know!
 ## License
 GekkoNet is licensed under the BSD-2-Clause license
 [Read about it here](https://opensource.org/license/bsd-2-clause).
+
+The GekkoNet logo is made by the amazing [NoisyChain](https://github.com/NoisyChain)

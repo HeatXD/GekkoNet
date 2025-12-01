@@ -46,9 +46,11 @@ namespace Gekko {
 
 		Frame GetIncorrectPredictionFrame();
 
-		std::unique_ptr<GameInput> GetInput(Frame frame, bool prediction = true);
+		std::unique_ptr<GameInput> GetInput(Frame frame, bool prediction = false);
 
 		Frame GetLastReceivedFrame();
+
+        void ClearIncorrectFrames(Frame clear_limit);
 
 	private:
 		void ResetPrediction();
@@ -74,7 +76,7 @@ namespace Gekko {
 
 		Frame _first_predicted_input;
 
-		Frame _incorrent_predicted_input;
+		std::deque<Frame> _incorrent_predicted_inputs;
 
 		std::deque<std::unique_ptr<GameInput>> _inputs;
 	};

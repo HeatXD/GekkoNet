@@ -54,7 +54,7 @@ namespace Gekko {
 	private:
 		void Poll();
 
-		bool AllPlayersValid();
+		bool AllActorsValid();
 
 		void HandleReceivedInputs();
 
@@ -65,6 +65,8 @@ namespace Gekko {
 		bool IsSpectating();
 
 		bool IsPlayingLocally();
+
+        bool IsLockstepActive() const;
 
 		void AddDisconnectedPlayerInputs();
 

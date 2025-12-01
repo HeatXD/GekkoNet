@@ -11,10 +11,11 @@ bool gekko_create(GekkoSession** session)
     return true;
 }
 
-bool gekko_destroy(GekkoSession* session)
+bool gekko_destroy(GekkoSession** session)
 {
-    if (session) {
-        delete session;
+    if (session && *session) {
+        delete *session;
+        *session = nullptr;
         return true;
     }
 
@@ -180,6 +181,16 @@ GekkoNetAdapter* gekko_default_adapter(unsigned short port) {
     _socket->non_blocking(true);
 
     return &default_sock;
+}
+
+bool gekko_default_adapter_destroy()
+{
+    if (_socket) {
+        delete _socket;
+        _socket = nullptr;
+        return true;
+    }
+    return false;
 }
 
 #endif // GEKKONET_NO_ASIO
