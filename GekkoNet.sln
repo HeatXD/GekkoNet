@@ -20,6 +20,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GekkoGame", "Examples\Gekko
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sliders", "Examples\Sliders\Sliders.vcxproj", "{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpectatorSession", "Examples\SpectatorSession\SpectatorSession.vcxproj", "{3DF5D51B-4050-4879-98AD-3F63946349AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -60,6 +62,14 @@ Global
 		{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9}.Release|x64.Build.0 = Release|x64
 		{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9}.RelWithDebInfo|x64.ActiveCfg = Debug|x64
 		{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9}.RelWithDebInfo|x64.Build.0 = Debug|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.Debug|x64.ActiveCfg = Debug|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.Debug|x64.Build.0 = Debug|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.MinSizeRel|x64.ActiveCfg = Release|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.MinSizeRel|x64.Build.0 = Release|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.Release|x64.ActiveCfg = Release|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.Release|x64.Build.0 = Release|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.RelWithDebInfo|x64.ActiveCfg = Debug|x64
+		{3DF5D51B-4050-4879-98AD-3F63946349AB}.RelWithDebInfo|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,6 +78,7 @@ Global
 		{052B8114-3124-4AFF-9040-1FB324C15937} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 		{9AFB4E7E-5586-4016-B251-323199DDE62B} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 		{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
+		{3DF5D51B-4050-4879-98AD-3F63946349AB} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {53703212-0E21-473D-8C3D-CFCABD5DE432}
