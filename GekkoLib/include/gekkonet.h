@@ -105,7 +105,7 @@ typedef struct GekkoGameEvent {
     GekkoGameEventType type;
 
     union EventData {
-        // events 
+        // events
         struct Advance {
             int frame;
             unsigned int input_len;
@@ -179,6 +179,8 @@ GEKKONET_API void gekko_start(GekkoSession* session, GekkoConfig* config);
 GEKKONET_API void gekko_net_adapter_set(GekkoSession* session, GekkoNetAdapter* adapter);
 
 GEKKONET_API int gekko_add_actor(GekkoSession* session, GekkoPlayerType player_type, GekkoNetAddress* addr);
+
+GEKKONET_API void gekko_remove_actor(GekkoSession* session, GekkoNetAddress addr);
 
 GEKKONET_API void gekko_set_local_delay(GekkoSession* session, int player, unsigned char delay);
 
