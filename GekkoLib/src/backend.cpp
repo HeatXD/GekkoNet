@@ -51,6 +51,7 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
         input_q.last_added_input++;
         input_q.inputs.push_back(std::make_unique<u8[]>(_input_size));
         std::memcpy(input_q.inputs.back().get(), input, _input_size);
+        player_input_cache.outdated = true;
 
 		// update history // TODO REDO WITH BACKEND REWORK..
         if (!remote) {
@@ -73,6 +74,7 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
         const size_t num_players = locals.size() + remotes.size();
         input_q.inputs.push_back(std::make_unique<u8[]>(_input_size * num_players));
         std::memcpy(input_q.inputs.back().get(), input, _input_size * num_players);
+        spectator_input_cache.outdated = true;
 	}
 
     // move the input queues along
@@ -725,17 +727,35 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
 {
     const u32 MAX_INPUT_SIZE = 512;
 
+    const auto packet_type = spectator ? SpectatorInputs : Inputs;
+    auto& input_cache = spectator ? spectator_input_cache : player_input_cache;
+    auto& queue = spectator ? _net_spectator_queue : _net_player_queue[locals[0]->handle];
+
     const u32 num_players = spectator ? _num_players : (u32)locals.size();
     const u32 inputs_per_packet = MAX_INPUT_SIZE / (_input_size * num_players);
-
-    auto& queue = spectator ? _net_spectator_queue : _net_player_queue[locals[0]->handle];
     const u32 q_size = (u32)queue.inputs.size();
 
     if (q_size == 0) return;
 
+    // check if cache is valid and can be reused
+    if (!input_cache.outdated && !input_cache.input.empty()) {
+        // reuse cached packets, just copy from cache
+        for (const auto& cached_msg : input_cache.input) {
+            _pending_output.push(std::make_unique<NetData>());
+            auto& packet = _pending_output.back();
+            packet->pkt.header.type = packet_type;
+            auto message = std::make_unique<InputMsg>();
+            message->Copy(&cached_msg);
+            packet->pkt.body = std::move(message);
+        }
+        return; 
+    }
+
+    // cache is outdated, rebuild packets
+    input_cache.input.clear();
+
     const u32 packet_count = (q_size + inputs_per_packet - 1) / inputs_per_packet;
     const Frame start_frame = queue.last_added_input - q_size + 1;
-    const auto packet_type = spectator ? SpectatorInputs : Inputs;
 
     for (u32 pc = 0; pc < packet_count; pc++) {
         const u32 input_start_idx = pc * inputs_per_packet;
@@ -745,29 +765,41 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
         _pending_output.push(std::make_unique<NetData>());
         auto& packet = _pending_output.back();
         packet->pkt.header.type = packet_type;
-
         auto message = std::make_unique<InputMsg>();
         message->start_frame = start_frame + input_start_idx;
 
         if (spectator) {
             for (u32 i = input_start_idx; i < input_end_idx; i++) {
                 const auto& p_input = queue.inputs.at(i);
-                message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size * num_players);
+                message->inputs.insert(message->inputs.end(),
+                    p_input.get(),
+                    p_input.get() + _input_size * num_players);
             }
-        } else {
+        }
+        else {
             for (u32 player = 0; player < num_players; player++) {
                 const auto& player_queue = _net_player_queue[locals[player]->handle];
                 for (u32 i = input_start_idx; i < input_end_idx; i++) {
                     const auto& p_input = player_queue.inputs.at(i);
-                    message->inputs.insert(message->inputs.end(), p_input.get(), p_input.get() + _input_size);
+                    message->inputs.insert(message->inputs.end(),
+                        p_input.get(),
+                        p_input.get() + _input_size);
                 }
             }
         }
 
         message->total_size = (u16)message->inputs.size();
         message->input_count = input_count;
+
+        // cache this message before moving it
+        InputMsg cached_msg;
+        cached_msg.Copy(message.get());
+        input_cache.input.push_back(std::move(cached_msg));
+
         packet->pkt.body = std::move(message);
     }
+    // mark cache as valid
+    input_cache.outdated = false;
 }
 
 void Gekko::AdvantageHistory::Init()

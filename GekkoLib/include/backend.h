@@ -191,5 +191,13 @@ namespace Gekko {
         std::vector<u8> _bin_buffer;
 
         u64 _last_sent_network_check;
+
+        struct InputCache {
+            bool outdated = true;
+            std::vector<InputMsg> input;
+        };
+
+        InputCache player_input_cache;
+        InputCache spectator_input_cache;
 	};
 }
