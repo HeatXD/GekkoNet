@@ -34,7 +34,6 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 ### Maybe Later
 - Replays
 - Game engine plugins
-- Commission an artist to create a logo for GekkoNet
 
 ## Getting Started
 ### Docs
