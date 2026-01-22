@@ -1,28 +1,30 @@
 #pragma once
 
-#include "session.h";
+#include "session.h"
 
 namespace Gekko {
     class StressSession : public GekkoSession {
     public:
-        virtual void Init(GekkoConfig* config);
+        void Init(GekkoConfig* config) override;
 
-        virtual void SetLocalDelay(i32 player, u8 delay);
+        void SetLocalDelay(i32 player, u8 delay) override;
 
-        virtual void SetNetAdapter(GekkoNetAdapter* adapter);
+        void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
-        virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr);
+        i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
 
-        virtual void AddLocalInput(i32 player, void* input);
+        void AddLocalInput(i32 player, void* input) override;
 
-        virtual GekkoGameEvent** UpdateSession(i32* count);
+        GekkoGameEvent** UpdateSession(i32* count) override;
 
-        virtual GekkoSessionEvent** Events(i32* count);
+        GekkoSessionEvent** Events(i32* count) override;
 
-        virtual f32 FramesAhead();
+        f32 FramesAhead() override;
 
-        virtual void NetworkStats(i32 player, GekkoNetworkStats* stats);
+        void NetworkStats(i32 player, GekkoNetworkStats* stats) override;
 
-        virtual void NetworkPoll();
+        void NetworkPoll() override;
+
+    private:
     };
 }

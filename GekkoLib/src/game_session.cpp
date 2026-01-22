@@ -1,5 +1,4 @@
 #include "game_session.h"
-#include "backend.h"
 
 #include <cassert>
 

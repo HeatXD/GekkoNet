@@ -1,7 +1,7 @@
 #pragma once
 
-#include <gekkonet.h>
-#include <gekko_types.h>
+#include "gekkonet.h"
+#include "gekko_types.h"
 
 // define GekkoSession internally
 struct GekkoSession {

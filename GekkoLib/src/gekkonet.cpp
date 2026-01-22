@@ -1,17 +1,29 @@
 #include "gekkonet.h"
-#include "gekko.h"
 
-bool gekko_create(GekkoSession** session)
+#include "game_session.h"
+#include "stress_session.h"
+
+bool gekko_create_game_session(GekkoSession** session)
 {
     if (*session) {
         return false;
     }
 
-    *session = new Gekko::Session();
+    *session = new Gekko::GameSession();
     return true;
 }
 
-bool gekko_destroy(GekkoSession** session)
+bool gekko_create_stress_session(GekkoSession** session)
+{
+    if (*session) {
+        return false;
+    }
+
+    *session = new Gekko::StressSession();
+    return true;
+}
+
+bool gekko_destroy_session(GekkoSession** session)
 {
     if (session && *session) {
         delete *session;
@@ -22,7 +34,7 @@ bool gekko_destroy(GekkoSession** session)
     return false;
 }
 
-void gekko_start(GekkoSession* session, GekkoConfig* config)
+void gekko_start_session(GekkoSession* session, GekkoConfig* config)
 {
     session->Init(config);
 }

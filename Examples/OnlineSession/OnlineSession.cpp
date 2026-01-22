@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session);
+    gekko_create_game_session(&session);
 
     GekkoConfig config{};
 
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
     config.input_prediction_window = 10;
     config.num_players = num_players;
 
-    gekko_start(session, &config);
+    gekko_start_session(session, &config);
     gekko_net_adapter_set(session, gekko_default_adapter(ports[local_players[0]]));
 
     for (int i = 0; i < num_players; i++) {
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
     }
 
     gekko_default_adapter_destroy();
-    gekko_destroy(&session);
+    gekko_destroy_session(&session);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
