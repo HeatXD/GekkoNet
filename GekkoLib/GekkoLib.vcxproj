@@ -22,23 +22,26 @@
     <ClInclude Include="include\backend.h" />
     <ClInclude Include="include\compression.h" />
     <ClInclude Include="include\event.h" />
-    <ClInclude Include="include\gekko.h" />
+    <ClInclude Include="include\game_session.h" />
     <ClInclude Include="include\gekkonet.h" />
     <ClInclude Include="include\gekko_types.h" />
     <ClInclude Include="include\input.h" />
     <ClInclude Include="include\net.h" />
+    <ClInclude Include="include\session.h" />
     <ClInclude Include="include\storage.h" />
+    <ClInclude Include="include\stress_session.h" />
     <ClInclude Include="include\sync.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\backend.cpp" />
     <ClCompile Include="src\event.cpp" />
-    <ClCompile Include="src\gekko.cpp" />
+    <ClCompile Include="src\game_session.cpp" />
     <ClCompile Include="src\gekkonet.cpp" />
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\net.cpp" />
     <ClCompile Include="src\player.cpp" />
     <ClCompile Include="src\storage.cpp" />
+    <ClCompile Include="src\stress_session.cpp" />
     <ClCompile Include="src\sync.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

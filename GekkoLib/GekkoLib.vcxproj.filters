@@ -21,7 +21,7 @@
     <ClInclude Include="include\event.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\gekko.h">
+    <ClInclude Include="include\game_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\gekko_types.h">
@@ -45,6 +45,12 @@
     <ClInclude Include="include\gekkonet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\session.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stress_session.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\backend.cpp">
@@ -53,7 +59,7 @@
     <ClCompile Include="src\event.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\gekko.cpp">
+    <ClCompile Include="src\game_session.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\input.cpp">
@@ -72,6 +78,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\gekkonet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stress_session.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,11 +1,9 @@
-#include "gekko.h"
+#include "game_session.h"
 #include "backend.h"
 
 #include <cassert>
 
-GekkoSession::~GekkoSession() = default;
-
-Gekko::Session::Session()
+Gekko::GameSession::GameSession()
 {
 	_host = nullptr;
 	_started = false;
@@ -16,7 +14,7 @@ Gekko::Session::Session()
     _config = GekkoConfig();
 }
 
-void Gekko::Session::Init(GekkoConfig* config)
+void Gekko::GameSession::Init(GekkoConfig* config)
 {
     _host = nullptr;
 
@@ -45,7 +43,7 @@ void Gekko::Session::Init(GekkoConfig* config)
     _config.desync_detection = _config.limited_saving ? false : _config.desync_detection;
 }
 
-void Gekko::Session::SetLocalDelay(i32 player, u8 delay)
+void Gekko::GameSession::SetLocalDelay(i32 player, u8 delay)
 {
     for (u32 i = 0; i < _msg.locals.size(); i++) {
         if (_msg.locals[i]->handle == player) {
@@ -54,12 +52,12 @@ void Gekko::Session::SetLocalDelay(i32 player, u8 delay)
     }
 }
 
-void Gekko::Session::SetNetAdapter(GekkoNetAdapter* adapter)
+void Gekko::GameSession::SetNetAdapter(GekkoNetAdapter* adapter)
 {
     _host = adapter;
 }
 
-i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
+i32 Gekko::GameSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 {
     const i32 ERR = -1;
     std::unique_ptr<NetAddress> address;
@@ -102,7 +100,7 @@ i32 Gekko::Session::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
     }
 }
 
-void Gekko::Session::AddLocalInput(i32 player, void* input)
+void Gekko::GameSession::AddLocalInput(i32 player, void* input)
 {
     u8* inp = (u8*)input;
 
@@ -114,7 +112,7 @@ void Gekko::Session::AddLocalInput(i32 player, void* input)
     }
 }
 
-GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
+GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
 {
     // reset session events
     _msg.session_events.Reset();
@@ -166,13 +164,13 @@ GekkoGameEvent** Gekko::Session::UpdateSession(i32* count)
     return _current_game_events.data();
 }
 
-GekkoSessionEvent** Gekko::Session::Events(i32* count)
+GekkoSessionEvent** Gekko::GameSession::Events(i32* count)
 {
     *count = (i32)_msg.session_events.GetRecentEvents().size();
     return _msg.session_events.GetRecentEvents().data();
 }
 
-f32 Gekko::Session::FramesAhead()
+f32 Gekko::GameSession::FramesAhead()
 {
     if (!_started) {
         return 0.f;
@@ -181,7 +179,7 @@ f32 Gekko::Session::FramesAhead()
 	return _msg.history.GetAverageAdvantage();
 }
 
-void Gekko::Session::NetworkStats(i32 player, GekkoNetworkStats* stats)
+void Gekko::GameSession::NetworkStats(i32 player, GekkoNetworkStats* stats)
 {
     std::vector<std::unique_ptr<Player>>* current = &_msg.remotes;
 
@@ -202,12 +200,12 @@ void Gekko::Session::NetworkStats(i32 player, GekkoNetworkStats* stats)
     }
 }
 
-void Gekko::Session::NetworkPoll()
+void Gekko::GameSession::NetworkPoll()
 {
     Poll();
 }
 
-void Gekko::Session::HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev)
+void Gekko::GameSession::HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev)
 {
 	if (IsLockstepActive() || !_config.limited_saving ||
         IsSpectating() || IsPlayingLocally()) {
@@ -243,7 +241,7 @@ void Gekko::Session::HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev
 	assert(_sync.GetCurrentFrame() == current);
 }
 
-void Gekko::Session::UpdateLocalFrameAdvantage()
+void Gekko::GameSession::UpdateLocalFrameAdvantage()
 {
     if (!_started || IsSpectating()) {
         return;
@@ -256,7 +254,7 @@ void Gekko::Session::UpdateLocalFrameAdvantage()
 	_msg.history.SetLocalAdvantage(local_advantage);
 }
 
-bool Gekko::Session::ShouldDelaySpectator()
+bool Gekko::GameSession::ShouldDelaySpectator()
 {
     if (!IsSpectating() || _config.spectator_delay == 0) {
         return false;
@@ -289,7 +287,7 @@ bool Gekko::Session::ShouldDelaySpectator()
     return false;
 }
 
-void Gekko::Session::SendSessionHealthCheck()
+void Gekko::GameSession::SendSessionHealthCheck()
 {
     if (!_config.desync_detection || IsSpectating()) {
         return;
@@ -326,7 +324,7 @@ void Gekko::Session::SendSessionHealthCheck()
     }
 }
 
-void Gekko::Session::SendNetworkHealthCheck()
+void Gekko::GameSession::SendNetworkHealthCheck()
 {
     // we want the session to be synced before trying to determine its network health.
     if (IsSpectating()) {
@@ -336,7 +334,7 @@ void Gekko::Session::SendNetworkHealthCheck()
     _msg.SendNetworkHealth();
 }
 
-void Gekko::Session::SessionIntegrityCheck()
+void Gekko::GameSession::SessionIntegrityCheck()
 {
     if (!_config.desync_detection || IsSpectating()) {
         return;
@@ -363,7 +361,7 @@ void Gekko::Session::SessionIntegrityCheck()
     }
 }
 
-void Gekko::Session::AddDisconnectedPlayerInputs()
+void Gekko::GameSession::AddDisconnectedPlayerInputs()
 {
 	for (auto& player : _msg.remotes) {
 		if (player->GetStatus() == Disconnected) {
@@ -376,7 +374,7 @@ void Gekko::Session::AddDisconnectedPlayerInputs()
 	}
 }
 
-void Gekko::Session::SendSpectatorInputs()
+void Gekko::GameSession::SendSpectatorInputs()
 {
 	const Frame current = _msg.GetLastAddedInput(true) + 1;
 	const Frame confirmed = _sync.GetMinReceivedFrame();
@@ -390,7 +388,7 @@ void Gekko::Session::SendSpectatorInputs()
 	}
 }
 
-void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
+void Gekko::GameSession::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 {
 	Frame current = _sync.GetCurrentFrame();
 	if (_last_saved_frame == GameInput::NULL_FRAME - 1) {
@@ -434,7 +432,7 @@ void Gekko::Session::HandleRollback(std::vector<GekkoGameEvent*>& ev)
 	assert(_sync.GetCurrentFrame() == current);
 }
 
-bool Gekko::Session::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back)
+bool Gekko::GameSession::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back)
 {
 	Frame frame = GameInput::NULL_FRAME;
 	std::unique_ptr<u8[]> inputs;
@@ -456,7 +454,7 @@ bool Gekko::Session::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool roll
 	return true;
 }
 
-void Gekko::Session::AddSaveEvent(std::vector<GekkoGameEvent*>& ev)
+void Gekko::GameSession::AddSaveEvent(std::vector<GekkoGameEvent*>& ev)
 {
 	const Frame frame_to_save = _sync.GetCurrentFrame();
 
@@ -477,7 +475,7 @@ void Gekko::Session::AddSaveEvent(std::vector<GekkoGameEvent*>& ev)
 	_last_saved_frame = frame_to_save;
 }
 
-void Gekko::Session::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
+void Gekko::GameSession::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
 {
 	const Frame frame_to_load = _sync.GetCurrentFrame();
 
@@ -493,7 +491,7 @@ void Gekko::Session::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
 	event->data.load.state_len = state->state_len;
 }
 
-void Gekko::Session::Poll()
+void Gekko::GameSession::Poll()
 {
 	// return if no host is defined.
     if (!_host) {
@@ -526,7 +524,7 @@ void Gekko::Session::Poll()
 	_msg.SendPendingOutput(_host);
 }
 
-bool Gekko::Session::AllActorsValid()
+bool Gekko::GameSession::AllActorsValid()
 {
 	if (!_started) {
 		if (!_msg.CheckStatusActors()) {
@@ -544,7 +542,7 @@ bool Gekko::Session::AllActorsValid()
 	return true;
 }
 
-void Gekko::Session::HandleReceivedInputs()
+void Gekko::GameSession::HandleReceivedInputs()
 {
     for (auto& remote : _msg.remotes) {
         if (remote->GetStatus() != Connected) continue;
@@ -580,7 +578,7 @@ void Gekko::Session::HandleReceivedInputs()
     }
 }
 
-void Gekko::Session::SendLocalInputs()
+void Gekko::GameSession::SendLocalInputs()
 {
 	if (!_msg.locals.empty() && _started) {
 		const Frame current = _msg.GetLastAddedInput(false) + 1;
@@ -598,7 +596,7 @@ void Gekko::Session::SendLocalInputs()
 	}
 }
 
-u8 Gekko::Session::GetMinLocalDelay()
+u8 Gekko::GameSession::GetMinLocalDelay()
 {
 	u8 min = UINT8_MAX;
 	for (auto& player : _msg.locals) {
@@ -607,18 +605,18 @@ u8 Gekko::Session::GetMinLocalDelay()
 	return min;
 }
 
-bool Gekko::Session::IsSpectating()
+bool Gekko::GameSession::IsSpectating()
 {
 	return _msg.remotes.size() == 1 && _msg.locals.empty();
 }
 
 
-bool Gekko::Session::IsPlayingLocally()
+bool Gekko::GameSession::IsPlayingLocally()
 {
 	return _msg.remotes.empty() && !_msg.locals.empty();
 }
 
-bool Gekko::Session::IsLockstepActive() const
+bool Gekko::GameSession::IsLockstepActive() const
 {
     return _config.input_prediction_window == 0;
 }
