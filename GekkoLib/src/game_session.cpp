@@ -10,7 +10,11 @@ Gekko::GameSession::GameSession()
     _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
+
     _config = GekkoConfig();
+    _sync = SyncSystem();
+    _storage = StateStorage();
+    _game_event_buffer = GameEventBuffer();
 }
 
 void Gekko::GameSession::Init(GekkoConfig* config)

@@ -1,10 +1,18 @@
 #pragma once
 
+#include <vector>
+
 #include "session.h"
+#include "storage.h"
+#include "sync.h"
+#include "event.h"
+#include "backend.h"
 
 namespace Gekko {
     class StressSession : public GekkoSession {
     public:
+        StressSession();
+
         void Init(GekkoConfig* config) override;
 
         void SetLocalDelay(i32 player, u8 delay) override;
@@ -26,5 +34,20 @@ namespace Gekko {
         void NetworkPoll() override;
 
     private:
+        GekkoConfig _config;
+
+        SyncSystem _sync;
+
+        StateStorage _storage;
+
+        GameEventBuffer _game_event_buffer;
+
+        SessionEventSystem _session_events;
+
+        std::vector<GekkoGameEvent*> _current_game_events;
+
+        std::vector<Player> _locals;
+
+        u32 _check_distance;
     };
 }

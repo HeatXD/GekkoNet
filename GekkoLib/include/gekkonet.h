@@ -64,6 +64,7 @@ typedef struct GekkoConfig {
     unsigned int state_size;
     bool limited_saving;
     bool desync_detection;
+    unsigned int check_distance;
 } GekkoConfig;
 
 typedef enum GekkoPlayerType {
