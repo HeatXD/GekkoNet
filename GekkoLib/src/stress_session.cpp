@@ -1,4 +1,5 @@
 #include "stress_session.h"
+#include <cassert>
 
 
 Gekko::StressSession::StressSession()
@@ -15,6 +16,9 @@ void Gekko::StressSession::Init(GekkoConfig* config)
 {
     std::memcpy(&_config, config, sizeof(GekkoConfig));
 
+    // check distance
+    _check_distance = _config.check_distance;
+
     // setup input buffer for the players
     _sync.Init(_config.num_players, _config.input_size);
 
@@ -22,10 +26,10 @@ void Gekko::StressSession::Init(GekkoConfig* config)
     _game_event_buffer.Init(_config.input_size * _config.num_players);
 
     // setup state storage
-    _storage.Init(_config.input_prediction_window, _config.state_size, false);
+    _storage.Init(_check_distance, _config.state_size, false);
 
-    // check distance
-    _check_distance = _config.check_distance;
+    // setup checksum history for comparisons
+    _checksum_history.clear();
 }
 
 void Gekko::StressSession::SetLocalDelay(i32 player, u8 delay)
@@ -54,6 +58,8 @@ i32 Gekko::StressSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
     }
 
     _locals.push_back(Player(new_handle, type, address.get()));
+
+    return new_handle;
 }
 
 void Gekko::StressSession::AddLocalInput(i32 player, void* input)
@@ -77,9 +83,26 @@ GekkoGameEvent** Gekko::StressSession::UpdateSession(i32* count)
 
     Frame current = _sync.GetCurrentFrame();
     if (_check_distance > 0 && current > _check_distance) {
-
+        // once whe have gone far enough forward start rollback back and comparing checksums
+        for (Frame check_frame = current - _check_distance; check_frame < current; check_frame++) {
+            CheckForDesyncs(check_frame);
+        }
+        // rollback according to check distance
+        HandleRollback(_current_game_events);
     }
 
+    if (current - 1 == GameInput::NULL_FRAME - 1) {
+        // initial gamestate save
+        AddSaveEvent(_current_game_events);
+    }
+
+    // advance the session forward
+    if (AddAdvanceEvent(_current_game_events, false)) {
+        AddSaveEvent(_current_game_events);
+        _sync.IncrementFrame();
+    }
+
+    *count = (i32)_current_game_events.size();
     return _current_game_events.data();
 }
 
@@ -102,4 +125,104 @@ void Gekko::StressSession::NetworkStats(i32 player, GekkoNetworkStats* stats)
 void Gekko::StressSession::NetworkPoll()
 {
     // stress sessions are local only
+}
+
+void Gekko::StressSession::HandleRollback(std::vector<GekkoGameEvent*>& ev)
+{
+    const Frame current = _sync.GetCurrentFrame();
+    const Frame past = current - _check_distance;
+
+    // load the sync frame
+    _sync.SetCurrentFrame(past);
+    AddLoadEvent(ev);
+    _sync.IncrementFrame();
+
+    for (Frame frame = past + 1; frame < current; frame++) {
+        AddAdvanceEvent(ev, true);
+        AddSaveEvent(ev);
+        _sync.IncrementFrame();
+    }
+
+    // make sure that we are back where we started.
+    assert(_sync.GetCurrentFrame() == current);
+}
+
+void Gekko::StressSession::CheckForDesyncs(Frame check_frame)
+{
+    const Frame oldest = check_frame - _check_distance;
+
+    // clear old checksum frames
+    _checksum_history.erase(_checksum_history.begin(), _checksum_history.lower_bound(oldest));
+
+    const StateEntry* state = _storage.GetState(check_frame);
+    // check if there is a valid entry in the state storage
+    if (state->frame == check_frame) {
+        if (_checksum_history.count(check_frame)) {
+            // found in the history! compare checksums and send event if incorrect.
+            u32 recorded_checksum = _checksum_history[check_frame];
+            if (state->checksum != recorded_checksum) {
+                _session_events.AddDesyncDetectedEvent(check_frame, 0, state->checksum, recorded_checksum);
+            }
+        } else {
+            // not in the history? then add it.
+            _checksum_history.emplace(check_frame, state->checksum);
+        }
+    } 
+}
+
+bool Gekko::StressSession::AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back)
+{
+    Frame frame = GameInput::NULL_FRAME;
+    std::unique_ptr<u8[]> inputs;
+    if (!_sync.GetCurrentInputs(inputs, frame)) {
+        return false;
+    }
+
+    ev.push_back(_game_event_buffer.GetEvent(true));
+
+    auto event = ev.back();
+
+    event->type = AdvanceEvent;
+    event->data.adv.frame = frame;
+    event->data.adv.rolling_back = rolling_back;
+
+    if (event->data.adv.inputs) {
+        std::memcpy(event->data.adv.inputs, inputs.get(), event->data.adv.input_len);
+    }
+    return true;
+}
+
+void Gekko::StressSession::AddSaveEvent(std::vector<GekkoGameEvent*>& ev)
+{
+    const Frame frame_to_save = _sync.GetCurrentFrame();
+
+    auto state = _storage.GetState(frame_to_save);
+
+    state->frame = frame_to_save;
+
+    ev.push_back(_game_event_buffer.GetEvent(false));
+
+    auto event = ev.back();
+    event->type = SaveEvent;
+
+    event->data.save.frame = frame_to_save;
+    event->data.save.state = state->state.get();
+    event->data.save.checksum = &state->checksum;
+    event->data.save.state_len = &state->state_len;
+}
+
+void Gekko::StressSession::AddLoadEvent(std::vector<GekkoGameEvent*>& ev)
+{
+    const Frame frame_to_load = _sync.GetCurrentFrame();
+
+    auto state = _storage.GetState(frame_to_load);
+
+    ev.push_back(_game_event_buffer.GetEvent(false));
+
+    auto event = ev.back();
+    event->type = LoadEvent;
+
+    event->data.load.frame = frame_to_load;
+    event->data.load.state = state->state.get();
+    event->data.load.state_len = state->state_len;
 }

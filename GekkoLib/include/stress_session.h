@@ -34,6 +34,17 @@ namespace Gekko {
         void NetworkPoll() override;
 
     private:
+        void HandleRollback(std::vector<GekkoGameEvent*>& ev);
+
+        void CheckForDesyncs(Frame check_frame);
+
+        bool AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back);
+
+        void AddSaveEvent(std::vector<GekkoGameEvent*>& ev);
+
+        void AddLoadEvent(std::vector<GekkoGameEvent*>& ev);
+
+    private:
         GekkoConfig _config;
 
         SyncSystem _sync;
@@ -49,5 +60,7 @@ namespace Gekko {
         std::vector<Player> _locals;
 
         u32 _check_distance;
+
+        std::map<Frame, u32> _checksum_history;
     };
 }
