@@ -3,23 +3,25 @@
 #include "game_session.h"
 #include "stress_session.h"
 
-bool gekko_create_game_session(GekkoSession** session)
+GEKKONET_API bool gekko_create_session(GekkoSession** session, GekkoSessionType session_type)
 {
     if (*session) {
         return false;
     }
 
-    *session = new Gekko::GameSession();
-    return true;
-}
+    switch (session_type) {
+    case GekkoSessionType::Game:
+        *session = new Gekko::GameSession();
+        break;
 
-bool gekko_create_stress_session(GekkoSession** session)
-{
-    if (*session) {
+    case GekkoSessionType::Stress:
+        *session = new Gekko::StressSession();
+        break;
+
+    default:
         return false;
     }
 
-    *session = new Gekko::StressSession();
     return true;
 }
 

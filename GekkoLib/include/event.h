@@ -2,6 +2,8 @@
 
 #include "gekkonet.h"
 #include "gekko_types.h"
+#include "sync.h"
+#include "storage.h"
 
 #include <vector>
 #include <memory>
@@ -29,6 +31,31 @@ namespace Gekko {
         std::vector<std::unique_ptr<u8[]>> _input_memory_buffer;
     };
 
+    struct GameEventSystem {
+    public:
+        void Init(u32 input_size);
+
+        bool AddAdvanceEvent(SyncSystem& sync, bool rolling_back);
+
+        void AddSaveEvent(SyncSystem& sync, StateStorage& storage, Frame* last_saved_frame = nullptr);
+
+        void AddLoadEvent(SyncSystem& sync, StateStorage& storage);
+
+        std::vector<GekkoGameEvent*>& GetEvents();
+
+        void Reset();
+
+        void Clear();
+
+        i32 Count();
+
+        GekkoGameEvent** Data();
+
+    private:
+        std::vector<GekkoGameEvent*> _current_events;
+
+        GameEventBuffer _event_buffer;
+    };
 
     struct SessionEventBuffer {
     public:

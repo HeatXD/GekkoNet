@@ -55,15 +55,9 @@ namespace Gekko {
 
 		void SendSpectatorInputs();
 
-		void HandleRollback(std::vector<GekkoGameEvent*>& ev);
+		void HandleRollback();
 
-		bool AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back);
-
-		void AddSaveEvent(std::vector<GekkoGameEvent*>& ev);
-
-		void AddLoadEvent(std::vector<GekkoGameEvent*>& ev);
-
-		void HandleSavingConfirmedFrame(std::vector<GekkoGameEvent*>& ev);
+		void HandleSavingConfirmedFrame();
 
 		void UpdateLocalFrameAdvantage();
 
@@ -96,9 +90,7 @@ namespace Gekko {
 
 		StateStorage _storage;
 
-        GameEventBuffer _game_event_buffer;
-
-        std::vector<GekkoGameEvent*> _current_game_events;
+        GameEventSystem _game_events;
 	};
 }
 

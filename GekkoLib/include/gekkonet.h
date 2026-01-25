@@ -1,7 +1,7 @@
 /*
 BSD 2-Clause License
 
-Copyright (c) 2024-2025, Jamie Meyer
+Copyright (c) 2024-2026, Jamie Meyer
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -54,6 +54,11 @@ extern "C" {
 // Technically the user shouldnt need to free or create any memory (look at the examples).
 // The only case the user needs to create memory is when slotting in their own GekkoNetAdapter
 typedef struct GekkoSession GekkoSession;
+
+typedef enum GekkoSessionType {
+    Game, // TODO maybe later i will split the gamesession into 2 sessions, one for spectating and one for actual rollback sim.
+    Stress,
+} GekkoSessionType;
 
 typedef struct GekkoConfig {
     unsigned char num_players;
@@ -171,9 +176,7 @@ typedef struct GekkoNetworkStats {
 } GekkoNetworkStats;
 
 // Public Facing API
-GEKKONET_API bool gekko_create_game_session(GekkoSession** session);
-
-GEKKONET_API bool gekko_create_stress_session(GekkoSession** session);
+GEKKONET_API bool gekko_create_session(GekkoSession** session, GekkoSessionType session_type);
 
 GEKKONET_API bool gekko_destroy_session(GekkoSession** session);
 

@@ -34,15 +34,9 @@ namespace Gekko {
         void NetworkPoll() override;
 
     private:
-        void HandleRollback(std::vector<GekkoGameEvent*>& ev);
+        void HandleRollback();
 
         void CheckForDesyncs(Frame check_frame);
-
-        bool AddAdvanceEvent(std::vector<GekkoGameEvent*>& ev, bool rolling_back);
-
-        void AddSaveEvent(std::vector<GekkoGameEvent*>& ev);
-
-        void AddLoadEvent(std::vector<GekkoGameEvent*>& ev);
 
     private:
         GekkoConfig _config;
@@ -51,11 +45,9 @@ namespace Gekko {
 
         StateStorage _storage;
 
-        GameEventBuffer _game_event_buffer;
-
         SessionEventSystem _session_events;
 
-        std::vector<GekkoGameEvent*> _current_game_events;
+        GameEventSystem _game_events;
 
         std::vector<Player> _locals;
 
