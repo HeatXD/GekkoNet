@@ -3,7 +3,7 @@
 #include "game_session.h"
 #include "stress_session.h"
 
-GEKKONET_API bool gekko_create_session(GekkoSession** session, GekkoSessionType session_type)
+GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_type)
 {
     if (*session) {
         return false;
@@ -25,7 +25,7 @@ GEKKONET_API bool gekko_create_session(GekkoSession** session, GekkoSessionType 
     return true;
 }
 
-bool gekko_destroy_session(GekkoSession** session)
+bool gekko_destroy(GekkoSession** session)
 {
     if (session && *session) {
         delete *session;

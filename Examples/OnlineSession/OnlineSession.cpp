@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create_game_session(&session);
+    gekko_create(&session, GekkoSessionType::Game);
 
     GekkoConfig config{};
 
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
     }
 
     gekko_default_adapter_destroy();
-    gekko_destroy_session(&session);
+    gekko_destroy(&session);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

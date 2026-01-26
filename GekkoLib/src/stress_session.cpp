@@ -4,9 +4,6 @@
 
 Gekko::StressSession::StressSession()
 {
-    _config = GekkoConfig();
-    _session_events = SessionEventSystem();
-    _storage = StateStorage();
     _sync = SyncSystem();
     _check_distance = 0;
 }
@@ -21,7 +18,7 @@ void Gekko::StressSession::Init(GekkoConfig* config)
     // setup input buffer for the players
     _sync.Init(_config.num_players, _config.input_size);
 
-    //setup game event system
+    // setup game event system
     _game_events.Init(_config.input_size * _config.num_players);
 
     // setup state storage

@@ -176,9 +176,9 @@ typedef struct GekkoNetworkStats {
 } GekkoNetworkStats;
 
 // Public Facing API
-GEKKONET_API bool gekko_create_session(GekkoSession** session, GekkoSessionType session_type);
+GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_type);
 
-GEKKONET_API bool gekko_destroy_session(GekkoSession** session);
+GEKKONET_API bool gekko_destroy(GekkoSession** session);
 
 GEKKONET_API void gekko_start_session(GekkoSession* session, GekkoConfig* config);
 
