@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
     config.input_prediction_window = 10;
     config.num_players = NUM_PLAYERS;
 
-    gekko_start_session(session, &config);
+    gekko_start(session, &config);
     gekko_net_adapter_set(session, gekko_default_adapter(local_port));
 
     GekkoNetAddress rem_addr = {};

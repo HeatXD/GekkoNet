@@ -36,7 +36,7 @@ bool gekko_destroy(GekkoSession** session)
     return false;
 }
 
-void gekko_start_session(GekkoSession* session, GekkoConfig* config)
+void gekko_start(GekkoSession* session, GekkoConfig* config)
 {
     session->Init(config);
 }

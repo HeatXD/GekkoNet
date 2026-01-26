@@ -4,6 +4,7 @@
 
 Gekko::StressSession::StressSession()
 {
+    _config = GekkoConfig();
     _sync = SyncSystem();
     _check_distance = 0;
 }

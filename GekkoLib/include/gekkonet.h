@@ -180,7 +180,7 @@ GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_
 
 GEKKONET_API bool gekko_destroy(GekkoSession** session);
 
-GEKKONET_API void gekko_start_session(GekkoSession* session, GekkoConfig* config);
+GEKKONET_API void gekko_start(GekkoSession* session, GekkoConfig* config);
 
 GEKKONET_API void gekko_net_adapter_set(GekkoSession* session, GekkoNetAdapter* adapter);
 
