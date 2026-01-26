@@ -81,7 +81,7 @@ static void handle_frame_time(
     uint64_t frame_end = SDL_GetPerformanceCounter();
     frame_time_ns = ((frame_end - frame_start) * 1000000000) / perf_freq;
     if (frame_delay_ns > frame_time_ns) {
-        uint64_t delay_ns = frames_ahead > .5f ? frame_delay_ns * 1.016 : frame_delay_ns -  frame_time_ns;
+        uint64_t delay_ns = frames_ahead > 1.f ? frame_delay_ns * 1.016 : frame_delay_ns -  frame_time_ns;
         SDL_DelayNS(delay_ns);
     }
 }
@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
     config.input_size = sizeof(Input);
     config.state_size = sizeof(State);
     config.max_spectators = 0;
-    config.input_prediction_window = 0;
+    config.input_prediction_window = 10;
     config.num_players = num_players;
 
     gekko_start(session, &config);
