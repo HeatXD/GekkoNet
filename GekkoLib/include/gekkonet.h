@@ -56,9 +56,9 @@ extern "C" {
 typedef struct GekkoSession GekkoSession;
 
 typedef enum GekkoSessionType {
-    Game,
-    Stress,
-    Spectate,
+    Game, // session for an active player.
+    Stress, // session to test your local simulation for state desyncs.
+    Spectate, // session for spectators watching an active player.
 } GekkoSessionType;
 
 typedef struct GekkoConfig {
