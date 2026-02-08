@@ -153,8 +153,6 @@ namespace Gekko {
 
 		MessageSystem _msg;
 
-		StateStorage _storage;
-
         GameEventSystem _game_events;
 	};
 

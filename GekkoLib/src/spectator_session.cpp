@@ -1,6 +1,5 @@
 #include "session.h"
 
-#include <cassert>
 
 Gekko::SpectatorSession::SpectatorSession()
 {
@@ -20,17 +19,15 @@ void Gekko::SpectatorSession::Init(GekkoConfig* config)
     // get given configs
     std::memcpy(&_config, config, sizeof(GekkoConfig));
 
-    // setup input buffer for the players
-    _sync.Init(_config.num_players, _config.input_size);
+    // setup input buffer for the players (add size for spectator delay)
+    u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay;
+    _sync.Init(_config.num_players, _config.input_size, buffer_size);
 
     // setup message system.
     _msg.Init(_config.num_players, _config.input_size);
 
     // setup game event system
     _game_events.Init(_config.input_size * _config.num_players);
-
-    // setup state storage (use spectator_delay as the window, no limited saving)
-    _storage.Init(_config.spectator_delay > 0 ? _config.spectator_delay : _config.input_prediction_window, _config.state_size, false);
 }
 
 void Gekko::SpectatorSession::SetLocalDelay(i32 player, u8 delay)
@@ -98,7 +95,6 @@ GekkoGameEvent** Gekko::SpectatorSession::UpdateSession(i32* count)
 
         // then advance the session
         if (_game_events.AddAdvanceEvent(_sync, false)) {
-            _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             _sync.IncrementFrame();
         }
     }
@@ -190,8 +186,6 @@ void Gekko::SpectatorSession::HandleReceivedInputs()
             const Frame last_recv = _sync.GetLastReceivedFrom(handle) + 1;
             const Frame last_added = _msg.GetLastAddedInputFrom(handle);
 
-            assert(last_added - last_recv <= 128); // more then 128 frames behind sounds incorrect.
-
             auto& input_q = _msg.GetNetPlayerQueue(handle);
             const Frame min_frame = last_added - (i32)input_q.size() + 1;
             for (int i = last_recv; i <= last_added; i++) {
@@ -212,7 +206,7 @@ bool Gekko::SpectatorSession::ShouldDelaySpectator()
         return false;
     }
 
-    const u8 delay = std::min(_config.spectator_delay, (u8)(InputBuffer::BUFF_SIZE * 0.75));
+    const u32 delay = _config.spectator_delay;
     const Frame current = _sync.GetCurrentFrame();
     const Frame min = _sync.GetMinReceivedFrame();
     const u32 diff = std::abs(min - current);

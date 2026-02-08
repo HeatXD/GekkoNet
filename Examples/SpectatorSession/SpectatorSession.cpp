@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     config.state_size = sizeof(Gamestate::State);
     config.max_spectators = 1;
     config.input_prediction_window = 10;
-    config.spectator_delay = 30;
+    config.spectator_delay = 300;
     config.num_players = NUM_PLAYERS;
 
     gekko_start(session, &config);

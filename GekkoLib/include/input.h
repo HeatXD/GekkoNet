@@ -28,11 +28,11 @@ namespace Gekko {
 	};
 
 	struct InputBuffer {
-		static const u32 BUFF_SIZE = 128;
+		static const u32 DEFAULT_BUFF_SIZE = 128;
 
 		InputBuffer();
 
-		void Init(u8 delay, u8 input_window, u32 input_size);
+		void Init(u8 delay, u8 input_window, u32 input_size, u32 buffer_size = DEFAULT_BUFF_SIZE);
 
 		void AddLocalInput(Frame frame, u8* input);
 
@@ -67,6 +67,8 @@ namespace Gekko {
 		u8 _input_prediction_window;
 
 		u32 _input_size;
+
+		u32 _buff_size;
 
         std::unique_ptr<u8[]> _empty_input;
 

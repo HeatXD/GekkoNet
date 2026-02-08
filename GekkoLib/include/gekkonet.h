@@ -65,7 +65,7 @@ typedef struct GekkoConfig {
     unsigned char num_players;
     unsigned char max_spectators;
     unsigned char input_prediction_window;
-    unsigned char spectator_delay;
+    unsigned int spectator_delay;
     unsigned int input_size;
     unsigned int state_size;
     bool limited_saving;

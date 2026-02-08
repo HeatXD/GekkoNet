@@ -11,7 +11,7 @@ namespace Gekko {
 	public:
 		SyncSystem();
 
-		void Init(u8 num_players, u32 input_size);
+		void Init(u8 num_players, u32 input_size, u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE);
 
 		void AddLocalInput(Handle player, u8* input);
 
