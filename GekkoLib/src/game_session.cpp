@@ -1,4 +1,4 @@
-#include "game_session.h"
+#include "session.h"
 
 #include <cassert>
 
@@ -6,7 +6,6 @@ Gekko::GameSession::GameSession()
 {
 	_host = nullptr;
 	_started = false;
-    _delay_spectator = false;
     _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
@@ -136,12 +135,6 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         // check if we need to save the confirmed frame
         HandleSavingConfirmedFrame();
 
-        // spectator session buffer
-        if (ShouldDelaySpectator()) {
-            *count = _game_events.Count();
-            return _game_events.Data();
-        }
-
         // send a healthcheck if applicable
         SendSessionHealthCheck();
 
@@ -151,7 +144,7 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         // then advance the session
         if (_game_events.AddAdvanceEvent(_sync, false)) {
             if (!_config.limited_saving ||
-                (IsSpectating() || IsPlayingLocally()) &&
+                IsPlayingLocally() &&
                 _sync.GetCurrentFrame() % _config.input_prediction_window == 0) {
                 _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             }
@@ -207,7 +200,7 @@ void Gekko::GameSession::NetworkPoll()
 void Gekko::GameSession::HandleSavingConfirmedFrame()
 {
 	if (IsLockstepActive() || !_config.limited_saving ||
-        IsSpectating() || IsPlayingLocally()) {
+        IsPlayingLocally()) {
 		return;
 	}
 
@@ -242,7 +235,7 @@ void Gekko::GameSession::HandleSavingConfirmedFrame()
 
 void Gekko::GameSession::UpdateLocalFrameAdvantage()
 {
-    if (!_started || IsSpectating()) {
+    if (!_started) {
         return;
     }
 
@@ -253,42 +246,9 @@ void Gekko::GameSession::UpdateLocalFrameAdvantage()
 	_msg.history.SetLocalAdvantage(local_advantage);
 }
 
-bool Gekko::GameSession::ShouldDelaySpectator()
-{
-    if (!IsSpectating() || _config.spectator_delay == 0) {
-        return false;
-    }
-
-    const u8 delay = std::min(_config.spectator_delay, (u8)(InputBuffer::BUFF_SIZE * 0.75));
-    const Frame current = _sync.GetCurrentFrame();
-    const Frame min = _sync.GetMinReceivedFrame();
-    const u32 diff = std::abs(min - current);
-
-    if (_delay_spectator) {
-        if (diff >= delay) {
-            _delay_spectator = false;
-            _msg.session_events.AddSpectatorUnpausedEvent();
-            return false;
-        }
-        return true;
-    }
-
-    // check every 600 frames (10 seconds at 60 fps) whether it should add delay.
-    if (current % 600 == 0) {
-        _delay_spectator = diff < delay;
-
-        if (_delay_spectator) {
-            _msg.session_events.AddSpectatorPausedEvent();
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void Gekko::GameSession::SendSessionHealthCheck()
 {
-    if (!_config.desync_detection || IsSpectating()) {
+    if (!_config.desync_detection) {
         return;
     }
 
@@ -325,17 +285,12 @@ void Gekko::GameSession::SendSessionHealthCheck()
 
 void Gekko::GameSession::SendNetworkHealthCheck()
 {
-    // we want the session to be synced before trying to determine its network health.
-    if (IsSpectating()) {
-        return;
-    }
-
     _msg.SendNetworkHealth();
 }
 
 void Gekko::GameSession::SessionIntegrityCheck()
 {
-    if (!_config.desync_detection || IsSpectating()) {
+    if (!_config.desync_detection) {
         return;
     }
 
@@ -396,7 +351,7 @@ void Gekko::GameSession::HandleRollback()
 		_sync.IncrementFrame();
 	}
 
-	if (IsLockstepActive() || IsSpectating() || IsPlayingLocally()) {
+	if (IsLockstepActive() || IsPlayingLocally()) {
         return;
     }
 
@@ -487,18 +442,8 @@ void Gekko::GameSession::HandleReceivedInputs()
     for (auto& remote : _msg.remotes) {
         if (remote->GetStatus() != Connected) continue;
 
-        std::vector<Handle> handles;
-
-        if (IsSpectating()) {
-            for (u32 i = 0; i < _config.num_players; i++) {
-                handles.push_back(i);
-            }
-        } else {
-            handles.push_back(remote->handle);
-        }
-
-        for (u32 i = 0; i < handles.size(); i++) {
-            auto handle = handles[i];
+        {
+            auto handle = remote->handle;
             const Frame last_recv = _sync.GetLastReceivedFrom(handle) + 1;
             const Frame last_added = _msg.GetLastAddedInputFrom(handle);
 
@@ -543,11 +488,6 @@ u8 Gekko::GameSession::GetMinLocalDelay()
 		min = std::min(_sync.GetLocalDelay(player->handle), min);
 	}
 	return min;
-}
-
-bool Gekko::GameSession::IsSpectating()
-{
-	return _msg.remotes.size() == 1 && _msg.locals.empty();
 }
 
 bool Gekko::GameSession::IsPlayingLocally()

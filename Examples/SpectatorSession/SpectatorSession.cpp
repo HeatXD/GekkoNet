@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session, GekkoSessionType::Game);
+    gekko_create(&session, is_spectator ? GekkoSessionType::Spectate : GekkoSessionType::Game);
 
     GekkoConfig config{};
 
@@ -80,6 +80,7 @@ int main(int argc, char* argv[]) {
     config.state_size = sizeof(Gamestate::State);
     config.max_spectators = 1;
     config.input_prediction_window = 10;
+    config.spectator_delay = 30;
     config.num_players = NUM_PLAYERS;
 
     gekko_start(session, &config);
@@ -99,7 +100,7 @@ int main(int argc, char* argv[]) {
         // add spectator
         gekko_add_actor(session, Spectator, &rem_addr);
     } else {
-        // add spectator host
+        // add host as remote player
         gekko_add_actor(session, RemotePlayer, &rem_addr);
     }
 
@@ -119,9 +120,11 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        auto local_input = gs.PollInput();
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            gekko_add_local_input(session, i, &local_input);
+        if (!is_spectator) {
+            auto local_input = gs.PollInput();
+            for (int i = 0; i < NUM_PLAYERS; i++) {
+                gekko_add_local_input(session, i, &local_input);
+            }
         }
 
         int count = 0;
@@ -151,6 +154,14 @@ int main(int argc, char* argv[]) {
             case PlayerSyncing:
                 auto sync = event->data.syncing;
                 printf("Player %i is connecting %d/%d\n", sync.handle, sync.current, sync.max);
+                break;
+
+            case SpectatorPaused:
+                printf("Spectator paused, waiting for more inputs...\n");
+                break;
+
+            case SpectatorUnpaused:
+                printf("Spectator unpaused, resuming playback.\n");
                 break;
             }
         }

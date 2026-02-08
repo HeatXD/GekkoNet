@@ -56,8 +56,9 @@ extern "C" {
 typedef struct GekkoSession GekkoSession;
 
 typedef enum GekkoSessionType {
-    Game, // TODO maybe later i will split the gamesession into 2 sessions, one for spectating and one for actual rollback sim.
+    Game,
     Stress,
+    Spectate,
 } GekkoSessionType;
 
 typedef struct GekkoConfig {

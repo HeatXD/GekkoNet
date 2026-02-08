@@ -68,7 +68,6 @@ int main(int argc, char* argv[]) {
     bool running = true;
     while (running) {
         frame_start = SDL_GetPerformanceCounter();
-        gekko_network_poll(session);
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -139,7 +138,6 @@ int main(int argc, char* argv[]) {
         );
     }
 
-    gekko_default_adapter_destroy();
     gekko_destroy(&session);
 
     SDL_DestroyRenderer(renderer);

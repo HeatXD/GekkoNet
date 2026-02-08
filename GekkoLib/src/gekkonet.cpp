@@ -1,7 +1,6 @@
 #include "gekkonet.h"
 
-#include "game_session.h"
-#include "stress_session.h"
+#include "session.h"
 
 GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_type)
 {
@@ -16,6 +15,10 @@ GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_
 
     case GekkoSessionType::Stress:
         *session = new Gekko::StressSession();
+        break;
+
+    case GekkoSessionType::Spectate:
+        *session = new Gekko::SpectatorSession();
         break;
 
     default:
