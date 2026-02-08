@@ -1,4 +1,5 @@
 #include "event.h"
+
 #include <cassert>
 #include <cstdlib>
 
@@ -161,4 +162,97 @@ void Gekko::SessionEventSystem::AddDesyncDetectedEvent(Frame frame, Handle remot
     ev->data.desynced.local_checksum = check_local;
     ev->data.desynced.remote_checksum = check_remote;
     AddEvent(ev);
+}
+
+void Gekko::GameEventSystem::Init(u32 input_size) {
+    _event_buffer.Init(input_size);
+    _event_buffer.Reset();
+    _current_events.clear();
+}
+
+bool Gekko::GameEventSystem::AddAdvanceEvent(SyncSystem& sync, bool rolling_back)
+{
+    Frame frame = GameInput::NULL_FRAME;
+    std::unique_ptr<u8[]> inputs;
+    if (!sync.GetCurrentInputs(inputs, frame)) {
+        return false;
+    }
+
+    _current_events.push_back(_event_buffer.GetEvent(true));
+
+    auto event = _current_events.back();
+
+    event->type = AdvanceEvent;
+    event->data.adv.frame = frame;
+    event->data.adv.rolling_back = rolling_back;
+
+    if (event->data.adv.inputs) {
+        std::memcpy(event->data.adv.inputs, inputs.get(), event->data.adv.input_len);
+    }
+
+    return true;
+}
+
+void Gekko::GameEventSystem::AddSaveEvent(SyncSystem& sync, StateStorage& storage, Frame* last_saved_frame)
+{
+    const Frame frame_to_save = sync.GetCurrentFrame();
+
+    auto state = storage.GetState(frame_to_save);
+
+    state->frame = frame_to_save;
+
+    _current_events.push_back(_event_buffer.GetEvent(false));
+
+    auto event = _current_events.back();
+    event->type = SaveEvent;
+
+    event->data.save.frame = frame_to_save;
+    event->data.save.state = state->state.get();
+    event->data.save.checksum = &state->checksum;
+    event->data.save.state_len = &state->state_len;
+
+    if (last_saved_frame) {
+        *last_saved_frame = frame_to_save;
+    }
+}
+
+void Gekko::GameEventSystem::AddLoadEvent(SyncSystem& sync, StateStorage& storage)
+{
+    const Frame frame_to_load = sync.GetCurrentFrame();
+
+    auto state = storage.GetState(frame_to_load);
+
+    _current_events.push_back(_event_buffer.GetEvent(false));
+
+    auto event = _current_events.back();
+    event->type = LoadEvent;
+
+    event->data.load.frame = frame_to_load;
+    event->data.load.state = state->state.get();
+    event->data.load.state_len = state->state_len;
+}
+
+std::vector<GekkoGameEvent*>& Gekko::GameEventSystem::GetEvents()
+{
+    return _current_events;
+}
+
+void Gekko::GameEventSystem::Reset()
+{
+    _event_buffer.Reset();
+}
+
+void Gekko::GameEventSystem::Clear()
+{
+    _current_events.clear();
+}
+
+i32 Gekko::GameEventSystem::Count()
+{
+    return (i32)_current_events.size();
+}
+
+GekkoGameEvent** Gekko::GameEventSystem::Data()
+{
+    return _current_events.data();
 }

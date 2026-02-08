@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		Directory.Build.props = Directory.Build.props
+		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
 EndProject
@@ -21,6 +22,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sliders", "Examples\Sliders\Sliders.vcxproj", "{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpectatorSession", "Examples\SpectatorSession\SpectatorSession.vcxproj", "{3DF5D51B-4050-4879-98AD-3F63946349AB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StressSession", "Examples\StressSession\StressSession.vcxproj", "{2CA70355-4D6C-4675-8088-BF0956B730C2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,6 +73,14 @@ Global
 		{3DF5D51B-4050-4879-98AD-3F63946349AB}.Release|x64.Build.0 = Release|x64
 		{3DF5D51B-4050-4879-98AD-3F63946349AB}.RelWithDebInfo|x64.ActiveCfg = Debug|x64
 		{3DF5D51B-4050-4879-98AD-3F63946349AB}.RelWithDebInfo|x64.Build.0 = Debug|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.Debug|x64.ActiveCfg = Debug|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.Debug|x64.Build.0 = Debug|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.MinSizeRel|x64.ActiveCfg = Release|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.MinSizeRel|x64.Build.0 = Release|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.Release|x64.ActiveCfg = Release|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.Release|x64.Build.0 = Release|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.RelWithDebInfo|x64.ActiveCfg = Debug|x64
+		{2CA70355-4D6C-4675-8088-BF0956B730C2}.RelWithDebInfo|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -79,6 +90,7 @@ Global
 		{9AFB4E7E-5586-4016-B251-323199DDE62B} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 		{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 		{3DF5D51B-4050-4879-98AD-3F63946349AB} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
+		{2CA70355-4D6C-4675-8088-BF0956B730C2} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {53703212-0E21-473D-8C3D-CFCABD5DE432}

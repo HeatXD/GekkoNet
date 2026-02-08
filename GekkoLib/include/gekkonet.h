@@ -1,7 +1,7 @@
 /*
 BSD 2-Clause License
 
-Copyright (c) 2024-2025, Jamie Meyer
+Copyright (c) 2024-2026, Jamie Meyer
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -55,15 +55,22 @@ extern "C" {
 // The only case the user needs to create memory is when slotting in their own GekkoNetAdapter
 typedef struct GekkoSession GekkoSession;
 
+typedef enum GekkoSessionType {
+    Game, // session for an active player.
+    Stress, // session to test your local simulation for state desyncs.
+    Spectate, // session for spectators watching an active player.
+} GekkoSessionType;
+
 typedef struct GekkoConfig {
     unsigned char num_players;
     unsigned char max_spectators;
     unsigned char input_prediction_window;
-    unsigned char spectator_delay;
+    unsigned int spectator_delay;
     unsigned int input_size;
     unsigned int state_size;
     bool limited_saving;
     bool desync_detection;
+    unsigned int check_distance;
 } GekkoConfig;
 
 typedef enum GekkoPlayerType {
@@ -170,7 +177,7 @@ typedef struct GekkoNetworkStats {
 } GekkoNetworkStats;
 
 // Public Facing API
-GEKKONET_API bool gekko_create(GekkoSession** session);
+GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_type);
 
 GEKKONET_API bool gekko_destroy(GekkoSession** session);
 

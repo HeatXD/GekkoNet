@@ -1,13 +1,30 @@
 #include "gekkonet.h"
-#include "gekko.h"
 
-bool gekko_create(GekkoSession** session)
+#include "session.h"
+
+GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_type)
 {
     if (*session) {
         return false;
     }
 
-    *session = new Gekko::Session();
+    switch (session_type) {
+    case GekkoSessionType::Game:
+        *session = new Gekko::GameSession();
+        break;
+
+    case GekkoSessionType::Stress:
+        *session = new Gekko::StressSession();
+        break;
+
+    case GekkoSessionType::Spectate:
+        *session = new Gekko::SpectatorSession();
+        break;
+
+    default:
+        return false;
+    }
+
     return true;
 }
 

@@ -12,7 +12,7 @@ Gekko::SyncSystem::SyncSystem()
 	_input_buffers = nullptr;
 }
 
-void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
+void Gekko::SyncSystem::Init(u8 num_players, u32 input_size, u32 buffer_size)
 {
 	_input_size = input_size;
 	_num_players = num_players;
@@ -21,7 +21,7 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size)
     _input_buffers = std::make_unique<InputBuffer[]>(num_players);
 	// on creation setup input buffers
 	for (int i = 0; i < _num_players; i++) {
-		_input_buffers[i].Init(0, 0, input_size);
+		_input_buffers[i].Init(0, 0, input_size, buffer_size);
 	}
 }
 

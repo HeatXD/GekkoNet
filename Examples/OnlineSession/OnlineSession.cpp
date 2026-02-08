@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session);
+    gekko_create(&session, GekkoSessionType::Game);
 
     GekkoConfig config{};
 

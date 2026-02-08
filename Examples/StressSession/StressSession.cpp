@@ -30,39 +30,12 @@ static void handle_frame_time(
 int main(int argc, char* argv[]) {
     using namespace GekkoGame;
 
-    if (argc != 4) {
-        printf("Usage:\n");
-        printf("  Host:     %s -h <local_port> <remote_port>\n", argv[0]);
-        printf("  Spectate: %s -s <local_port> <remote_port>\n", argv[0]);
-        return 1;
-    }
-
-    std::string mode = argv[1];
-    bool is_spectator = (mode == "-s");
-
-    if (mode != "-h" && mode != "-s") {
-        printf("Invalid mode. Use '-h' for host or '-s' for spectate\n");
-        return 1;
-    }
-
-    int local_port = atoi(argv[2]);
-    int remote_port = atoi(argv[3]);
-
-    if (local_port <= 0 || local_port > 65535 || remote_port <= 0 || remote_port > 65535) {
-        printf("Invalid port numbers. Must be between 1-65535\n");
-        return 1;
-    }
-
-    const int NUM_PLAYERS = 2;
-
-    printf("%s mode - Local port: %d, Remote port: %d\n",
-        is_spectator ? "Spectator" : "Host", local_port, remote_port);
-
     // window init
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Pong Example", FIELD_SIZE, FIELD_SIZE, 0);
+    SDL_Window* window = SDL_CreateWindow("SDL3 GekkoNet Pong Stress Example", FIELD_SIZE, FIELD_SIZE, 0);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
     // timing
     const uint64_t frame_delay_ns = (1000000000 / TARGET_FPS); // ns/frame
     const uint64_t performance_frequency = SDL_GetPerformanceFrequency();
@@ -71,47 +44,30 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session, is_spectator ? GekkoSessionType::Spectate : GekkoSessionType::Game);
+    gekko_create(&session, GekkoSessionType::Stress);
 
     GekkoConfig config{};
 
     config.desync_detection = true;
     config.input_size = sizeof(Input);
     config.state_size = sizeof(Gamestate::State);
-    config.max_spectators = 1;
-    config.input_prediction_window = 10;
-    config.spectator_delay = 300;
-    config.num_players = NUM_PLAYERS;
+    config.num_players = 2;
+    config.check_distance = 10;
 
     gekko_start(session, &config);
-    gekko_net_adapter_set(session, gekko_default_adapter(local_port));
 
-    GekkoNetAddress rem_addr = {};
-    std::string address_str = "127.0.0.1:" + std::to_string(remote_port);
-    rem_addr.data = (void*)address_str.c_str();
-    rem_addr.size = address_str.size();
-
-    if (!is_spectator) {
-        // add local players
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            gekko_add_actor(session, LocalPlayer, nullptr);
-            gekko_set_local_delay(session, i, 1);
-        }
-        // add spectator
-        gekko_add_actor(session, Spectator, &rem_addr);
-    } else {
-        // add host as remote player
-        gekko_add_actor(session, RemotePlayer, &rem_addr);
+    for (int i = 0; i < 2; i++) {
+        gekko_add_actor(session, LocalPlayer, nullptr);
+        gekko_set_local_delay(session, i, 1);
     }
 
     // setup game
     Gamestate gs = {};
-    gs.Init(NUM_PLAYERS);
+    gs.Init(2);
 
     bool running = true;
     while (running) {
         frame_start = SDL_GetPerformanceCounter();
-        gekko_network_poll(session);
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -120,11 +76,9 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (!is_spectator) {
-            auto local_input = gs.PollInput();
-            for (int i = 0; i < NUM_PLAYERS; i++) {
-                gekko_add_local_input(session, i, &local_input);
-            }
+        auto local_input = gs.PollInput();
+        for (int i = 0; i < 2; i++) {
+            gekko_add_local_input(session, i, &local_input);
         }
 
         int count = 0;
@@ -140,29 +94,6 @@ int main(int argc, char* argv[]) {
                 );
                 assert(false);
                 break;
-
-            case PlayerConnected:
-                auto connect = event->data.connected;
-                printf("Player %i connected\n", connect.handle);
-                break;
-
-            case PlayerDisconnected:
-                auto disconnect = event->data.disconnected;
-                printf("Player %i disconnected\n", disconnect.handle);
-                break;
-
-            case PlayerSyncing:
-                auto sync = event->data.syncing;
-                printf("Player %i is connecting %d/%d\n", sync.handle, sync.current, sync.max);
-                break;
-
-            case SpectatorPaused:
-                printf("Spectator paused, waiting for more inputs...\n");
-                break;
-
-            case SpectatorUnpaused:
-                printf("Spectator unpaused, resuming playback.\n");
-                break;
             }
         }
 
@@ -175,16 +106,18 @@ int main(int argc, char* argv[]) {
                 *event->data.save.state_len = sizeof(Gamestate::State);
                 *event->data.save.checksum = SDL_crc32(0, &gs.state, sizeof(Gamestate::State));
                 memcpy(event->data.save.state, &gs.state, sizeof(Gamestate::State));
+                printf("sf%d \n", event->data.save.frame);
                 break;
 
             case LoadEvent:
                 memcpy(&gs.state, event->data.load.state, sizeof(Gamestate::State));
+                printf("lf%d \n", event->data.load.frame);
                 break;
 
             case AdvanceEvent:
                 Input inputs[MAX_PLAYERS] = {};
                 printf("f%d,", event->data.adv.frame);
-                for (int j = 0; j < NUM_PLAYERS; j++) {
+                for (int j = 0; j < 2; j++) {
                     inputs[j] = ((Input*)(event->data.adv.inputs))[j];
                     printf(" p%d %d%d", j, inputs[j].left, inputs[j].right);
                 }
@@ -205,7 +138,6 @@ int main(int argc, char* argv[]) {
         );
     }
 
-    gekko_default_adapter_destroy();
     gekko_destroy(&session);
 
     SDL_DestroyRenderer(renderer);
