@@ -20,6 +20,8 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Remote Player Input Prediction Settings
 - Spectator Sessions
 	- Spectator Delay Settings.
+- Stress Sessions
+    - To help find desyncs it your local state, This is a local session which constantly rolls the simulation back over user-specified a check distance.
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
 - Abstracted socket manager.
