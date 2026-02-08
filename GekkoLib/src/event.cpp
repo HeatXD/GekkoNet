@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 
 void Gekko::GameEventBuffer::Init(u32 input_size)
 {
