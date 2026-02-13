@@ -52,13 +52,15 @@ namespace Gekko {
         Frame start_frame;
         u16 input_count;
         u16 total_size;
-        
+        bool compressed;
+
         std::vector<u8> inputs;
 
         void Copy(const InputMsg* other) {
             start_frame = other->start_frame;
             input_count = other->input_count;
             total_size = other->total_size;
+            compressed = other->compressed;
 
             inputs.clear();
             inputs.insert(inputs.begin(), other->inputs.begin(), other->inputs.end());
@@ -66,7 +68,7 @@ namespace Gekko {
 
         template <typename Archive, typename Self>
         static void serialize(Archive& a, Self& s) {
-            a(s.start_frame, s.input_count, s.total_size, s.inputs);
+            a(s.start_frame, s.input_count, s.total_size, s.compressed, s.inputs);
         }
     };
 
@@ -123,14 +125,23 @@ namespace Gekko {
         static const u64 DISCONNECT_TIMEOUT = 5000;
         static const u64 SYNC_MSG_DELAY = 200;
         static const u64 NET_CHECK_DELAY = 500;
+        static const u32 RTT_HISTORY_SIZE = 10;
 
         Frame last_acked_frame = -1;
         u64 last_sent_sync_message = 0;
         u64 last_received_message = 0;
         u64 last_received_frame = 0;
 
+        float kb_sent_per_sec = 0;
+        float kb_received_per_sec = 0;
+        u32 bytes_sent_accum = 0;
+        u32 bytes_received_accum = 0;
+        u64 last_bandwidth_update = 0;
+
         std::vector<u16> rtt;
 
+        void AddRTT(u16 rtt_ms);
+        void UpdateBandwidth();
         float CalculateJitter();
         float CalculateAvgRTT();
         u32 LastRTT();

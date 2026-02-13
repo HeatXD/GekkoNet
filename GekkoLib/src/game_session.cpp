@@ -183,6 +183,9 @@ void Gekko::GameSession::NetworkStats(i32 player, GekkoNetworkStats* stats)
 
         for (auto& actor : *current) {
             if (actor->handle == player) {
+                actor->stats.UpdateBandwidth();
+                stats->kb_sent = actor->stats.kb_sent_per_sec;
+                stats->kb_received = actor->stats.kb_received_per_sec;
                 stats->last_ping = actor->stats.LastRTT();
                 stats->jitter = actor->stats.CalculateJitter();
                 stats->avg_ping = actor->stats.CalculateAvgRTT();

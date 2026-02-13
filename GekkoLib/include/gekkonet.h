@@ -169,8 +169,8 @@ typedef struct GekkoSessionEvent {
 } GekkoSessionEvent;
 
 typedef struct GekkoNetworkStats {
-    // unsigned int bytes_received;
-    // unsigned int bytes_sent;
+    float kb_sent;
+    float kb_received;
     unsigned short last_ping;
     float avg_ping;
     float jitter;

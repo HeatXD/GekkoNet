@@ -3,6 +3,8 @@
 #include "gekkonet.h"
 
 #include "gekko_types.h"
+
+#include "compression.h"
 #include "net.h"
 #include "event.h"
 
@@ -168,7 +170,7 @@ namespace Gekko {
 
         void SendDataTo(NetData* pkt, GekkoNetAdapter* host);
 
-        void ParsePacket(NetAddress& addr, NetPacket& pkt);
+        void ParsePacket(NetAddress& addr, NetPacket& pkt, u32 packet_size);
 
         void OnSyncRequest(NetAddress& addr, NetPacket& pkt);
 

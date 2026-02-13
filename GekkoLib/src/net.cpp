@@ -80,11 +80,39 @@ float Gekko::NetStats::CalculateAvgRTT()
     return avg_rtt;
 }
 
+void Gekko::NetStats::AddRTT(u16 rtt_ms)
+{
+    rtt.push_back(rtt_ms);
+    while (rtt.size() > RTT_HISTORY_SIZE) {
+        rtt.erase(rtt.begin());
+    }
+}
+
+void Gekko::NetStats::UpdateBandwidth()
+{
+    using namespace std::chrono;
+    u64 now = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+
+    if (last_bandwidth_update == 0) {
+        last_bandwidth_update = now;
+        return;
+    }
+
+    u64 elapsed = now - last_bandwidth_update;
+    if (elapsed >= 1000) {
+        kb_sent_per_sec = (bytes_sent_accum * 1000.f / elapsed) / 1024.f;
+        kb_received_per_sec = (bytes_received_accum * 1000.f / elapsed) / 1024.f;
+        bytes_sent_accum = 0;
+        bytes_received_accum = 0;
+        last_bandwidth_update = now;
+    }
+}
+
 u32 Gekko::NetStats::LastRTT()
 {
     if (rtt.empty()) {
         return 0;
     }
 
-    return rtt.at(0);
+    return rtt.back();
 }

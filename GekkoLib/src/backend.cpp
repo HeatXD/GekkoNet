@@ -1,6 +1,5 @@
 #include "backend.h"
 
-#include <chrono>
 #include <cassert>
 #include <climits>
 
@@ -152,7 +151,7 @@ void Gekko::MessageSystem::HandleData(GekkoNetAdapter* host, GekkoNetResult** da
             zpp::serializer::memory_input_archive in(_bin_buffer);
             in(pkt.header, pkt.body);
 
-            ParsePacket(addr, pkt);
+            ParsePacket(addr, pkt, res->data_len);
         }
         catch (const std::exception&) {
             printf("failed to deserialize packet\n");
@@ -437,6 +436,7 @@ void Gekko::MessageSystem::SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bo
             addr.size = actor->address.GetSize();
 
             host->send_data(&addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
+            actor->stats.bytes_sent_accum += (u32)_bin_buffer.size();
         }
     }
 }
@@ -460,9 +460,24 @@ void Gekko::MessageSystem::SendDataTo(NetData* pkt, GekkoNetAdapter* host)
     addr.size = pkt->addr.GetSize();
 
     host->send_data(&addr, (char*)_bin_buffer.data(), (int)_bin_buffer.size());
+
+    u32 sent_size = (u32)_bin_buffer.size();
+    std::vector<std::unique_ptr<Player>>* current = &remotes;
+    for (u32 i = 0; i < 2; i++)
+    {
+        if (i == 1) {
+            current = &spectators;
+        }
+
+        for (auto& actor : *current) {
+            if (actor->address.Equals(pkt->addr)) {
+                actor->stats.bytes_sent_accum += sent_size;
+            }
+        }
+    }
 }
 
-void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
+void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt, u32 packet_size)
 {
     u64 now = TimeSinceEpoch();
     // update receive timers.
@@ -476,6 +491,7 @@ void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt)
         for (auto& player : *current) {
             if (player->address.Equals(addr)) {
                 player->stats.last_received_message = now;
+                player->stats.bytes_received_accum += packet_size;
             }
         }
     }
@@ -600,6 +616,12 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 {
     auto body = (InputMsg*)pkt.body.get();
 
+    // RLE decompress if the sender compressed this packet
+    if (body->compressed) {
+        auto decompressed = Compression::RLEDecode(body->inputs.data(), (u32)body->inputs.size());
+        body->inputs = std::move(decompressed);
+    }
+
     const Frame start_frame = body->start_frame;
     const u32 input_count = body->input_count;
     const Frame end_frame = start_frame + input_count;
@@ -697,10 +719,29 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
 
     // ok if its not a returned packet then update it and send it back to its specifc peer.
     if (!body->received) {
+        // find the sender in remotes or spectators
+        Player* player = nullptr;
+        auto handles = GetRemoteHandlesForAddress(&addr);
+        if (!handles.empty()) {
+            player = GetPlayerByHandle(handles.at(0));
+        }
+
+        // check spectators if not found in remotes
+        if (!player) {
+            for (auto& spec : spectators) {
+                if (spec->address.Equals(addr)) {
+                    player = spec.get();
+                    break;
+                }
+            }
+        }
+
+        if (!player) {
+            return;
+        }
+
         _pending_output.push(std::make_unique<NetData>());
         auto& message = _pending_output.back();
-
-        auto player = GetPlayerByHandle(GetRemoteHandlesForAddress(&addr).at(0));
 
         message->pkt.header.magic = player->session_magic;
         message->pkt.header.type = NetworkHealth;
@@ -725,13 +766,8 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
         }
 
         for (auto& actor : *current) {
-            // add rtt times to a list 
             if (addr.Equals(actor->address)) {
-                actor->stats.rtt.push_back(rtt_ms);
-            }
-            // cleanup
-            if (actor->stats.rtt.size() > 10) {
-                actor->stats.rtt.erase(actor->stats.rtt.begin());
+                actor->stats.AddRTT(rtt_ms);
             }
         }
     }
@@ -813,6 +849,14 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
                         p_input.get() + _input_size);
                 }
             }
+        }
+
+        // RLE compress only when it actually reduces size
+        msg.compressed = false;
+        auto compressed = Compression::RLEEncode(msg.inputs.data(), (u32)msg.inputs.size());
+        if (compressed.size() < msg.inputs.size()) {
+            msg.inputs = std::move(compressed);
+            msg.compressed = true;
         }
 
         msg.total_size = (u16)msg.inputs.size();

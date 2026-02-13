@@ -91,6 +91,7 @@ int main(int argc, char* argv[]) {
     rem_addr.data = (void*)address_str.c_str();
     rem_addr.size = address_str.size();
 
+    int stats_handle = -1;
     if (!is_spectator) {
         // add local players
         for (int i = 0; i < NUM_PLAYERS; i++) {
@@ -98,10 +99,10 @@ int main(int argc, char* argv[]) {
             gekko_set_local_delay(session, i, 1);
         }
         // add spectator
-        gekko_add_actor(session, Spectator, &rem_addr);
+        stats_handle = gekko_add_actor(session, Spectator, &rem_addr);
     } else {
         // add host as remote player
-        gekko_add_actor(session, RemotePlayer, &rem_addr);
+        stats_handle = gekko_add_actor(session, RemotePlayer, &rem_addr);
     }
 
     // setup game
@@ -195,6 +196,18 @@ int main(int argc, char* argv[]) {
         }
 
         gs.Draw(renderer);
+
+        if (stats_handle >= 0) {
+            GekkoNetworkStats netstats = {};
+            gekko_network_stats(session, stats_handle, &netstats);
+            char title[256];
+            snprintf(title, sizeof(title),
+                "Pong %s | P: %ums PA: %.1fms J: %.1fms | S: %.2f R: %.2f KB/s",
+                is_spectator ? "Spec" : "Host",
+                netstats.last_ping, netstats.avg_ping, netstats.jitter,
+                netstats.kb_sent, netstats.kb_received);
+            SDL_SetWindowTitle(window, title);
+        }
 
         handle_frame_time(
             frame_start,

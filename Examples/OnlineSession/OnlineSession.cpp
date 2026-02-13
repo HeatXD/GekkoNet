@@ -108,6 +108,7 @@ int main(int argc, char* argv[]) {
     gekko_start(session, &config);
     gekko_net_adapter_set(session, gekko_default_adapter(ports[local_players[0]]));
 
+    int remote_handle = -1;
     for (int i = 0; i < num_players; i++) {
         bool is_local = false;
         for (int j = 0; j < num_local_players; j++) {
@@ -127,6 +128,7 @@ int main(int argc, char* argv[]) {
             addr.data = (void*)address_str.c_str();
             addr.size = address_str.size();
             gekko_add_actor(session, RemotePlayer, &addr);
+            if (remote_handle < 0) remote_handle = i;
         }
     }
 
@@ -211,6 +213,17 @@ int main(int argc, char* argv[]) {
         }
 
         gs.Draw(renderer);
+
+        if (remote_handle >= 0) {
+            GekkoNetworkStats netstats = {};
+            gekko_network_stats(session, remote_handle, &netstats);
+            char title[256];
+            snprintf(title, sizeof(title),
+                "Pong | P: %ums PA: %.1fms J: %.1fms | S: %.2f R: %.2f KB/s",
+                netstats.last_ping, netstats.avg_ping, netstats.jitter,
+                netstats.kb_sent, netstats.kb_received);
+            SDL_SetWindowTitle(window, title);
+        }
 
         handle_frame_time(
             frame_start,
