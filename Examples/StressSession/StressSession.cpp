@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
                 printf("f%d,", event->data.adv.frame);
                 for (int j = 0; j < 2; j++) {
                     inputs[j] = ((Input*)(event->data.adv.inputs))[j];
-                    printf(" p%d %d%d", j, inputs[j].left, inputs[j].right);
+                    printf(" p%d %d%d%d%d", j, inputs[j].left, inputs[j].right, inputs[j].up, inputs[j].down);
                 }
                 printf("\n");
                 gs.Update(inputs);

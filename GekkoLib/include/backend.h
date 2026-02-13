@@ -21,6 +21,14 @@ namespace Gekko {
         Disconnected,
     };
 
+	struct InputCache {
+		Frame last_acked_frame = -1;
+		Frame last_input_frame = -1;
+		std::vector<InputMsg> packets;
+
+		bool IsValid(Frame current_ack, Frame current_last_input) const;
+	};
+
 	class Player
 	{
 	public:
@@ -46,6 +54,8 @@ namespace Gekko {
 		NetAddress address;
 
         std::map<Frame, u32> session_health;
+
+		InputCache input_cache;
 
 	private:
         GekkoPlayerType _type;
@@ -133,6 +143,8 @@ namespace Gekko {
             NetInputQueue& operator=(NetInputQueue&&) = default;
 
             NetInputQueue() = default;
+
+            void TrimToAck(Frame min_ack, u32 max_size);
         };
 
 	private:
@@ -140,7 +152,7 @@ namespace Gekko {
 
 		void SendSyncResponse(NetAddress* addr, u16 magic);
 
-		void AddPendingInput(bool spectator = false);
+		void SendInputsToPeer(Player* peer, GekkoNetAdapter* host, bool spectator);
 
 		std::vector<Handle> GetRemoteHandlesForAddress(NetAddress* addr);
 
@@ -191,13 +203,5 @@ namespace Gekko {
         std::vector<u8> _bin_buffer;
 
         u64 _last_sent_network_check;
-
-        struct InputCache {
-            bool outdated = true;
-            std::vector<InputMsg> input;
-        };
-
-        InputCache player_input_cache;
-        InputCache spectator_input_cache;
 	};
 }

@@ -41,6 +41,33 @@ void Gekko::MessageSystem::Init(u8 num_players, u32 input_size)
 }
 
 
+bool Gekko::InputCache::IsValid(Frame current_ack, Frame current_last_input) const
+{
+    return !packets.empty()
+        && last_acked_frame == current_ack
+        && last_input_frame == current_last_input;
+}
+
+void Gekko::MessageSystem::NetInputQueue::TrimToAck(Frame min_ack, u32 max_size)
+{
+    if (inputs.empty()) return;
+
+    // compute target size from ack
+    u32 target = (u32)inputs.size();
+    if (min_ack != INT_MAX) {
+        Frame oldest = last_added_input - (Frame)inputs.size() + 1;
+        Frame acked = std::max((Frame)0, min_ack - oldest + 1);
+        target = (u32)inputs.size() - std::min((u32)acked, (u32)inputs.size());
+    }
+
+    // apply safety cap
+    target = std::min(target, max_size);
+
+    while (inputs.size() > target) {
+        inputs.pop_front();
+    }
+}
+
 void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[], bool remote)
 {
     auto& input_q = _net_player_queue[player];
@@ -48,7 +75,6 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
         input_q.last_added_input++;
         input_q.inputs.push_back(std::make_unique<u8[]>(_input_size));
         std::memcpy(input_q.inputs.back().get(), input, _input_size);
-        player_input_cache.outdated = true;
 
 		// update history // TODO REDO WITH BACKEND REWORK..
         if (!remote) {
@@ -56,11 +82,9 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
         }
 	}
 
-    // move it along discarding old inputs
-    // TODO make the local input send queues variable in size by checking diff to last acked input.
-	while (input_q.inputs.size() > MAX_INPUT_QUEUE_SIZE) {
-        input_q.inputs.pop_front();
-	}
+    // discard acked inputs (local) or just cap the queue (remote)
+    Frame min_ack = remote ? (Frame)INT_MAX : GetMinLastAckedFrame(false);
+    input_q.TrimToAck(min_ack, MAX_INPUT_QUEUE_SIZE);
 }
 
 void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
@@ -71,42 +95,36 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
         const size_t num_players = locals.size() + remotes.size();
         input_q.inputs.push_back(std::make_unique<u8[]>(_input_size * num_players));
         std::memcpy(input_q.inputs.back().get(), input, _input_size * num_players);
-        spectator_input_cache.outdated = true;
 	}
 
-    // move the input queues along
-    if (input_q.inputs.size() > MAX_INPUT_QUEUE_SIZE) {
-        input_q.inputs.pop_front();
-    }
+    // discard acked inputs and cap the queue
+    input_q.TrimToAck(GetMinLastAckedFrame(true), MAX_INPUT_QUEUE_SIZE);
 }
 
 void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 {
-	// add input packet
+	// send per-peer input packets to remotes
 	if (!remotes.empty() && !locals.empty()) {
-		AddPendingInput(false);
+		for (auto& peer : remotes) {
+			SendInputsToPeer(peer.get(), host, false);
+		}
         // check for disconnects
         HandleTooFarBehindActors(false);
 	}
 
-	// add spectator input packet
+	// send per-peer input packets to spectators
 	if (!spectators.empty() && !locals.empty()) {
-		AddPendingInput(true);
+		for (auto& peer : spectators) {
+			SendInputsToPeer(peer.get(), host, true);
+		}
         // check for disconnects
         HandleTooFarBehindActors(true);
 	}
 
-	// handle messages
-	for (u32 i = 0; i < _pending_output.size(); i++) {
+	// drain remaining messages (acks, sync, health, etc.)
+	while (!_pending_output.empty()) {
 		auto& pkt = _pending_output.front();
-		if (pkt->pkt.header.type == Inputs || pkt->pkt.header.type == SpectatorInputs) {
-            if (pkt->pkt.header.type == Inputs) {
-                SendDataToAll(pkt.get(), host);
-            } else {
-                SendDataToAll(pkt.get(), host, true);
-            }
-		}
-        else if ((pkt->pkt.header.type == SessionHealth || pkt->pkt.header.type == NetworkHealth) && pkt->addr.GetSize() == 0) {
+        if ((pkt->pkt.header.type == SessionHealth || pkt->pkt.header.type == NetworkHealth) && pkt->addr.GetSize() == 0) {
             // send to remotes
             SendDataToAll(pkt.get(), host);
             // send to spectators
@@ -115,7 +133,6 @@ void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 		else {
 			SendDataTo(pkt.get(), host);
 		}
-		// housekeeping
 		_pending_output.pop();
 	}
 }
@@ -720,55 +737,68 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
     }
 }
 
-void Gekko::MessageSystem::AddPendingInput(bool spectator)
+void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host, bool spectator)
 {
+    if (peer->address.GetSize() == 0 || peer->GetStatus() == Disconnected) {
+        return;
+    }
+
     const u32 MAX_INPUT_SIZE = 512;
-
     const auto packet_type = spectator ? SpectatorInputs : Inputs;
-    auto& input_cache = spectator ? spectator_input_cache : player_input_cache;
     auto& queue = spectator ? _net_spectator_queue : _net_player_queue[locals[0]->handle];
-
     const u32 num_players = spectator ? _num_players : (u32)locals.size();
     const u32 inputs_per_packet = MAX_INPUT_SIZE / (_input_size * num_players);
     const u32 q_size = (u32)queue.inputs.size();
 
     if (q_size == 0) return;
 
-    // check if cache is valid and can be reused
-    if (!input_cache.outdated && !input_cache.input.empty()) {
-        // reuse cached packets, just copy from cache
-        for (const auto& cached_msg : input_cache.input) {
-            _pending_output.push(std::make_unique<NetData>());
-            auto& packet = _pending_output.back();
-            packet->pkt.header.type = packet_type;
+    const Frame queue_oldest_frame = queue.last_added_input - (Frame)q_size + 1;
+    const Frame last_input = spectator ? _net_spectator_queue.last_added_input : GetLastAddedInput(false);
+
+    // peer is caught up, nothing to send
+    if (peer->stats.last_acked_frame >= last_input) return;
+
+    // check per-peer cache
+    if (peer->input_cache.IsValid(peer->stats.last_acked_frame, last_input)) {
+        // cache hit: serialize and send cached packets directly
+        for (const auto& cached_msg : peer->input_cache.packets) {
+            NetData data;
+            data.addr.Copy(&peer->address);
+            data.pkt.header.type = packet_type;
+            data.pkt.header.magic = peer->session_magic;
+
             auto message = std::make_unique<InputMsg>();
             message->Copy(&cached_msg);
-            packet->pkt.body = std::move(message);
+            data.pkt.body = std::move(message);
+
+            SendDataTo(&data, host);
         }
-        return; 
+        return;
     }
 
-    // cache is outdated, rebuild packets
-    input_cache.input.clear();
+    // cache miss: rebuild packets for this peer
+    const Frame peer_start_frame = std::max(peer->stats.last_acked_frame + 1, queue_oldest_frame);
+    const u32 peer_start_idx = (u32)(peer_start_frame - queue_oldest_frame);
+    const u32 peer_input_count = q_size - peer_start_idx;
 
-    const u32 packet_count = (q_size + inputs_per_packet - 1) / inputs_per_packet;
-    const Frame start_frame = queue.last_added_input - q_size + 1;
+    if (peer_input_count == 0) return;
+
+    peer->input_cache.packets.clear();
+
+    const u32 packet_count = (peer_input_count + inputs_per_packet - 1) / inputs_per_packet;
 
     for (u32 pc = 0; pc < packet_count; pc++) {
-        const u32 input_start_idx = pc * inputs_per_packet;
-        const u32 input_end_idx = std::min(q_size, input_start_idx + inputs_per_packet);
+        const u32 input_start_idx = peer_start_idx + pc * inputs_per_packet;
+        const u32 input_end_idx = std::min(peer_start_idx + peer_input_count, input_start_idx + inputs_per_packet);
         const u32 input_count = input_end_idx - input_start_idx;
 
-        _pending_output.push(std::make_unique<NetData>());
-        auto& packet = _pending_output.back();
-        packet->pkt.header.type = packet_type;
-        auto message = std::make_unique<InputMsg>();
-        message->start_frame = start_frame + input_start_idx;
+        InputMsg msg;
+        msg.start_frame = queue_oldest_frame + input_start_idx;
 
         if (spectator) {
             for (u32 i = input_start_idx; i < input_end_idx; i++) {
                 const auto& p_input = queue.inputs.at(i);
-                message->inputs.insert(message->inputs.end(),
+                msg.inputs.insert(msg.inputs.end(),
                     p_input.get(),
                     p_input.get() + _input_size * num_players);
             }
@@ -778,25 +808,33 @@ void Gekko::MessageSystem::AddPendingInput(bool spectator)
                 const auto& player_queue = _net_player_queue[locals[player]->handle];
                 for (u32 i = input_start_idx; i < input_end_idx; i++) {
                     const auto& p_input = player_queue.inputs.at(i);
-                    message->inputs.insert(message->inputs.end(),
+                    msg.inputs.insert(msg.inputs.end(),
                         p_input.get(),
                         p_input.get() + _input_size);
                 }
             }
         }
 
-        message->total_size = (u16)message->inputs.size();
-        message->input_count = input_count;
+        msg.total_size = (u16)msg.inputs.size();
+        msg.input_count = input_count;
 
-        // cache this message before moving it
+        // cache and send
         InputMsg cached_msg;
-        cached_msg.Copy(message.get());
-        input_cache.input.push_back(std::move(cached_msg));
+        cached_msg.Copy(&msg);
+        peer->input_cache.packets.push_back(std::move(cached_msg));
 
-        packet->pkt.body = std::move(message);
+        NetData data;
+        data.addr.Copy(&peer->address);
+        data.pkt.header.type = packet_type;
+        data.pkt.header.magic = peer->session_magic;
+        data.pkt.body = std::make_unique<InputMsg>(std::move(msg));
+
+        SendDataTo(&data, host);
     }
-    // mark cache as valid
-    input_cache.outdated = false;
+
+    // update cache keys
+    peer->input_cache.last_acked_frame = peer->stats.last_acked_frame;
+    peer->input_cache.last_input_frame = last_input;
 }
 
 void Gekko::AdvantageHistory::Init()
