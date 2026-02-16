@@ -46,7 +46,7 @@ i32 Gekko::SpectatorSession::AddActor(GekkoPlayerType type, GekkoNetAddress* add
     std::unique_ptr<NetAddress> address;
 
     // only accept a single remote player (the host)
-    if (type != RemotePlayer) {
+    if (type != GekkoRemotePlayer) {
         return ERR;
     }
 

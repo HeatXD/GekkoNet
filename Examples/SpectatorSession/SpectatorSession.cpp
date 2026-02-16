@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session, is_spectator ? GekkoSessionType::Spectate : GekkoSessionType::Game);
+    gekko_create(&session, is_spectator ? GekkoSessionType::GekkoSpectateSession : GekkoSessionType::GekkoGameSession);
 
     GekkoConfig config{};
 
@@ -95,14 +95,14 @@ int main(int argc, char* argv[]) {
     if (!is_spectator) {
         // add local players
         for (int i = 0; i < NUM_PLAYERS; i++) {
-            gekko_add_actor(session, LocalPlayer, nullptr);
+            gekko_add_actor(session, GekkoLocalPlayer, nullptr);
             gekko_set_local_delay(session, i, 1);
         }
         // add spectator
-        stats_handle = gekko_add_actor(session, Spectator, &rem_addr);
+        stats_handle = gekko_add_actor(session, GekkoSpectator, &rem_addr);
     } else {
         // add host as remote player
-        stats_handle = gekko_add_actor(session, RemotePlayer, &rem_addr);
+        stats_handle = gekko_add_actor(session, GekkoRemotePlayer, &rem_addr);
     }
 
     // setup game
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < count; i++) {
             GekkoSessionEvent* event = events[i];
             switch (event->type) {
-            case DesyncDetected:
+            case GekkoDesyncDetected:
                 auto desync = event->data.desynced;
                 printf(
                     "DESYNC!!! f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle,
@@ -142,26 +142,26 @@ int main(int argc, char* argv[]) {
                 assert(false);
                 break;
 
-            case PlayerConnected:
+            case GekkoPlayerConnected:
                 auto connect = event->data.connected;
                 printf("Player %i connected\n", connect.handle);
                 break;
 
-            case PlayerDisconnected:
+            case GekkoPlayerDisconnected:
                 auto disconnect = event->data.disconnected;
                 printf("Player %i disconnected\n", disconnect.handle);
                 break;
 
-            case PlayerSyncing:
+            case GekkoPlayerSyncing:
                 auto sync = event->data.syncing;
                 printf("Player %i is connecting %d/%d\n", sync.handle, sync.current, sync.max);
                 break;
 
-            case SpectatorPaused:
+            case GekkoSpectatorPaused:
                 printf("Spectator paused, waiting for more inputs...\n");
                 break;
 
-            case SpectatorUnpaused:
+            case GekkoSpectatorUnpaused:
                 printf("Spectator unpaused, resuming playback.\n");
                 break;
             }
@@ -172,17 +172,17 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < count; i++) {
             GekkoGameEvent* event = updates[i];
             switch (event->type) {
-            case SaveEvent:
+            case GekkoSaveEvent:
                 *event->data.save.state_len = sizeof(Gamestate::State);
                 *event->data.save.checksum = SDL_crc32(0, &gs.state, sizeof(Gamestate::State));
                 memcpy(event->data.save.state, &gs.state, sizeof(Gamestate::State));
                 break;
 
-            case LoadEvent:
+            case GekkoLoadEvent:
                 memcpy(&gs.state, event->data.load.state, sizeof(Gamestate::State));
                 break;
 
-            case AdvanceEvent:
+            case GekkoAdvanceEvent:
                 Input inputs[MAX_PLAYERS] = {};
                 printf("f%d,", event->data.adv.frame);
                 for (int j = 0; j < NUM_PLAYERS; j++) {

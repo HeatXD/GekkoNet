@@ -64,7 +64,7 @@ i32 Gekko::GameSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
         address = std::make_unique<NetAddress>(addr->data, addr->size);
     }
 
-    if (type == Spectator) {
+    if (type == GekkoSpectator) {
         if (_msg.spectators.size() >= _config.max_spectators) {
             return ERR;
         }
@@ -81,7 +81,7 @@ i32 Gekko::GameSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 
         u32 new_handle = (u32)(_msg.locals.size() + _msg.remotes.size());
 
-        if (type == LocalPlayer) {
+        if (type == GekkoLocalPlayer) {
             _msg.locals.push_back(std::make_unique<Player>(new_handle, type, address.get()));
         }
         else {
