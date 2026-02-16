@@ -45,7 +45,7 @@ void Gekko::StressSession::SetNetAdapter(GekkoNetAdapter* adapter)
 
 i32 Gekko::StressSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
 {
-    if (type != LocalPlayer) return -1;
+    if (type != GekkoLocalPlayer) return -1;
 
     u32 new_handle = (u32)_locals.size();
     std::unique_ptr<NetAddress> address;

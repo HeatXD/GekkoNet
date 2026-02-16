@@ -56,9 +56,9 @@ extern "C" {
 typedef struct GekkoSession GekkoSession;
 
 typedef enum GekkoSessionType {
-    Game, // session for an active player.
-    Stress, // session to test your local simulation for state desyncs.
-    Spectate, // session for spectators watching an active player.
+    GekkoGameSession, // session for an active player.
+    GekkoStressSession, // session to test your local simulation for state desyncs.
+    GekkoSpectateSession, // session for spectators watching an active player.
 } GekkoSessionType;
 
 typedef struct GekkoConfig {
@@ -74,9 +74,9 @@ typedef struct GekkoConfig {
 } GekkoConfig;
 
 typedef enum GekkoPlayerType {
-    LocalPlayer,
-    RemotePlayer,
-    Spectator
+    GekkoLocalPlayer,
+    GekkoRemotePlayer,
+    GekkoSpectator
 } GekkoPlayerType;
 
 typedef struct GekkoNetAddress {
@@ -102,10 +102,10 @@ typedef struct GekkoNetAdapter {
 } GekkoNetAdapter;
 
 typedef enum GekkoGameEventType {
-    EmptyGameEvent = -1,
-    AdvanceEvent,
-    SaveEvent,
-    LoadEvent
+    GekkoEmptyGameEvent = -1,
+    GekkoAdvanceEvent,
+    GekkoSaveEvent,
+    GekkoLoadEvent
 } GekkoGameEventType;
 
 typedef struct GekkoGameEvent {
@@ -134,14 +134,14 @@ typedef struct GekkoGameEvent {
 } GekkoGameEvent;
 
 typedef enum GekkoSessionEventType {
-    EmptySessionEvent = -1,
-    PlayerSyncing,
-    PlayerConnected,
-    PlayerDisconnected,
-    SessionStarted,
-    SpectatorPaused,
-    SpectatorUnpaused,
-    DesyncDetected
+    GekkoEmptySessionEvent = -1,
+    GekkoPlayerSyncing,
+    GekkoPlayerConnected,
+    GekkoPlayerDisconnected,
+    GekkoSessionStarted,
+    GekkoSpectatorPaused,
+    GekkoSpectatorUnpaused,
+    GekkoDesyncDetected
 } GekkoSessionEventType;
 
 typedef struct GekkoSessionEvent {

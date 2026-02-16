@@ -13,7 +13,7 @@ Gekko::Player::Player(Handle phandle, GekkoPlayerType type, NetAddress* addr, u3
 	stats.last_sent_sync_message = 0;
 
 	_type = type;
-	_status = _type == LocalPlayer ? Connected : Initiating;
+	_status = _type == GekkoLocalPlayer ? Connected : Initiating;
 }
 
 GekkoPlayerType Gekko::Player::GetType()

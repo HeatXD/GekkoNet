@@ -9,15 +9,15 @@ GEKKONET_API bool gekko_create(GekkoSession** session, GekkoSessionType session_
     }
 
     switch (session_type) {
-    case GekkoSessionType::Game:
+    case GekkoSessionType::GekkoGameSession:
         *session = new Gekko::GameSession();
         break;
 
-    case GekkoSessionType::Stress:
+    case GekkoSessionType::GekkoStressSession:
         *session = new Gekko::StressSession();
         break;
 
-    case GekkoSessionType::Spectate:
+    case GekkoSessionType::GekkoSpectateSession:
         *session = new Gekko::SpectatorSession();
         break;
 

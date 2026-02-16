@@ -18,20 +18,20 @@ void Gekko::GameEventBuffer::Reset()
 
     // clear the inputs
     for (auto& ev : _buffer_advance){
-        if (ev->type == EmptyGameEvent) {
+        if (ev->type == GekkoEmptyGameEvent) {
             break;
         }
         // reuse the input buffer rather than destroying it.
         // set event to empty to be used again.
-        ev->type = EmptyGameEvent;
+        ev->type = GekkoEmptyGameEvent;
     }
 
     for (auto& ev : _buffer_others) {
-        if (ev->type == EmptyGameEvent) {
+        if (ev->type == GekkoEmptyGameEvent) {
             break;
         }
         // set event to empty to be used again.
-        ev->type = EmptyGameEvent;
+        ev->type = GekkoEmptyGameEvent;
     }
 }
 
@@ -83,11 +83,11 @@ void Gekko::SessionEventBuffer::Reset()
     _index = 0;
 
     for (auto& ev : _buffer) {
-        if (ev->type == EmptySessionEvent) {
+        if (ev->type == GekkoEmptySessionEvent) {
             break;
         }
 
-        ev->type = EmptySessionEvent;
+        ev->type = GekkoEmptySessionEvent;
     }
 }
 
@@ -110,7 +110,7 @@ std::vector<GekkoSessionEvent*>& Gekko::SessionEventSystem::GetRecentEvents()
 void Gekko::SessionEventSystem::AddPlayerSyncingEvent(Handle handle, u8 sync, u8 max)
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = PlayerSyncing;
+    ev->type = GekkoPlayerSyncing;
     ev->data.syncing.handle = handle;
     ev->data.syncing.current = sync;
     ev->data.syncing.max = max;
@@ -120,7 +120,7 @@ void Gekko::SessionEventSystem::AddPlayerSyncingEvent(Handle handle, u8 sync, u8
 void Gekko::SessionEventSystem::AddPlayerConnectedEvent(Handle handle)
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = PlayerConnected;
+    ev->type = GekkoPlayerConnected;
     ev->data.connected.handle = handle;
     AddEvent(ev);
 }
@@ -128,7 +128,7 @@ void Gekko::SessionEventSystem::AddPlayerConnectedEvent(Handle handle)
 void Gekko::SessionEventSystem::AddPlayerDisconnectedEvent(Handle handle)
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = PlayerDisconnected;
+    ev->type = GekkoPlayerDisconnected;
     ev->data.disconnected.handle = handle;
     AddEvent(ev);
 }
@@ -136,28 +136,28 @@ void Gekko::SessionEventSystem::AddPlayerDisconnectedEvent(Handle handle)
 void Gekko::SessionEventSystem::AddSessionStartedEvent()
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = SessionStarted;
+    ev->type = GekkoSessionStarted;
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddSpectatorPausedEvent()
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = SpectatorPaused;
+    ev->type = GekkoSpectatorPaused;
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddSpectatorUnpausedEvent()
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = SpectatorUnpaused;
+    ev->type = GekkoSpectatorUnpaused;
     AddEvent(ev);
 }
 
 void Gekko::SessionEventSystem::AddDesyncDetectedEvent(Frame frame, Handle remote, u32 check_local, u32 check_remote)
 {
     auto ev = _event_buffer.GetEvent();
-    ev->type = DesyncDetected;
+    ev->type = GekkoDesyncDetected;
     ev->data.desynced.frame = frame;
     ev->data.desynced.remote_handle = remote;
     ev->data.desynced.local_checksum = check_local;
@@ -183,7 +183,7 @@ bool Gekko::GameEventSystem::AddAdvanceEvent(SyncSystem& sync, bool rolling_back
 
     auto event = _current_events.back();
 
-    event->type = AdvanceEvent;
+    event->type = GekkoAdvanceEvent;
     event->data.adv.frame = frame;
     event->data.adv.rolling_back = rolling_back;
 
@@ -205,7 +205,7 @@ void Gekko::GameEventSystem::AddSaveEvent(SyncSystem& sync, StateStorage& storag
     _current_events.push_back(_event_buffer.GetEvent(false));
 
     auto event = _current_events.back();
-    event->type = SaveEvent;
+    event->type = GekkoSaveEvent;
 
     event->data.save.frame = frame_to_save;
     event->data.save.state = state->state.get();
@@ -226,7 +226,7 @@ void Gekko::GameEventSystem::AddLoadEvent(SyncSystem& sync, StateStorage& storag
     _current_events.push_back(_event_buffer.GetEvent(false));
 
     auto event = _current_events.back();
-    event->type = LoadEvent;
+    event->type = GekkoLoadEvent;
 
     event->data.load.frame = frame_to_load;
     event->data.load.state = state->state.get();

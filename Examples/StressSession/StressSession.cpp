@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session, GekkoSessionType::Stress);
+    gekko_create(&session, GekkoSessionType::GekkoStressSession);
 
     GekkoConfig config{};
 
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
     gekko_start(session, &config);
 
     for (int i = 0; i < 2; i++) {
-        gekko_add_actor(session, LocalPlayer, nullptr);
+        gekko_add_actor(session, GekkoLocalPlayer, nullptr);
         gekko_set_local_delay(session, i, 1);
     }
 
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < count; i++) {
             GekkoSessionEvent* event = events[i];
             switch (event->type) {
-            case DesyncDetected:
+            case GekkoDesyncDetected:
                 auto desync = event->data.desynced;
                 printf(
                     "DESYNC!!! f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle,
@@ -102,19 +102,19 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < count; i++) {
             GekkoGameEvent* event = updates[i];
             switch (event->type) {
-            case SaveEvent:
+            case GekkoSaveEvent:
                 *event->data.save.state_len = sizeof(Gamestate::State);
                 *event->data.save.checksum = SDL_crc32(0, &gs.state, sizeof(Gamestate::State));
                 memcpy(event->data.save.state, &gs.state, sizeof(Gamestate::State));
                 printf("sf%d \n", event->data.save.frame);
                 break;
 
-            case LoadEvent:
+            case GekkoLoadEvent:
                 memcpy(&gs.state, event->data.load.state, sizeof(Gamestate::State));
                 printf("lf%d \n", event->data.load.frame);
                 break;
 
-            case AdvanceEvent:
+            case GekkoAdvanceEvent:
                 Input inputs[MAX_PLAYERS] = {};
                 printf("f%d,", event->data.adv.frame);
                 for (int j = 0; j < 2; j++) {
