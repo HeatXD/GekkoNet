@@ -25,7 +25,7 @@ Your responsibilities as the integrator:
 2. **Load** a previous gamestate when asked (this is the rollback).
 3. **Advance** your simulation one frame with provided inputs (deterministically).
 
-GekkoNet is event-driven, unlike callback based SDKs (eg. GGPO) you poll for events each frame and respond to them in a switch statement.
+GekkoNet is event-driven, you poll for events each frame and respond to them in a switch statement.
 
 ### Actors
 
@@ -336,11 +336,5 @@ if (ahead > 0.5f) {
 ## Tips
 
 - **Input structs**: Keep them small (bitfields for booleans). POD types only, no pointers. Consistent size across platforms.
-- **Frame timing**: Fixed tick rate. Call `gekko_add_local_input` once per local player per tick and `gekko_update_session` once per tick. Don't skip frames.
 - **Rollback rendering**: You can check `data.adv.rolling_back` on `GekkoAdvanceEvent` to skip rendering and audio during re-simulation.
 - **Test locally first**: Use `GekkoStressSession` with `check_distance` set (eg. 10). It will continuously roll back and compare checksums over that distance. If your save/load has any non-determinism you'll see `GekkoDesyncDetected` immediately.
-- **Cleanup order**: When using the default adapter, destroy it before the session:
-  ```c
-  gekko_default_adapter_destroy();
-  gekko_destroy(&session);
-  ```
