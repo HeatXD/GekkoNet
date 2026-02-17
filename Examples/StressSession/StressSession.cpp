@@ -48,7 +48,6 @@ int main(int argc, char* argv[]) {
 
     GekkoConfig config{};
 
-    config.desync_detection = true;
     config.input_size = sizeof(Input);
     config.state_size = sizeof(Gamestate::State);
     config.num_players = 2;
