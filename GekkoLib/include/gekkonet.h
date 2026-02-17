@@ -111,21 +111,21 @@ typedef enum GekkoGameEventType {
 typedef struct GekkoGameEvent {
     GekkoGameEventType type;
 
-    union EventData {
+    union GekkoEventData {
         // events 
-        struct Advance {
+        struct GekkoAdvance {
             int frame;
             unsigned int input_len;
             unsigned char* inputs;
             bool rolling_back;
         } adv;
-        struct Save {
+        struct GekkoSave {
             int frame;
             unsigned int* checksum;
             unsigned int* state_len;
             unsigned char* state;
         } save;
-        struct Load {
+        struct GekkoLoad {
             int frame;
             unsigned int state_len;
             unsigned char* state;
@@ -147,19 +147,19 @@ typedef enum GekkoSessionEventType {
 typedef struct GekkoSessionEvent {
     GekkoSessionEventType type;
 
-    union Data {
-        struct Syncing {
+    union GekkoSessionData {
+        struct GekkoSyncing {
             int handle;
             unsigned char current;
             unsigned char max;
         } syncing;
-        struct Connected {
+        struct GekkoConnected {
             int handle;
         } connected;
-        struct Disconnected {
+        struct GekkoDisconnected {
             int handle;
         } disconnected;
-        struct Desynced {
+        struct GekkoDesynced {
             int frame;
             unsigned int local_checksum;
             unsigned int remote_checksum;
