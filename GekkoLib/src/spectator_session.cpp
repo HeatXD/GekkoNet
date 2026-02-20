@@ -28,6 +28,9 @@ void Gekko::SpectatorSession::Init(GekkoConfig* config)
 
     // setup game event system
     _game_events.Init(_config.input_size * _config.num_players);
+
+    // start paused so the buffer fills before playback begins
+    _delay_spectator = (_config.spectator_delay > 0);
 }
 
 void Gekko::SpectatorSession::SetLocalDelay(i32 player, u8 delay)
@@ -167,7 +170,9 @@ bool Gekko::SpectatorSession::AllActorsValid()
 
 		// if none returned that the session is ready!
         _msg.session_events.AddSessionStartedEvent();
-
+        if (_config.spectator_delay > 0) {
+            _msg.session_events.AddSpectatorPausedEvent();
+        }
         _started = true;
 
 		return true;
@@ -226,14 +231,11 @@ bool Gekko::SpectatorSession::ShouldDelaySpectator()
         return true;
     }
 
-    // check every 600 frames (10 seconds at 60 fps) whether it should add delay.
-    if (current % 600 == 0) {
-        _delay_spectator = diff < delay;
-
-        if (_delay_spectator) {
-            _msg.session_events.AddSpectatorPausedEvent();
-            return true;
-        }
+    // Re-pause only when the buffer is completely exhausted
+    if (diff == 0) {
+        _delay_spectator = true;
+        _msg.session_events.AddSpectatorPausedEvent();
+        return true;
     }
 
     return false;
