@@ -22,7 +22,8 @@ static void handle_frame_time(
     uint64_t frame_end = SDL_GetPerformanceCounter();
     frame_time_ns = ((frame_end - frame_start) * 1000000000) / perf_freq;
     if (frame_delay_ns > frame_time_ns) {
-        uint64_t delay_ns = frames_ahead > .5f ? frame_delay_ns * 1.016 : frame_delay_ns - frame_time_ns;
+        uint64_t delay_ns = frames_ahead > .5f ? frame_delay_ns * 1.016 : frame_delay_ns;
+        delay_ns -= frame_time_ns;
         SDL_DelayNS(delay_ns);
     }
 }
@@ -94,7 +95,7 @@ int main(int argc, char* argv[]) {
     // gekkonet setup
     GekkoSession* session = nullptr;
 
-    gekko_create(&session, GekkoSessionType::GekkoGameSession);
+    gekko_create(&session, GekkoGameSession);
 
     GekkoConfig config{};
 
@@ -214,14 +215,16 @@ int main(int argc, char* argv[]) {
 
         gs.Draw(renderer);
 
+        float frames_ahead = gekko_frames_ahead(session);
+
         if (remote_handle >= 0) {
             GekkoNetworkStats netstats = {};
             gekko_network_stats(session, remote_handle, &netstats);
             char title[256];
             snprintf(title, sizeof(title),
-                "Pong | P: %ums PA: %.1fms J: %.1fms | S: %.2f R: %.2f KB/s",
+                "Pong | P: %ums PA: %.1fms J: %.1fms | S: %.2f R: %.2f KB/s | FA: %.2f",
                 netstats.last_ping, netstats.avg_ping, netstats.jitter,
-                netstats.kb_sent, netstats.kb_received);
+                netstats.kb_sent, netstats.kb_received, frames_ahead);
             SDL_SetWindowTitle(window, title);
         }
 
@@ -230,7 +233,7 @@ int main(int argc, char* argv[]) {
             frame_time_ns,
             frame_delay_ns,
             performance_frequency,
-            gekko_frames_ahead(session)
+            frames_ahead
         );
     }
 
