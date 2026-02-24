@@ -74,11 +74,6 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
         input_q.last_added_input++;
         input_q.inputs.push_back(std::make_unique<u8[]>(_input_size));
         std::memcpy(input_q.inputs.back().get(), input, _input_size);
-
-		// update history // TODO REDO WITH BACKEND REWORK..
-        if (!remote) {
-            history.Update(input_frame);
-        }
 	}
 
     // discard acked inputs (local) or just cap the queue (remote)
@@ -680,7 +675,7 @@ void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
                     player->stats.last_acked_frame = ack_frame;
                     // only add remote advantages once
                     if (!added_advantage && i == 0) {
-                        history.AddRemoteAdvantage(remote_advantage);
+                        history.SetRemoteAdvantage(remote_advantage);
                         added_advantage = true;
                     }
                 }
@@ -890,10 +885,8 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
 
 void Gekko::AdvantageHistory::Init()
 {
-    _adv_index = 0;
 	_local_frame_adv = 0;
-
-    std::memset(_remote_frame_adv, 0, HISTORY_SIZE * sizeof(i8));
+    _remote_frame_adv = 0;
 	std::memset(_local, 0, HISTORY_SIZE * sizeof(i8));
 	std::memset(_remote, 0, HISTORY_SIZE * sizeof(i8));
 }
@@ -901,16 +894,8 @@ void Gekko::AdvantageHistory::Init()
 void Gekko::AdvantageHistory::Update(Frame frame)
 {
 	const u32 update_frame = std::max(frame, 0);
-
 	_local[update_frame % HISTORY_SIZE] = _local_frame_adv;
-
-	i32 sum = 0;
-	for (i8 num : _remote_frame_adv) {
-        sum += num;
-	}
-
-    sum /= HISTORY_SIZE;
-    _remote[update_frame % HISTORY_SIZE] = sum;
+	_remote[update_frame % HISTORY_SIZE] = _remote_frame_adv;
 }
 
 f32 Gekko::AdvantageHistory::GetAverageAdvantage()
@@ -926,17 +911,16 @@ f32 Gekko::AdvantageHistory::GetAverageAdvantage()
 	f32 avg_local = sum_local / HISTORY_SIZE;
 	f32 avg_remote = sum_remote / HISTORY_SIZE;
 
-	// return the frames ahead
-	return (avg_local - avg_remote);
+	// return the frames ahead (halved: each peer corrects its share of the gap)
+	return (avg_local - avg_remote) / 2.f;
 }
 
 void Gekko::AdvantageHistory::SetLocalAdvantage(i8 adv) {
 	_local_frame_adv = adv;
 }
 
-void Gekko::AdvantageHistory::AddRemoteAdvantage(i8 adv) {
-    _remote_frame_adv[_adv_index % HISTORY_SIZE] = adv;
-    _adv_index++;
+void Gekko::AdvantageHistory::SetRemoteAdvantage(i8 adv) {
+    _remote_frame_adv = adv;
 }
 
 i8 Gekko::AdvantageHistory::GetLocalAdvantage() {

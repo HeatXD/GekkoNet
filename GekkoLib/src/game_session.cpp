@@ -480,6 +480,10 @@ void Gekko::GameSession::SendLocalInputs()
                 }
                 _msg.AddInput(frame, player->handle, input.get());
             }
+            // Record advantage snapshot once per actual game frame
+            if (frame == current) {
+                _msg.history.Update(frame);
+            }
 		}
 	}
 }

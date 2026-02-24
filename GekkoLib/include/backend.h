@@ -79,20 +79,18 @@ namespace Gekko {
 
 		void SetLocalAdvantage(i8 adv);
 
-		void AddRemoteAdvantage(i8 adv);
+		void SetRemoteAdvantage(i8 adv);
 
 	private:
-		static const i32 HISTORY_SIZE = 26;
-
-        u8 _adv_index;
+		static const i32 HISTORY_SIZE = 32;
 
         i8 _local_frame_adv;
+
+        i8 _remote_frame_adv;
 
 		i8 _local[HISTORY_SIZE];
 
 		i8 _remote[HISTORY_SIZE];
-
-        i8 _remote_frame_adv[HISTORY_SIZE];
 	};
 
 	class MessageSystem {
