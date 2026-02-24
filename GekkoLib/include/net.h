@@ -125,6 +125,7 @@ namespace Gekko {
         static const u64 DISCONNECT_TIMEOUT = 5000;
         static const u64 SYNC_MSG_DELAY = 200;
         static const u64 NET_CHECK_DELAY = 500;
+        static const u64 INPUT_RETRY_INTERVAL = 200;
         static const u32 RTT_HISTORY_SIZE = 10;
 
         Frame last_acked_frame = -1;

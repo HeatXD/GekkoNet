@@ -59,6 +59,8 @@ namespace Gekko {
 
 		InputCache input_cache;
 
+		u64 last_input_send_time = 0;
+
 	private:
         GekkoPlayerType _type;
 

@@ -796,7 +796,11 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
 
     // check per-peer cache
     if (peer->input_cache.IsValid(peer->stats.last_acked_frame, last_input)) {
-        // cache hit: serialize and send cached packets directly
+        // cache hit: nothing new to send, this is a pure re-send — rate limit it
+        const u64 now = TimeSinceEpoch();
+        if (peer->last_input_send_time + NetStats::INPUT_RETRY_INTERVAL > now) {
+            return;
+        }
         for (const auto& cached_msg : peer->input_cache.packets) {
             NetData data;
             data.addr.Copy(&peer->address);
@@ -809,6 +813,7 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
 
             SendDataTo(&data, host);
         }
+        peer->last_input_send_time = now;
         return;
     }
 
@@ -875,6 +880,8 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
 
         SendDataTo(&data, host);
     }
+
+    peer->last_input_send_time = TimeSinceEpoch();
 
     // update cache keys
     peer->input_cache.last_acked_frame = peer->stats.last_acked_frame;
