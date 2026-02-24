@@ -25,7 +25,6 @@ Gekko::MessageSystem::MessageSystem()
 	std::srand((unsigned int)std::time(nullptr));
 	_session_magic = std::rand();
 
-	history = AdvantageHistory();
     session_events = SessionEventSystem();
 }
 
@@ -36,7 +35,6 @@ void Gekko::MessageSystem::Init(u8 num_players, u32 input_size)
 
     _net_player_queue.resize(num_players);
 
-	history.Init();
 }
 
 
@@ -198,7 +196,7 @@ void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u16 magic)
     message->pkt.body = std::move(body);
 }
 
-void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
+void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame, i8 local_advantage)
 {
 	auto plyr = GetPlayerByHandle(player);
 
@@ -215,7 +213,7 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame)
 
     auto body = std::make_unique<InputAckMsg>();
 	body->ack_frame = frame;
-	body->frame_advantage = history.GetLocalAdvantage();
+	body->frame_advantage = local_advantage;
 
     message->pkt.body = std::move(body);
 }
@@ -619,7 +617,6 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 
     const Frame start_frame = body->start_frame;
     const u32 input_count = body->input_count;
-    const Frame end_frame = start_frame + input_count;
 
     const bool is_spectator = (pkt.header.type == SpectatorInputs);
 
@@ -657,29 +654,19 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
 {
     auto body = (InputAckMsg*)pkt.body.get();
-    // we should just update the ack frame for all handles where the address matches
-	const Frame ack_frame = body->ack_frame;
-    const i32 remote_advantage = body->frame_advantage;
-    bool added_advantage = false;
+    const Frame ack_frame = body->ack_frame;
+    const i8 remote_advantage = (i8)body->frame_advantage;
 
-    std::vector<std::unique_ptr<Player>>* current = &remotes;
-    for (u32 i = 0; i < 2; i++)
-    {
-        if (i == 1) {
-            current = &spectators;
+    for (auto& player : remotes) {
+        if (player->address.Equals(addr) && player->stats.last_acked_frame < ack_frame) {
+            player->stats.last_acked_frame = ack_frame;
+            player->adv_history.SetRemoteAdvantage(remote_advantage);
         }
+    }
 
-        for (auto& player : *current) {
-            if (player->address.Equals(addr)) {
-                if (player->stats.last_acked_frame < ack_frame) {
-                    player->stats.last_acked_frame = ack_frame;
-                    // only add remote advantages once
-                    if (!added_advantage && i == 0) {
-                        history.SetRemoteAdvantage(remote_advantage);
-                        added_advantage = true;
-                    }
-                }
-            }
+    for (auto& player : spectators) {
+        if (player->address.Equals(addr) && player->stats.last_acked_frame < ack_frame) {
+            player->stats.last_acked_frame = ack_frame;
         }
     }
 }
@@ -923,6 +910,3 @@ void Gekko::AdvantageHistory::SetRemoteAdvantage(i8 adv) {
     _remote_frame_adv = adv;
 }
 
-i8 Gekko::AdvantageHistory::GetLocalAdvantage() {
-	return _local_frame_adv;
-}

@@ -75,8 +75,6 @@ namespace Gekko {
 
 		void HandleSavingConfirmedFrame();
 
-		void UpdateLocalFrameAdvantage();
-
         void SendSessionHealthCheck();
 
         void SendNetworkHealthCheck();

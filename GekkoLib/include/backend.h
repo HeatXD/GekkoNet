@@ -31,6 +31,30 @@ namespace Gekko {
 		bool IsValid(Frame current_ack, Frame current_last_input) const;
 	};
 
+	struct AdvantageHistory {
+	public:
+		void Init();
+
+		void Update(Frame frame);
+
+		f32 GetAverageAdvantage();
+
+		void SetLocalAdvantage(i8 adv);
+
+		void SetRemoteAdvantage(i8 adv);
+
+	private:
+		static const i32 HISTORY_SIZE = 26;
+
+        i8 _local_frame_adv;
+
+        i8 _remote_frame_adv;
+
+		i8 _local[HISTORY_SIZE];
+
+		i8 _remote[HISTORY_SIZE];
+	};
+
 	class Player
 	{
 	public:
@@ -61,36 +85,12 @@ namespace Gekko {
 
 		u64 last_input_send_time = 0;
 
+		AdvantageHistory adv_history;
+
 	private:
         GekkoPlayerType _type;
 
 		PlayerStatus _status;
-	};
-
-	struct AdvantageHistory {
-	public:
-		void Init();
-
-		void Update(Frame frame);
-
-		f32 GetAverageAdvantage();
-
-		i8 GetLocalAdvantage();
-
-		void SetLocalAdvantage(i8 adv);
-
-		void SetRemoteAdvantage(i8 adv);
-
-	private:
-		static const i32 HISTORY_SIZE = 32;
-
-        i8 _local_frame_adv;
-
-        i8 _remote_frame_adv;
-
-		i8 _local[HISTORY_SIZE];
-
-		i8 _remote[HISTORY_SIZE];
 	};
 
 	class MessageSystem {
@@ -107,7 +107,7 @@ namespace Gekko {
 
 		void HandleData(GekkoNetAdapter* host, GekkoNetResult** data, u32 length);
 
-		void SendInputAck(Handle player, Frame frame);
+		void SendInputAck(Handle player, Frame frame, i8 local_advantage);
 
 		Frame GetLastAddedInput(bool spectator = false);
 
@@ -128,9 +128,7 @@ namespace Gekko {
 
 		std::vector<std::unique_ptr<Player>> spectators;
 
-		AdvantageHistory history;
-
-        SessionEventSystem session_events;
+		SessionEventSystem session_events;
 
         std::map<Frame, u32> local_health;
 

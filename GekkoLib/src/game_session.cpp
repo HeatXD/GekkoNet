@@ -168,7 +168,15 @@ f32 Gekko::GameSession::FramesAhead()
         return 0.f;
     }
 
-	return _msg.history.GetAverageAdvantage();
+    f32 sum = 0.f;
+    i32 count = 0;
+    for (auto& remote : _msg.remotes) {
+        if (remote->GetStatus() == Connected) {
+            sum += remote->adv_history.GetAverageAdvantage();
+            count++;
+        }
+    }
+    return count > 0 ? sum / (f32)count : 0.f;
 }
 
 void Gekko::GameSession::NetworkStats(i32 player, GekkoNetworkStats* stats)
@@ -234,19 +242,6 @@ void Gekko::GameSession::HandleSavingConfirmedFrame()
 
 	// make sure that we are back where we started.
 	assert(_sync.GetCurrentFrame() == current);
-}
-
-void Gekko::GameSession::UpdateLocalFrameAdvantage()
-{
-    if (!_started) {
-        return;
-    }
-
-	const Frame min = _sync.GetMinReceivedFrame();
-	const Frame current = _sync.GetCurrentFrame();
-    const i32 local_advantage = current - min;
-
-	_msg.history.SetLocalAdvantage(local_advantage);
 }
 
 void Gekko::GameSession::SendSessionHealthCheck()
@@ -406,9 +401,6 @@ void Gekko::GameSession::Poll()
 	// handle received inputs
 	HandleReceivedInputs();
 
-	// update local frame advantage
-	UpdateLocalFrameAdvantage();
-
 	// add local input for the network
 	SendLocalInputs();
 
@@ -454,12 +446,15 @@ void Gekko::GameSession::HandleReceivedInputs()
 
             auto& input_q = _msg.GetNetPlayerQueue(handle);
             const Frame min_frame = last_added - (i32)input_q.size() + 1;
+            const Frame current_frame = _sync.GetCurrentFrame();
+            const Frame local_delay = (Frame)GetMinLocalDelay();
             for (int i = last_recv; i <= last_added; i++) {
                 if (i >= min_frame) {
                     int current_idx = i - min_frame;
                     u8* input = input_q[current_idx].get();
                     _sync.AddRemoteInput(handle, input, i);
-                    _msg.SendInputAck(handle, i);
+                    const i8 local_adv = (i8)(current_frame - i - local_delay);
+                    _msg.SendInputAck(handle, i, local_adv);
                 }
             }
         }
@@ -480,9 +475,16 @@ void Gekko::GameSession::SendLocalInputs()
                 }
                 _msg.AddInput(frame, player->handle, input.get());
             }
-            // Record advantage snapshot once per actual game frame
+            // Record per-peer advantage snapshot once per actual game frame
             if (frame == current) {
-                _msg.history.Update(frame);
+                const Frame current_frame = _sync.GetCurrentFrame();
+                for (auto& remote : _msg.remotes) {
+                    if (remote->GetStatus() == Connected) {
+                        const i8 local_adv = (i8)(current_frame - _sync.GetLastReceivedFrom(remote->handle) - (Frame)delay);
+                        remote->adv_history.SetLocalAdvantage(local_adv);
+                        remote->adv_history.Update(frame);
+                    }
+                }
             }
 		}
 	}

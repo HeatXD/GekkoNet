@@ -204,7 +204,7 @@ void Gekko::SpectatorSession::HandleReceivedInputs()
                     int current_idx = i - min_frame;
                     u8* input = input_q[current_idx].get();
                     _sync.AddRemoteInput(handle, input, i);
-                    _msg.SendInputAck(handle, i);
+                    _msg.SendInputAck(handle, i, 0);
                 }
             }
         }

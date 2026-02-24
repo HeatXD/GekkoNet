@@ -14,6 +14,7 @@ Gekko::Player::Player(Handle phandle, GekkoPlayerType type, NetAddress* addr, u3
 
 	_type = type;
 	_status = _type == GekkoLocalPlayer ? Connected : Initiating;
+	adv_history.Init();
 }
 
 GekkoPlayerType Gekko::Player::GetType()
