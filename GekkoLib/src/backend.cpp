@@ -100,8 +100,10 @@ void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 		for (auto& peer : remotes) {
 			SendInputsToPeer(peer.get(), host, false);
 		}
-        // check for disconnects
-        HandleTooFarBehindActors(false);
+	}
+	// check for disconnects (runs even in spectator sessions with no locals)
+	if (!remotes.empty()) {
+		HandleTooFarBehindActors(false);
 	}
 
 	// send per-peer input packets to spectators
@@ -109,8 +111,10 @@ void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 		for (auto& peer : spectators) {
 			SendInputsToPeer(peer.get(), host, true);
 		}
-        // check for disconnects
-        HandleTooFarBehindActors(true);
+	}
+	// check for disconnects
+	if (!spectators.empty()) {
+		HandleTooFarBehindActors(true);
 	}
 
 	// drain remaining messages (acks, sync, health, etc.)

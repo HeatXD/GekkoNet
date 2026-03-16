@@ -15,11 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="OnlineSession.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="vcpkg.json" />
+    <ClCompile Include="OnlineSession.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
