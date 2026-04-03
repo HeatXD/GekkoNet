@@ -175,7 +175,7 @@ bool Gekko::GameEventSystem::AddAdvanceEvent(SyncSystem& sync, bool rolling_back
 {
     Frame frame = GameInput::NULL_FRAME;
     std::unique_ptr<u8[]> inputs;
-    if (!sync.GetCurrentInputs(inputs, frame)) {
+    if (!sync.GetCurrentInputs(inputs, frame, running_ahead)) {
         return false;
     }
 

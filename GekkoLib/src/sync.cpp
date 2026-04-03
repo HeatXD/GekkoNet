@@ -66,11 +66,11 @@ bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame 
 	return true;
 }
 
-bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame)
+bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame, bool running_ahead)
 {
     auto all_input = std::make_unique<u8[]>(_input_size * _num_players);
 	for (u8 i = 0; i < _num_players; i++) {
-		auto inp = _input_buffers[i].GetInput(_current_frame, true);
+		auto inp = _input_buffers[i].GetInput(_current_frame, true, running_ahead);
 	
 		if (inp->frame == GameInput::NULL_FRAME) {
 			return false;
@@ -108,7 +108,7 @@ void Gekko::SyncSystem::SetInputPredictionWindow(Handle player, u8 input_window)
 	_input_buffers[player].SetInputPredictionWindow(input_window);
 }
 
-Frame Gekko::SyncSystem::GetCurrentFrame()
+Frame Gekko::SyncSystem::GetCurrentFrame() const
 {
 	return _current_frame;
 }
@@ -156,3 +156,4 @@ void Gekko::SyncSystem::ClearIncorrectFramesUpTo(Frame clear_limit)
         _input_buffers[i].ClearIncorrectFrames(clear_limit);
     }
 }
+

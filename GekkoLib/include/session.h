@@ -66,6 +66,8 @@ namespace Gekko {
 
 		u8 GetMinLocalDelay();
 
+		Frame GetSessionFrame() const;
+
 		bool IsPlayingLocally();
 
         bool IsLockstepActive() const;

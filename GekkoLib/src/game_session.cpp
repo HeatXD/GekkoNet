@@ -161,7 +161,7 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
             _sync.IncrementFrame();
         }
 
-        // run ahead speculatively if configured
+        // run ahead if configured
         HandleRunahead();
     }
 
@@ -459,7 +459,7 @@ void Gekko::GameSession::HandleReceivedInputs()
 
             auto& input_q = _msg.GetNetPlayerQueue(handle);
             const Frame min_frame = last_added - (i32)input_q.size() + 1;
-            const Frame current_frame = _sync.GetCurrentFrame();
+            const Frame current_frame = GetSessionFrame();
             const Frame local_delay = (Frame)GetMinLocalDelay();
             for (int i = last_recv; i <= last_added; i++) {
                 if (i >= min_frame) {
@@ -490,7 +490,7 @@ void Gekko::GameSession::SendLocalInputs()
             }
             // Record per-peer advantage snapshot once per actual game frame
             if (frame == current) {
-                const Frame current_frame = _sync.GetCurrentFrame();
+                const Frame current_frame = GetSessionFrame();
                 for (auto& remote : _msg.remotes) {
                     if (remote->GetStatus() == Connected) {
                         const i8 local_adv = (i8)(current_frame - _sync.GetLastReceivedFrom(remote->handle) - (Frame)delay);
@@ -520,6 +520,13 @@ bool Gekko::GameSession::IsPlayingLocally()
 bool Gekko::GameSession::IsLockstepActive() const
 {
     return _config.input_prediction_window == 0;
+}
+
+Frame Gekko::GameSession::GetSessionFrame() const
+{
+    return _runahead_start_frame != GameInput::NULL_FRAME
+        ? _runahead_start_frame
+        : _sync.GetCurrentFrame();
 }
 
 void Gekko::GameSession::RewindRunahead()
