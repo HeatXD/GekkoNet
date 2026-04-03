@@ -9,7 +9,7 @@ Gekko::GameSession::GameSession()
     _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
-    _runahead_base_frame = GameInput::NULL_FRAME;
+    _runahead_start_frame = GameInput::NULL_FRAME;
     _runahead_frames = 0;
     _config = GekkoConfig();
 }
@@ -524,14 +524,14 @@ bool Gekko::GameSession::IsLockstepActive() const
 
 void Gekko::GameSession::RewindRunahead()
 {
-    if (_runahead_base_frame == GameInput::NULL_FRAME) {
+    if (_runahead_start_frame == GameInput::NULL_FRAME) {
         return;
     }
 
-    _sync.SetCurrentFrame(_runahead_base_frame);
+    _sync.SetCurrentFrame(_runahead_start_frame);
     _game_events.AddRunaheadLoadEvent(_storage);
 
-    _runahead_base_frame = GameInput::NULL_FRAME;
+    _runahead_start_frame = GameInput::NULL_FRAME;
 }
 
 void Gekko::GameSession::HandleRunahead()
@@ -540,7 +540,7 @@ void Gekko::GameSession::HandleRunahead()
         return;
     }
 
-    _runahead_base_frame = _sync.GetCurrentFrame();
+    _runahead_start_frame = _sync.GetCurrentFrame();
     _game_events.AddRunaheadSaveEvent(_sync, _storage);
 
     for (u8 i = 0; i < _runahead_frames; i++) {

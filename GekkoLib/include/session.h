@@ -95,7 +95,7 @@ namespace Gekko {
 
         Frame _last_sent_healthcheck;
 
-		Frame _runahead_base_frame;
+		Frame _runahead_start_frame;
 
 		u8 _runahead_frames;
 
