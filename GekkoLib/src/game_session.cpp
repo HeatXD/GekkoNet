@@ -111,7 +111,7 @@ void Gekko::GameSession::AddLocalInput(i32 player, void* input)
 
     for (u32 i = 0; i < _msg.locals.size(); i++) {
         if (_msg.locals[i]->handle == player) {
-            _sync.AddLocalInput(player, inp);
+            _sync.AddLocalInput(player, inp, GetSessionFrame());
             break;
         }
     }

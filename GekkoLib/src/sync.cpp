@@ -25,14 +25,14 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size, u32 buffer_size)
 	}
 }
 
-void Gekko::SyncSystem::AddLocalInput(Handle player, u8* input)
+void Gekko::SyncSystem::AddLocalInput(Handle player, u8* input, Frame frame)
 {
 	// drop inputs from incorrect handles
     if (player >= _num_players || player < 0) {
         return;
     }
 
-	_input_buffers[player].AddLocalInput(_current_frame, input);
+	_input_buffers[player].AddLocalInput(frame, input);
 }
 
 void Gekko::SyncSystem::AddRemoteInput(Handle player, u8* input, Frame frame)
