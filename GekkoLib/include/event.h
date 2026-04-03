@@ -35,11 +35,15 @@ namespace Gekko {
     public:
         void Init(u32 input_size);
 
-        bool AddAdvanceEvent(SyncSystem& sync, bool rolling_back);
+        bool AddAdvanceEvent(SyncSystem& sync, bool rolling_back, bool running_ahead = false);
 
         void AddSaveEvent(SyncSystem& sync, StateStorage& storage, Frame* last_saved_frame = nullptr);
 
         void AddLoadEvent(SyncSystem& sync, StateStorage& storage);
+
+        void AddRunaheadSaveEvent(SyncSystem& sync, StateStorage& storage);
+
+        void AddRunaheadLoadEvent(StateStorage& storage);
 
         std::vector<GekkoGameEvent*>& GetEvents();
 

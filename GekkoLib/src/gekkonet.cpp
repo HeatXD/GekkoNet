@@ -59,6 +59,11 @@ void gekko_set_local_delay(GekkoSession* session, int player, unsigned char dela
     session->SetLocalDelay(player, delay);
 }
 
+void gekko_set_runahead(GekkoSession* session, unsigned char runahead)
+{
+    session->SetRunahead(runahead);
+}
+
 void gekko_add_local_input(GekkoSession* session, int player, void* input)
 {
     session->AddLocalInput(player, input);

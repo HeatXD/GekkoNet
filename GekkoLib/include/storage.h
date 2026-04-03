@@ -22,9 +22,13 @@ namespace Gekko {
 
 		StateEntry* GetState(Frame frame);
 
+		StateEntry* GetRunaheadState();
+
 	private:
 		u32 _max_num_states;
 
 		std::vector<std::unique_ptr<StateEntry>> _states;
+
+		StateEntry _runahead_state;
 	};
 }
