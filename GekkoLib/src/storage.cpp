@@ -16,6 +16,15 @@ void Gekko::StateStorage::Init(u32 num_states, u32 state_size, bool limited)
         _states.back().get()->state = std::make_unique<u8[]>(state_size);
 		_states.back().get()->state_len = state_size;
 	}
+
+	_runahead_state.state = std::make_unique<u8[]>(state_size);
+	_runahead_state.state_len = state_size;
+	_runahead_state.frame = GameInput::NULL_FRAME;
+}
+
+Gekko::StateEntry* Gekko::StateStorage::GetRunaheadState()
+{
+	return &_runahead_state;
 }
 
 Gekko::StateEntry* Gekko::StateStorage::GetState(Frame frame)

@@ -48,6 +48,8 @@ namespace Gekko {
 
 		std::unique_ptr<GameInput> GetInput(Frame frame, bool prediction = false);
 
+		void SetRunaheadMode(bool running_ahead);
+
 		Frame GetLastReceivedFrame();
 
         void ClearIncorrectFrames(Frame clear_limit);
@@ -62,6 +64,8 @@ namespace Gekko {
 		bool CanPredictInput();
 
 	private:
+		bool _running_ahead;
+
 		u8 _input_delay;
 
 		u8 _input_prediction_window;

@@ -18,6 +18,8 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Online Sessions
 	- Local Player Input Delay Settings
 	- Remote Player Input Prediction Settings
+	- Runahead Support
+		- Locally simulate ahead speculatively to hide input delay, keeping input feeling responsive regardless of network conditions.
 - Spectator Sessions
 	- Spectator Delay Settings.
 - Stress Sessions

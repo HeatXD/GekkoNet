@@ -15,6 +15,7 @@
 struct GekkoSession {
     virtual void Init(GekkoConfig* config) = 0;
     virtual void SetLocalDelay(i32 player, u8 delay) = 0;
+    virtual void SetRunahead(u8 runahead) = 0;
     virtual void SetNetAdapter(GekkoNetAdapter* adapter) = 0;
     virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) = 0;
     virtual void AddLocalInput(i32 player, void* input) = 0;
@@ -35,6 +36,8 @@ namespace Gekko {
         void Init(GekkoConfig* config) override;
 
         void SetLocalDelay(i32 player, u8 delay) override;
+
+        void SetRunahead(u8 runahead) override;
 
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
@@ -75,6 +78,10 @@ namespace Gekko {
 
 		void HandleSavingConfirmedFrame();
 
+		void HandleRunahead();
+
+		void RewindRunahead();
+
         void SendSessionHealthCheck();
 
         void SendNetworkHealthCheck();
@@ -87,6 +94,10 @@ namespace Gekko {
 		Frame _last_saved_frame;
 
         Frame _last_sent_healthcheck;
+
+		Frame _runahead_start_frame;
+
+		u8 _runahead_frames;
 
 		std::unique_ptr<u8[]> _disconnected_input;
 
@@ -110,6 +121,8 @@ namespace Gekko {
         void Init(GekkoConfig* config) override;
 
         void SetLocalDelay(i32 player, u8 delay) override;
+
+        void SetRunahead(u8 runahead) override {}
 
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
@@ -161,6 +174,8 @@ namespace Gekko {
         void Init(GekkoConfig* config) override;
 
         void SetLocalDelay(i32 player, u8 delay) override;
+
+        void SetRunahead(u8 runahead) override {}
 
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 

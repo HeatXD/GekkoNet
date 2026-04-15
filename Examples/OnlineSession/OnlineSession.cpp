@@ -109,6 +109,8 @@ int main(int argc, char* argv[]) {
     gekko_start(session, &config);
     gekko_net_adapter_set(session, gekko_default_adapter(ports[local_players[0]]));
 
+    gekko_set_runahead(session, 8);
+
     int remote_handle = -1;
     for (int i = 0; i < num_players; i++) {
         bool is_local = false;
@@ -121,7 +123,7 @@ int main(int argc, char* argv[]) {
 
         if (is_local) {
             gekko_add_actor(session, GekkoLocalPlayer, nullptr);
-            gekko_set_local_delay(session, i, 1);
+            gekko_set_local_delay(session, i, 10);
         }
         else {
             GekkoNetAddress addr = {};
@@ -137,6 +139,9 @@ int main(int argc, char* argv[]) {
     Gamestate gs = {};
     gs.Init(num_players);
 
+    unsigned char current_delay = 10;
+    unsigned char current_runahead = 8;
+
     bool running = true;
     while (running) {
         frame_start = SDL_GetPerformanceCounter();
@@ -146,6 +151,42 @@ int main(int argc, char* argv[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 running = false;
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN) {
+                switch (event.key.key) {
+                case SDLK_F1:
+                    if (current_delay > 0) {
+                        current_delay--;
+                        for (int i = 0; i < num_local_players; i++) {
+                            gekko_set_local_delay(session, local_players[i], current_delay);
+                        }
+                        printf("delay: %d\n", current_delay);
+                    }
+                    break;
+                case SDLK_F2:
+                    if (current_delay < 15) {
+                        current_delay++;
+                        for (int i = 0; i < num_local_players; i++) {
+                            gekko_set_local_delay(session, local_players[i], current_delay);
+                        }
+                        printf("delay: %d\n", current_delay);
+                    }
+                    break;
+                case SDLK_F3:
+                    if (current_runahead > 0) {
+                        current_runahead--;
+                        gekko_set_runahead(session, current_runahead);
+                        printf("runahead: %d\n", current_runahead);
+                    }
+                    break;
+                case SDLK_F4:
+                    if (current_runahead < 15) {
+                        current_runahead++;
+                        gekko_set_runahead(session, current_runahead);
+                        printf("runahead: %d\n", current_runahead);
+                    }
+                    break;
+                }
             }
         }
 
@@ -222,9 +263,10 @@ int main(int argc, char* argv[]) {
             gekko_network_stats(session, remote_handle, &netstats);
             char title[256];
             snprintf(title, sizeof(title),
-                "Pong | P: %ums PA: %.1fms J: %.1fms | S: %.2f R: %.2f KB/s | FA: %.2f",
+                "Pong | P: %ums PA: %.1fms J: %.1fms | S: %.2f R: %.2f KB/s | FA: %.2f | D: %d RA: %d",
                 netstats.last_ping, netstats.avg_ping, netstats.jitter,
-                netstats.kb_sent, netstats.kb_received, frames_ahead);
+                netstats.kb_sent, netstats.kb_received, frames_ahead,
+                current_delay, current_runahead);
             SDL_SetWindowTitle(window, title);
         }
 

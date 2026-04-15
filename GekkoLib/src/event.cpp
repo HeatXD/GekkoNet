@@ -171,7 +171,7 @@ void Gekko::GameEventSystem::Init(u32 input_size) {
     _current_events.clear();
 }
 
-bool Gekko::GameEventSystem::AddAdvanceEvent(SyncSystem& sync, bool rolling_back)
+bool Gekko::GameEventSystem::AddAdvanceEvent(SyncSystem& sync, bool rolling_back, bool running_ahead)
 {
     Frame frame = GameInput::NULL_FRAME;
     std::unique_ptr<u8[]> inputs;
@@ -186,6 +186,7 @@ bool Gekko::GameEventSystem::AddAdvanceEvent(SyncSystem& sync, bool rolling_back
     event->type = GekkoAdvanceEvent;
     event->data.adv.frame = frame;
     event->data.adv.rolling_back = rolling_back;
+    event->data.adv.running_ahead = running_ahead;
 
     if (event->data.adv.inputs) {
         std::memcpy(event->data.adv.inputs, inputs.get(), event->data.adv.input_len);
@@ -199,7 +200,6 @@ void Gekko::GameEventSystem::AddSaveEvent(SyncSystem& sync, StateStorage& storag
     const Frame frame_to_save = sync.GetCurrentFrame();
 
     auto state = storage.GetState(frame_to_save);
-
     state->frame = frame_to_save;
 
     _current_events.push_back(_event_buffer.GetEvent(false));
@@ -229,6 +229,38 @@ void Gekko::GameEventSystem::AddLoadEvent(SyncSystem& sync, StateStorage& storag
     event->type = GekkoLoadEvent;
 
     event->data.load.frame = frame_to_load;
+    event->data.load.state = state->state.get();
+    event->data.load.state_len = state->state_len;
+}
+
+void Gekko::GameEventSystem::AddRunaheadSaveEvent(SyncSystem& sync, StateStorage& storage)
+{
+    const Frame frame_to_save = sync.GetCurrentFrame();
+
+    auto state = storage.GetRunaheadState();
+    state->frame = frame_to_save;
+
+    _current_events.push_back(_event_buffer.GetEvent(false));
+
+    auto event = _current_events.back();
+    event->type = GekkoSaveEvent;
+
+    event->data.save.frame = frame_to_save;
+    event->data.save.state = state->state.get();
+    event->data.save.checksum = &state->checksum;
+    event->data.save.state_len = &state->state_len;
+}
+
+void Gekko::GameEventSystem::AddRunaheadLoadEvent(StateStorage& storage)
+{
+    auto state = storage.GetRunaheadState();
+
+    _current_events.push_back(_event_buffer.GetEvent(false));
+
+    auto event = _current_events.back();
+    event->type = GekkoLoadEvent;
+
+    event->data.load.frame = state->frame;
     event->data.load.state = state->state.get();
     event->data.load.state_len = state->state_len;
 }

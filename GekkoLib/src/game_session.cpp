@@ -9,6 +9,8 @@ Gekko::GameSession::GameSession()
     _last_saved_frame = GameInput::NULL_FRAME - 1;
 	_disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
+    _runahead_start_frame = GameInput::NULL_FRAME;
+    _runahead_frames = 0;
     _config = GekkoConfig();
 }
 
@@ -39,6 +41,11 @@ void Gekko::GameSession::Init(GekkoConfig* config)
 
     // we only detect desyncs whenever we are not limited saving for now.
     _config.desync_detection = _config.limited_saving ? false : _config.desync_detection;
+}
+
+void Gekko::GameSession::SetRunahead(u8 runahead)
+{
+    _runahead_frames = runahead;
 }
 
 void Gekko::GameSession::SetLocalDelay(i32 player, u8 delay)
@@ -129,6 +136,9 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         // add inputs so we can continue the session.
         AddDisconnectedPlayerInputs();
 
+        // rewind any runahead frames from the previous tick
+        RewindRunahead();
+
         // check if we need to rollback
         HandleRollback();
 
@@ -150,6 +160,9 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
             }
             _sync.IncrementFrame();
         }
+
+        // run ahead if configured
+        HandleRunahead();
     }
 
     *count = _game_events.Count();
@@ -507,4 +520,36 @@ bool Gekko::GameSession::IsPlayingLocally()
 bool Gekko::GameSession::IsLockstepActive() const
 {
     return _config.input_prediction_window == 0;
+}
+
+void Gekko::GameSession::RewindRunahead()
+{
+    if (_runahead_start_frame == GameInput::NULL_FRAME) {
+        return;
+    }
+
+    _game_events.AddRunaheadLoadEvent(_storage);
+    _runahead_start_frame = GameInput::NULL_FRAME;
+}
+
+void Gekko::GameSession::HandleRunahead()
+{
+    if (IsLockstepActive() || _runahead_frames == 0) {
+        return;
+    }
+
+    _runahead_start_frame = _sync.GetCurrentFrame();
+    _game_events.AddRunaheadSaveEvent(_sync, _storage);
+
+    _sync.SetRunaheadMode(true);
+    for (u8 i = 0; i < _runahead_frames; i++) {
+        if (!_game_events.AddAdvanceEvent(_sync, false, true)) {
+            break;
+        }
+        _sync.IncrementFrame();
+    }
+    _sync.SetRunaheadMode(false);
+
+    // Reset back to the real frame so AddLocalInput and network logic see the correct frame
+    _sync.SetCurrentFrame(_runahead_start_frame);
 }
