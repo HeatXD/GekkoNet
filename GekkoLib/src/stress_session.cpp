@@ -65,7 +65,7 @@ void Gekko::StressSession::AddLocalInput(i32 player, void* input)
 
     for (u32 i = 0; i < _locals.size(); i++) {
         if (_locals[i].handle == player) {
-            _sync.AddLocalInput(player, inp, _sync.GetCurrentFrame());
+            _sync.AddLocalInput(player, inp);
             break;
         }
     }

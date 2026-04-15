@@ -10,6 +10,7 @@ Gekko::InputBuffer::InputBuffer() {
 	_buff_size = DEFAULT_BUFF_SIZE;
 	_input_delay = 0;
 	_input_prediction_window = 0;
+    _running_ahead = false;
 
 	_last_received_input = GameInput::NULL_FRAME;
 	_last_predicted_input = GameInput::NULL_FRAME;
@@ -208,7 +209,12 @@ u32 Gekko::InputBuffer::PreviousFrame(Frame frame)
 	return frame - 1 < 0 ? _buff_size - frame - 1 : frame - 1;
 }
 
-std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool prediction, bool running_ahead)
+void Gekko::InputBuffer::SetRunaheadMode(bool running_ahead)
+{
+    _running_ahead = running_ahead;
+}
+
+std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool prediction)
 {
     auto inp = std::make_unique<GameInput>();
 
@@ -220,11 +226,11 @@ std::unique_ptr<Gekko::GameInput> Gekko::InputBuffer::GetInput(Frame frame, bool
                 // return existing prediction
                 inp->Init(_inputs[frame % _buff_size].get());
 
-            } else if (!running_ahead && CanPredictInput() && HandleInputPrediction(frame)) {
+            } else if (!_running_ahead && CanPredictInput() && HandleInputPrediction(frame)) {
                 // generate new prediction
 				inp->Init(_inputs[frame % _buff_size].get());
 
-            } else if (running_ahead) {
+            } else if (_running_ahead) {
                 // return last known input without advancing prediction state
                 const Frame ref = _last_predicted_input != GameInput::NULL_FRAME ? _last_predicted_input : _last_received_input;
                 if (ref != GameInput::NULL_FRAME) {

@@ -13,13 +13,15 @@ namespace Gekko {
 
 		void Init(u8 num_players, u32 input_size, u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE);
 
-		void AddLocalInput(Handle player, u8* input, Frame frame);
+		void AddLocalInput(Handle player, u8* input);
 
 		void AddRemoteInput(Handle player, u8* input, Frame frame);
 
 		void IncrementFrame();
 
-		bool GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame, bool running_ahead = false);
+		bool GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame);
+
+		void SetRunaheadMode(bool running_ahead);
 
 		bool GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame frame);
 

@@ -25,14 +25,14 @@ void Gekko::SyncSystem::Init(u8 num_players, u32 input_size, u32 buffer_size)
 	}
 }
 
-void Gekko::SyncSystem::AddLocalInput(Handle player, u8* input, Frame frame)
+void Gekko::SyncSystem::AddLocalInput(Handle player, u8* input)
 {
 	// drop inputs from incorrect handles
     if (player >= _num_players || player < 0) {
         return;
     }
 
-	_input_buffers[player].AddLocalInput(frame, input);
+	_input_buffers[player].AddLocalInput(_current_frame, input);
 }
 
 void Gekko::SyncSystem::AddRemoteInput(Handle player, u8* input, Frame frame)
@@ -66,11 +66,18 @@ bool Gekko::SyncSystem::GetSpectatorInputs(std::unique_ptr<u8[]>& inputs, Frame 
 	return true;
 }
 
-bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame, bool running_ahead)
+void Gekko::SyncSystem::SetRunaheadMode(bool running_ahead)
+{
+    for (u8 i = 0; i < _num_players; i++) {
+        _input_buffers[i].SetRunaheadMode(running_ahead);
+    }
+}
+
+bool Gekko::SyncSystem::GetCurrentInputs(std::unique_ptr<u8[]>& inputs, Frame& frame)
 {
     auto all_input = std::make_unique<u8[]>(_input_size * _num_players);
 	for (u8 i = 0; i < _num_players; i++) {
-		auto inp = _input_buffers[i].GetInput(_current_frame, true, running_ahead);
+		auto inp = _input_buffers[i].GetInput(_current_frame, true);
 	
 		if (inp->frame == GameInput::NULL_FRAME) {
 			return false;
