@@ -153,9 +153,7 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
 
         // then advance the session
         if (_game_events.AddAdvanceEvent(_sync, false)) {
-            if (!_config.limited_saving ||
-                IsPlayingLocally() &&
-                _sync.GetCurrentFrame() % _config.input_prediction_window == 0) {
+            if (!_config.limited_saving) {
                 _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             }
             _sync.IncrementFrame();
