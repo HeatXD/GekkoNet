@@ -534,7 +534,7 @@ void Gekko::GameSession::RewindRunahead()
 
 void Gekko::GameSession::HandleRunahead()
 {
-    if (IsLockstepActive() || _runahead_frames == 0) {
+    if ((IsLockstepActive() && !IsPlayingLocally()) || _runahead_frames == 0) {
         return;
     }
 

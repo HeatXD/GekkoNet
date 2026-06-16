@@ -368,3 +368,7 @@ FodyWeavers.xsd
 #cmake build files
 /GekkoLib/build
 /Examples/OnlineSession/vcpkg_installed/
+/Examples/GekkoGame/vcpkg_installed/x64-windows
+/Examples/Sliders/vcpkg_installed/x64-windows
+/Examples/SpectatorSession/vcpkg_installed/x64-windows
+/Examples/StressSession/vcpkg_installed/x64-windows
