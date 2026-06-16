@@ -372,3 +372,4 @@ FodyWeavers.xsd
 /Examples/Sliders/vcpkg_installed/x64-windows
 /Examples/SpectatorSession/vcpkg_installed/x64-windows
 /Examples/StressSession/vcpkg_installed/x64-windows
+/Examples/LocalSession/vcpkg_installed/x64-windows

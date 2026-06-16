@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpectatorSession", "Example
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StressSession", "Examples\StressSession\StressSession.vcxproj", "{2CA70355-4D6C-4675-8088-BF0956B730C2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LocalSession", "Examples\LocalSession\LocalSession.vcxproj", "{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -81,6 +83,14 @@ Global
 		{2CA70355-4D6C-4675-8088-BF0956B730C2}.Release|x64.Build.0 = Release|x64
 		{2CA70355-4D6C-4675-8088-BF0956B730C2}.RelWithDebInfo|x64.ActiveCfg = Debug|x64
 		{2CA70355-4D6C-4675-8088-BF0956B730C2}.RelWithDebInfo|x64.Build.0 = Debug|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.Debug|x64.ActiveCfg = Debug|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.Debug|x64.Build.0 = Debug|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.MinSizeRel|x64.ActiveCfg = Release|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.MinSizeRel|x64.Build.0 = Release|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.Release|x64.ActiveCfg = Release|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.Release|x64.Build.0 = Release|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.RelWithDebInfo|x64.ActiveCfg = Debug|x64
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF}.RelWithDebInfo|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -91,6 +101,7 @@ Global
 		{57DBAEA8-8C5B-471A-BEDC-1888D0264AD9} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 		{3DF5D51B-4050-4879-98AD-3F63946349AB} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 		{2CA70355-4D6C-4675-8088-BF0956B730C2} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
+		{4F2899A1-DEDB-4F68-AF90-50BC73DEA8AF} = {C80B26F2-22C4-4292-B876-EB9D9CFC0455}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {53703212-0E21-473D-8C3D-CFCABD5DE432}
