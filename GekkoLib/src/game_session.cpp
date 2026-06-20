@@ -152,7 +152,7 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         SessionIntegrityCheck();
 
         // then advance the session
-        if (_game_events.AddAdvanceEvent(_sync, false)) {
+        if (_game_events.AddAdvanceEvent(_sync, false, _runahead_frames > 0)) {
             if (!_config.limited_saving) {
                 _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             }
@@ -541,7 +541,8 @@ void Gekko::GameSession::HandleRunahead()
 
     _sync.SetRunaheadMode(true);
     for (u8 i = 0; i < _runahead_frames; i++) {
-        if (!_game_events.AddAdvanceEvent(_sync, false, true)) {
+        const bool is_display_frame = (i == _runahead_frames - 1);
+        if (!_game_events.AddAdvanceEvent(_sync, false, !is_display_frame)) {
             break;
         }
         _sync.IncrementFrame();
