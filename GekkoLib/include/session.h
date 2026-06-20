@@ -82,6 +82,10 @@ namespace Gekko {
 
 		void RewindRunahead();
 
+		bool RollbackPending();
+
+		bool ConfirmedSaveDue();
+
         void SendSessionHealthCheck();
 
         void SendNetworkHealthCheck();
