@@ -221,18 +221,12 @@ void Gekko::GameSession::NetworkPoll()
 
 void Gekko::GameSession::HandleSavingConfirmedFrame()
 {
-    if (IsLockstepActive() || !_config.limited_saving ||
-        IsPlayingLocally()) {
+    if (!ConfirmedSaveDue()) {
         return;
     }
 
     const Frame confirmed_frame = _sync.GetMinReceivedFrame();
     const Frame current = _sync.GetCurrentFrame();
-    const Frame diff = current - (_last_saved_frame + 1);
-
-    if (diff <= _config.input_prediction_window) {
-        return;
-    }
 
     assert(_last_saved_frame < confirmed_frame);
 
@@ -361,17 +355,12 @@ void Gekko::GameSession::HandleRollback()
         _sync.IncrementFrame();
     }
 
-    if (IsLockstepActive() || IsPlayingLocally()) {
+    if (!RollbackPending()) {
         return;
     }
 
     current = _sync.GetCurrentFrame();
     const Frame min = _sync.GetMinIncorrectFrame();
-
-    // dont allow rollbacks starting before the null frame
-    if (min == GameInput::NULL_FRAME) {
-        return;
-    }
 
     const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
     const Frame frame_to_save = std::min(current - 1, min);
@@ -521,21 +510,39 @@ bool Gekko::GameSession::IsLockstepActive() const
     return _config.input_prediction_window == 0;
 }
 
+bool Gekko::GameSession::RollbackPending()
+{
+    if (IsLockstepActive() || IsPlayingLocally()) {
+        return false;
+    }
+
+    return _sync.GetMinIncorrectFrame() != GameInput::NULL_FRAME;
+}
+
+bool Gekko::GameSession::ConfirmedSaveDue()
+{
+    if (IsLockstepActive() || !_config.limited_saving || IsPlayingLocally()) {
+        return false;
+    }
+
+    const Frame diff = _sync.GetCurrentFrame() - (_last_saved_frame + 1);
+    return diff > _config.input_prediction_window;
+}
+
 void Gekko::GameSession::RewindRunahead()
 {
     if (_runahead_start_frame == GameInput::NULL_FRAME) {
         return;
     }
 
-    // rollback is coming so dont load the state twice.
-    // its get overwritten anyways
-    if (_sync.GetMinIncorrectFrame() != GameInput::NULL_FRAME) {
-        _runahead_start_frame = GameInput::NULL_FRAME;
+    _runahead_start_frame = GameInput::NULL_FRAME;
+
+    // a rollback or confirmed save will load+resim this frame, so dont load twice.
+    if (RollbackPending() || ConfirmedSaveDue()) {
         return;
     }
 
     _game_events.AddRunaheadLoadEvent(_storage);
-    _runahead_start_frame = GameInput::NULL_FRAME;
 }
 
 void Gekko::GameSession::HandleRunahead()
