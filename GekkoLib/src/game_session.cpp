@@ -4,10 +4,10 @@
 
 Gekko::GameSession::GameSession()
 {
-	_host = nullptr;
-	_started = false;
+    _host = nullptr;
+    _started = false;
     _last_saved_frame = GameInput::NULL_FRAME - 1;
-	_disconnected_input = nullptr;
+    _disconnected_input = nullptr;
     _last_sent_healthcheck = GameInput::NULL_FRAME;
     _runahead_start_frame = GameInput::NULL_FRAME;
     _runahead_frames = 0;
@@ -152,7 +152,7 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         SessionIntegrityCheck();
 
         // then advance the session
-        if (_game_events.AddAdvanceEvent(_sync, false)) {
+        if (_game_events.AddAdvanceEvent(_sync, false, _runahead_frames > 0)) {
             if (!_config.limited_saving) {
                 _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             }
@@ -221,38 +221,38 @@ void Gekko::GameSession::NetworkPoll()
 
 void Gekko::GameSession::HandleSavingConfirmedFrame()
 {
-	if (IsLockstepActive() || !_config.limited_saving ||
+    if (IsLockstepActive() || !_config.limited_saving ||
         IsPlayingLocally()) {
-		return;
-	}
+        return;
+    }
 
-	const Frame confirmed_frame = _sync.GetMinReceivedFrame();
-	const Frame current = _sync.GetCurrentFrame();
-	const Frame diff = current - (_last_saved_frame + 1);
+    const Frame confirmed_frame = _sync.GetMinReceivedFrame();
+    const Frame current = _sync.GetCurrentFrame();
+    const Frame diff = current - (_last_saved_frame + 1);
 
-	if (diff <= _config.input_prediction_window) {
-		return;
-	}
+    if (diff <= _config.input_prediction_window) {
+        return;
+    }
 
-	assert(_last_saved_frame < confirmed_frame);
+    assert(_last_saved_frame < confirmed_frame);
 
-	const Frame sync_frame = _last_saved_frame;
-	const Frame frame_to_save = std::min(current - 1, confirmed_frame);
+    const Frame sync_frame = _last_saved_frame;
+    const Frame frame_to_save = std::min(current - 1, confirmed_frame);
 
-	_sync.SetCurrentFrame(sync_frame);
-	_game_events.AddLoadEvent(_sync, _storage);
-	_sync.IncrementFrame();
+    _sync.SetCurrentFrame(sync_frame);
+    _game_events.AddLoadEvent(_sync, _storage);
+    _sync.IncrementFrame();
 
-	for (Frame frame = sync_frame + 1; frame < current; frame++) {
+    for (Frame frame = sync_frame + 1; frame < current; frame++) {
         _game_events.AddAdvanceEvent(_sync, true);
-		if (frame == frame_to_save) {
+        if (frame == frame_to_save) {
             _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
-		}
-		_sync.IncrementFrame();
-	}
+        }
+        _sync.IncrementFrame();
+    }
 
-	// make sure that we are back where we started.
-	assert(_sync.GetCurrentFrame() == current);
+    // make sure that we are back where we started.
+    assert(_sync.GetCurrentFrame() == current);
 }
 
 void Gekko::GameSession::SendSessionHealthCheck()
@@ -286,7 +286,8 @@ void Gekko::GameSession::SendSessionHealthCheck()
         iter != _msg.local_health.end(); ) {
         if (iter->first < (confirmed - 100)) {
             iter = _msg.local_health.erase(iter);
-        } else {
+        }
+        else {
             ++iter;
         }
     }
@@ -326,121 +327,121 @@ void Gekko::GameSession::SessionIntegrityCheck()
 
 void Gekko::GameSession::AddDisconnectedPlayerInputs()
 {
-	for (auto& player : _msg.remotes) {
-		if (player->GetStatus() == Disconnected) {
+    for (auto& player : _msg.remotes) {
+        if (player->GetStatus() == Disconnected) {
             const Frame last_recv = _sync.GetLastReceivedFrom(player->handle) + 1;
             const Frame current = _sync.GetCurrentFrame();
             for (Frame i = last_recv; i < current; i++) {
                 _sync.AddRemoteInput(player->handle, _disconnected_input.get(), i);
             }
-		}
-	}
+        }
+    }
 }
 
 void Gekko::GameSession::SendSpectatorInputs()
 {
-	const Frame current = _msg.GetLastAddedInput(true) + 1;
-	const Frame confirmed = _sync.GetMinReceivedFrame();
+    const Frame current = _msg.GetLastAddedInput(true) + 1;
+    const Frame confirmed = _sync.GetMinReceivedFrame();
 
-	std::unique_ptr<u8[]> inputs;
-	for (Frame frame = current; frame <= confirmed; frame++) {
-		if (!_sync.GetSpectatorInputs(inputs, frame)) {
-			break;
-		}
-		_msg.AddSpectatorInput(frame, inputs.get());
-	}
+    std::unique_ptr<u8[]> inputs;
+    for (Frame frame = current; frame <= confirmed; frame++) {
+        if (!_sync.GetSpectatorInputs(inputs, frame)) {
+            break;
+        }
+        _msg.AddSpectatorInput(frame, inputs.get());
+    }
 }
 
 void Gekko::GameSession::HandleRollback()
 {
-	Frame current = _sync.GetCurrentFrame();
-	if (_last_saved_frame == GameInput::NULL_FRAME - 1) {
-		_sync.SetCurrentFrame(current - 1);
-		_game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
-		_sync.IncrementFrame();
-	}
+    Frame current = _sync.GetCurrentFrame();
+    if (_last_saved_frame == GameInput::NULL_FRAME - 1) {
+        _sync.SetCurrentFrame(current - 1);
+        _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
+        _sync.IncrementFrame();
+    }
 
-	if (IsLockstepActive() || IsPlayingLocally()) {
+    if (IsLockstepActive() || IsPlayingLocally()) {
         return;
     }
 
-	current = _sync.GetCurrentFrame();
-	const Frame min = _sync.GetMinIncorrectFrame();
+    current = _sync.GetCurrentFrame();
+    const Frame min = _sync.GetMinIncorrectFrame();
 
-	// dont allow rollbacks starting before the null frame
+    // dont allow rollbacks starting before the null frame
     if (min == GameInput::NULL_FRAME) {
         return;
     }
 
-	const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
-	const Frame frame_to_save = std::min(current - 1, min);
+    const Frame sync_frame = _config.limited_saving ? _last_saved_frame : min - 1;
+    const Frame frame_to_save = std::min(current - 1, min);
 
-	// load the sync frame
- 	_sync.SetCurrentFrame(sync_frame);
-	_game_events.AddLoadEvent(_sync, _storage);
-	_sync.IncrementFrame();
+    // load the sync frame
+    _sync.SetCurrentFrame(sync_frame);
+    _game_events.AddLoadEvent(_sync, _storage);
+    _sync.IncrementFrame();
 
-	for (Frame frame = sync_frame + 1; frame < current; frame++) {
+    for (Frame frame = sync_frame + 1; frame < current; frame++) {
         _game_events.AddAdvanceEvent(_sync, true);
-		if (!_config.limited_saving || frame == frame_to_save) {
+        if (!_config.limited_saving || frame == frame_to_save) {
             _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
-		}
-		_sync.IncrementFrame();
-	}
+        }
+        _sync.IncrementFrame();
+    }
 
     // clear the marked mispredictions up to this point in the input buffer
     _sync.ClearIncorrectFramesUpTo(current);
 
-	// make sure that we are back where we started.
-	assert(_sync.GetCurrentFrame() == current);
+    // make sure that we are back where we started.
+    assert(_sync.GetCurrentFrame() == current);
 }
 
 void Gekko::GameSession::Poll()
 {
-	// return if no host is defined.
+    // return if no host is defined.
     if (!_host) {
         return;
     }
 
     // fetch data from network
     int length = 0;
-	auto data = _host->receive_data(&length);
+    auto data = _host->receive_data(&length);
 
     // process the data we received
     _msg.HandleData(_host, data, length);
 
-	// handle received inputs
-	HandleReceivedInputs();
+    // handle received inputs
+    HandleReceivedInputs();
 
-	// add local input for the network
-	SendLocalInputs();
+    // add local input for the network
+    SendLocalInputs();
 
-	// send inputs to spectators
-	SendSpectatorInputs();
+    // send inputs to spectators
+    SendSpectatorInputs();
 
     // send network health update
     SendNetworkHealthCheck();
 
-	// now send data
-	_msg.SendPendingOutput(_host);
+    // now send data
+    _msg.SendPendingOutput(_host);
 }
 
 bool Gekko::GameSession::AllActorsValid()
 {
-	if (!_started) {
-		if (!_msg.CheckStatusActors()) {
-			return false;
-		}
+    if (!_started) {
+        if (!_msg.CheckStatusActors()) {
+            return false;
+        }
 
-		// if none returned that the session is ready!
+        // if none returned that the session is ready!
         _msg.session_events.AddSessionStartedEvent();
 
         _started = true;
 
-		return true;
-	}
+        return true;
+    }
 
-	return true;
+    return true;
 }
 
 void Gekko::GameSession::HandleReceivedInputs()
@@ -474,12 +475,12 @@ void Gekko::GameSession::HandleReceivedInputs()
 
 void Gekko::GameSession::SendLocalInputs()
 {
-	if (!_msg.locals.empty() && _started) {
-		const Frame current = _msg.GetLastAddedInput(false) + 1;
+    if (!_msg.locals.empty() && _started) {
+        const Frame current = _msg.GetLastAddedInput(false) + 1;
         const Frame delay = GetMinLocalDelay();
 
-		auto input = std::make_unique<u8[]>(_config.input_size);
-		for (Frame frame = current; frame <= current + delay; frame++) {
+        auto input = std::make_unique<u8[]>(_config.input_size);
+        for (Frame frame = current; frame <= current + delay; frame++) {
             for (auto& player : _msg.locals) {
                 if (!_sync.GetLocalInput(player->handle, input, frame)) {
                     return;
@@ -497,22 +498,22 @@ void Gekko::GameSession::SendLocalInputs()
                     }
                 }
             }
-		}
-	}
+        }
+    }
 }
 
 u8 Gekko::GameSession::GetMinLocalDelay()
 {
-	u8 min = UINT8_MAX;
-	for (auto& player : _msg.locals) {
-		min = std::min(_sync.GetLocalDelay(player->handle), min);
-	}
-	return min;
+    u8 min = UINT8_MAX;
+    for (auto& player : _msg.locals) {
+        min = std::min(_sync.GetLocalDelay(player->handle), min);
+    }
+    return min;
 }
 
 bool Gekko::GameSession::IsPlayingLocally()
 {
-	return _msg.remotes.empty() && !_msg.locals.empty();
+    return _msg.remotes.empty() && !_msg.locals.empty();
 }
 
 bool Gekko::GameSession::IsLockstepActive() const
@@ -523,6 +524,13 @@ bool Gekko::GameSession::IsLockstepActive() const
 void Gekko::GameSession::RewindRunahead()
 {
     if (_runahead_start_frame == GameInput::NULL_FRAME) {
+        return;
+    }
+
+    // rollback is coming so dont load the state twice.
+    // its get overwritten anyways
+    if (_sync.GetMinIncorrectFrame() != GameInput::NULL_FRAME) {
+        _runahead_start_frame = GameInput::NULL_FRAME;
         return;
     }
 
@@ -541,7 +549,8 @@ void Gekko::GameSession::HandleRunahead()
 
     _sync.SetRunaheadMode(true);
     for (u8 i = 0; i < _runahead_frames; i++) {
-        if (!_game_events.AddAdvanceEvent(_sync, false, true)) {
+        const bool is_display_frame = (i == _runahead_frames - 1);
+        if (!_game_events.AddAdvanceEvent(_sync, false, !is_display_frame)) {
             break;
         }
         _sync.IncrementFrame();
