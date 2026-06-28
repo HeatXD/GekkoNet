@@ -28,6 +28,7 @@ add_library(GekkoNet)
 target_include_directories(
     GekkoNet
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/private
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
 
 if(NOT NO_ASIO_BUILD)

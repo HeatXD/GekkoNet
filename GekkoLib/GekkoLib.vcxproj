@@ -19,16 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\backend.h" />
-    <ClInclude Include="include\compression.h" />
-    <ClInclude Include="include\event.h" />
     <ClInclude Include="include\gekkonet.h" />
-    <ClInclude Include="include\gekko_types.h" />
-    <ClInclude Include="include\input.h" />
-    <ClInclude Include="include\net.h" />
-    <ClInclude Include="include\session.h" />
-    <ClInclude Include="include\storage.h" />
-    <ClInclude Include="include\sync.h" />
+    <ClInclude Include="include\private\backend.h" />
+    <ClInclude Include="include\private\compression.h" />
+    <ClInclude Include="include\private\event.h" />
+    <ClInclude Include="include\private\gekko_types.h" />
+    <ClInclude Include="include\private\input.h" />
+    <ClInclude Include="include\private\net.h" />
+    <ClInclude Include="include\private\session.h" />
+    <ClInclude Include="include\private\storage.h" />
+    <ClInclude Include="include\private\sync.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\backend.cpp" />
@@ -99,22 +99,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <PublicIncludeDirectories>
-    </PublicIncludeDirectories>
-    <AllProjectIncludesArePublic>true</AllProjectIncludesArePublic>
+    <PublicIncludeDirectories>$(ProjectDir)include;$(PublicIncludeDirectories)</PublicIncludeDirectories>
+    <AllProjectIncludesArePublic>false</AllProjectIncludesArePublic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <PublicIncludeDirectories>
-    </PublicIncludeDirectories>
-    <AllProjectIncludesArePublic>true</AllProjectIncludesArePublic>
+    <PublicIncludeDirectories>$(ProjectDir)include;$(PublicIncludeDirectories)</PublicIncludeDirectories>
+    <AllProjectIncludesArePublic>false</AllProjectIncludesArePublic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PublicIncludeDirectories>$(ProjectDir)thirdparty;$(PublicIncludeDirectories)</PublicIncludeDirectories>
-    <AllProjectIncludesArePublic>true</AllProjectIncludesArePublic>
+    <PublicIncludeDirectories>$(ProjectDir)include;$(PublicIncludeDirectories)</PublicIncludeDirectories>
+    <AllProjectIncludesArePublic>false</AllProjectIncludesArePublic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PublicIncludeDirectories>$(ProjectDir)thirdparty;$(PublicIncludeDirectories)</PublicIncludeDirectories>
-    <AllProjectIncludesArePublic>true</AllProjectIncludesArePublic>
+    <PublicIncludeDirectories>$(ProjectDir)include;$(PublicIncludeDirectories)</PublicIncludeDirectories>
+    <AllProjectIncludesArePublic>false</AllProjectIncludesArePublic>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -122,7 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;$(ProjectDir)include\private;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
@@ -139,7 +137,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;$(ProjectDir)include\private;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
@@ -157,7 +155,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)GEKKONET_STATIC</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;$(ProjectDir)include\private;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -175,7 +173,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)GEKKONET_STATIC</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)thirdparty;$(ProjectDir)include;$(ProjectDir)include\private;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
