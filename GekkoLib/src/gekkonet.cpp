@@ -105,6 +105,7 @@ void gekko_network_poll(GekkoSession* session)
 #define ASIO_STANDALONE
 
 #include "asio/asio.hpp"
+#include <cstring>
 #include <iostream>
 
 static char _buffer[1024];

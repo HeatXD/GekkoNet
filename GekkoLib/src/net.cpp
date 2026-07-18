@@ -2,6 +2,7 @@
 #include "net.h"
 
 #include <cassert>
+#include <cstring>
 #include <iostream>
 
 u32 Gekko::NetAddress::GetSize()

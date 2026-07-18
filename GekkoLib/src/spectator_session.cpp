@@ -1,5 +1,6 @@
 #include "session.h"
 
+#include <cstring>
 
 Gekko::SpectatorSession::SpectatorSession()
 {

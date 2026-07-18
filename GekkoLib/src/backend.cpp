@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <climits>
+#include <cstring>
 
 #include "zpp/zpp_bits.h"
 
