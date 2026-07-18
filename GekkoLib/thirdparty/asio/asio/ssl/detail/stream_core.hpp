@@ -2,7 +2,7 @@
 // ssl/detail/stream_core.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2026 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,17 +17,14 @@
 
 #include "asio/detail/config.hpp"
 
-#if defined(ASIO_HAS_BOOST_DATE_TIME)
-# include "asio/deadline_timer.hpp"
-#else // defined(ASIO_HAS_BOOST_DATE_TIME)
-# include "asio/steady_timer.hpp"
-#endif // defined(ASIO_HAS_BOOST_DATE_TIME)
 #include "asio/ssl/detail/engine.hpp"
 #include "asio/buffer.hpp"
+#include "asio/steady_timer.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
+ASIO_INLINE_NAMESPACE_BEGIN
 namespace ssl {
 namespace detail {
 
@@ -67,21 +64,12 @@ struct stream_core
 
   stream_core(stream_core&& other)
     : engine_(static_cast<engine&&>(other.engine_)),
-#if defined(ASIO_HAS_BOOST_DATE_TIME)
-      pending_read_(
-         static_cast<asio::deadline_timer&&>(
-           other.pending_read_)),
-      pending_write_(
-         static_cast<asio::deadline_timer&&>(
-           other.pending_write_)),
-#else // defined(ASIO_HAS_BOOST_DATE_TIME)
       pending_read_(
          static_cast<asio::steady_timer&&>(
            other.pending_read_)),
       pending_write_(
          static_cast<asio::steady_timer&&>(
            other.pending_write_)),
-#endif // defined(ASIO_HAS_BOOST_DATE_TIME)
       output_buffer_space_(
           static_cast<std::vector<unsigned char>&&>(
             other.output_buffer_space_)),
@@ -106,21 +94,12 @@ struct stream_core
     if (this != &other)
     {
       engine_ = static_cast<engine&&>(other.engine_);
-#if defined(ASIO_HAS_BOOST_DATE_TIME)
-      pending_read_ =
-        static_cast<asio::deadline_timer&&>(
-          other.pending_read_);
-      pending_write_ =
-        static_cast<asio::deadline_timer&&>(
-          other.pending_write_);
-#else // defined(ASIO_HAS_BOOST_DATE_TIME)
       pending_read_ =
         static_cast<asio::steady_timer&&>(
           other.pending_read_);
       pending_write_ =
         static_cast<asio::steady_timer&&>(
           other.pending_write_);
-#endif // defined(ASIO_HAS_BOOST_DATE_TIME)
       output_buffer_space_ =
         static_cast<std::vector<unsigned char>&&>(
           other.output_buffer_space_);
@@ -140,32 +119,6 @@ struct stream_core
   // The SSL engine.
   engine engine_;
 
-#if defined(ASIO_HAS_BOOST_DATE_TIME)
-  // Timer used for storing queued read operations.
-  asio::deadline_timer pending_read_;
-
-  // Timer used for storing queued write operations.
-  asio::deadline_timer pending_write_;
-
-  // Helper function for obtaining a time value that always fires.
-  static asio::deadline_timer::time_type neg_infin()
-  {
-    return boost::posix_time::neg_infin;
-  }
-
-  // Helper function for obtaining a time value that never fires.
-  static asio::deadline_timer::time_type pos_infin()
-  {
-    return boost::posix_time::pos_infin;
-  }
-
-  // Helper function to get a timer's expiry time.
-  static asio::deadline_timer::time_type expiry(
-      const asio::deadline_timer& timer)
-  {
-    return timer.expires_at();
-  }
-#else // defined(ASIO_HAS_BOOST_DATE_TIME)
   // Timer used for storing queued read operations.
   asio::steady_timer pending_read_;
 
@@ -190,7 +143,6 @@ struct stream_core
   {
     return timer.expiry();
   }
-#endif // defined(ASIO_HAS_BOOST_DATE_TIME)
 
   // Buffer space used to prepare output intended for the transport.
   std::vector<unsigned char> output_buffer_space_;
@@ -210,6 +162,7 @@ struct stream_core
 
 } // namespace detail
 } // namespace ssl
+ASIO_INLINE_NAMESPACE_END
 } // namespace asio
 
 #include "asio/detail/pop_options.hpp"

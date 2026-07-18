@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < count; i++) {
             GekkoSessionEvent* event = events[i];
             switch (event->type) {
-            case GekkoDesyncDetected:
+            case GekkoDesyncDetected: {
                 auto desync = event->data.desynced;
                 printf(
                     "DESYNC!!! f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle,
@@ -142,21 +142,22 @@ int main(int argc, char* argv[]) {
                 );
                 assert(false);
                 break;
-
-            case GekkoPlayerConnected:
+            }
+            case GekkoPlayerConnected: {
                 auto connect = event->data.connected;
                 printf("Player %i connected\n", connect.handle);
                 break;
-
-            case GekkoPlayerDisconnected:
+            }
+            case GekkoPlayerDisconnected: {
                 auto disconnect = event->data.disconnected;
                 printf("Player %i disconnected\n", disconnect.handle);
                 break;
-
-            case GekkoPlayerSyncing:
+            }
+            case GekkoPlayerSyncing: {
                 auto sync = event->data.syncing;
                 printf("Player %i is connecting %d/%d\n", sync.handle, sync.current, sync.max);
                 break;
+            }
 
             case GekkoSpectatorPaused:
                 printf("Spectator paused, waiting for more inputs...\n");

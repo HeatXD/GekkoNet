@@ -105,6 +105,7 @@ void gekko_network_poll(GekkoSession* session)
 #define ASIO_STANDALONE
 
 #include "asio/asio.hpp"
+#include <cstring>
 #include <iostream>
 
 static char _buffer[1024];
@@ -123,7 +124,7 @@ static asio::ip::udp::endpoint STOE(const std::string& str) {
     std::string address = str.substr(0, colon_pos);
     u16 port = (u16)(std::stoi(str.substr(colon_pos + 1)));
 
-    return asio::ip::udp::endpoint(asio::ip::address::from_string(address), port);
+    return asio::ip::udp::endpoint(asio::ip::make_address(address), port);
 }
 
 

@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < count; i++) {
             GekkoSessionEvent* event = events[i];
             switch (event->type) {
-            case GekkoDesyncDetected:
+            case GekkoDesyncDetected: {
                 auto desync = event->data.desynced;
                 printf(
                     "DESYNC!!! f:%d, rh:%d, lc:%u, rc:%u\n", desync.frame, desync.remote_handle,
@@ -95,6 +95,7 @@ int main(int argc, char* argv[]) {
                 );
                 assert(false);
                 break;
+            }
             }
         }
 
