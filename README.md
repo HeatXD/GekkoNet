@@ -53,7 +53,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 To build GekkoNet, make sure you have the following installed:
 
 1. **CMake** (version 3.15 or higher)
-2. **C++ Compiler**:
+2. **C++ Compiler** with C++20 support:
    - **GCC** or **Clang** (Linux/macOS)
    - **MSVC** (Visual Studio) for Windows
 3. **Doxygen** (optional, for documentation generation if `BUILD_DOCS` is enabled)

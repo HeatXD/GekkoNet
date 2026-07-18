@@ -5,9 +5,8 @@
 
 #include <memory>
 #include <vector>
+#include <variant>
 #include <chrono>
-
-#include "zpp/serializer.h"
 
 namespace Gekko {
     struct NetAddress {
@@ -38,82 +37,47 @@ namespace Gekko {
     struct MsgHeader {
         PacketType type;
         u16 magic;
-
-        template <typename Archive, typename Self>
-        static void serialize(Archive& a, Self& s) {
-            a(s.type, s.magic);
-        }
     };
 
-    struct MsgBody : public zpp::serializer::polymorphic {
-    };
-
-    struct InputMsg : MsgBody {
+    struct InputMsg {
         Frame start_frame;
         u16 input_count;
         u16 total_size;
         bool compressed;
 
         std::vector<u8> inputs;
-
-        void Copy(const InputMsg* other) {
-            start_frame = other->start_frame;
-            input_count = other->input_count;
-            total_size = other->total_size;
-            compressed = other->compressed;
-
-            inputs.clear();
-            inputs.insert(inputs.begin(), other->inputs.begin(), other->inputs.end());
-        }
-
-        template <typename Archive, typename Self>
-        static void serialize(Archive& a, Self& s) {
-            a(s.start_frame, s.input_count, s.total_size, s.compressed, s.inputs);
-        }
     };
 
-    struct InputAckMsg : MsgBody {
+    struct InputAckMsg {
         Frame ack_frame;
         i8 frame_advantage;
-
-        template <typename Archive, typename Self>
-        static void serialize(Archive& a, Self& s) {
-            a(s.ack_frame, s.frame_advantage);
-        }
     };
 
-    struct SyncMsg : MsgBody {
+    struct SyncMsg {
         u16 rng_data;
-
-        template <typename Archive, typename Self>
-        static void serialize(Archive& a, Self& s) {
-            a(s.rng_data);
-        }
     };
 
-    struct SessionHealthMsg : MsgBody {
+    struct SessionHealthMsg {
         Frame frame;
         u32 checksum;
-
-        template <typename Archive, typename Self>
-        static void serialize(Archive& a, Self& s) {
-            a(s.frame, s.checksum);
-        }
     };
 
-    struct NetworkHealthMsg : MsgBody {
+    struct NetworkHealthMsg {
         u64 send_time;
         bool received;
-
-        template <typename Archive, typename Self>
-        static void serialize(Archive& a, Self& s) {
-            a(s.send_time, s.received);
-        }
     };
+
+    using MsgBody = std::variant<
+        InputMsg,
+        InputAckMsg,
+        SyncMsg,
+        SessionHealthMsg,
+        NetworkHealthMsg
+    >;
 
     struct NetPacket {
         MsgHeader header;
-        std::unique_ptr<MsgBody> body;
+        MsgBody body;
     };
 
     struct NetData {

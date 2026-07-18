@@ -3,17 +3,7 @@
 #include <cassert>
 #include <climits>
 
-// register poly types.
-namespace
-{
-    zpp::serializer::register_types<
-        zpp::serializer::make_type<Gekko::SyncMsg, zpp::serializer::make_id("Gekko::SyncMsg")>,
-        zpp::serializer::make_type<Gekko::InputMsg, zpp::serializer::make_id("Gekko::InputMsg")>,
-        zpp::serializer::make_type<Gekko::InputAckMsg, zpp::serializer::make_id("Gekko::InputAckMsg")>,
-        zpp::serializer::make_type<Gekko::SessionHealthMsg, zpp::serializer::make_id("Gekko::SessionHealthMsg")>,
-        zpp::serializer::make_type<Gekko::NetworkHealthMsg, zpp::serializer::make_id("Gekko::NetworkHealthMsg")>
-    > _;
-}
+#include "zpp/zpp_bits.h"
 
 Gekko::MessageSystem::MessageSystem()
 {
@@ -140,18 +130,16 @@ void Gekko::MessageSystem::HandleData(GekkoNetAdapter* host, GekkoNetResult** da
         auto addr = NetAddress(res->addr.data, res->addr.size);
 
         _bin_buffer.clear();
+        _bin_buffer.insert(_bin_buffer.begin(), (u8*)res->data, (u8*)res->data + res->data_len);
 
-        try {
-            _bin_buffer.insert(_bin_buffer.begin(), (u8*)res->data, (u8*)res->data + res->data_len);
+        NetPacket pkt;
+        zpp::bits::in in(_bin_buffer);
 
-            NetPacket pkt;
-            zpp::serializer::memory_input_archive in(_bin_buffer);
-            in(pkt.header, pkt.body);
-
-            ParsePacket(addr, pkt, res->data_len);
-        }
-        catch (const std::exception&) {
+        if (failure(in(pkt.header, pkt.body))) {
             printf("failed to deserialize packet\n");
+        }
+        else {
+            ParsePacket(addr, pkt, res->data_len);
         }
 
         // cleanup :)
@@ -175,10 +163,10 @@ void Gekko::MessageSystem::SendSyncRequest(NetAddress* addr)
 	message->pkt.header.type = SyncRequest;
 	message->pkt.header.magic = 0;
 
-    auto body = std::make_unique<SyncMsg>();
-    body->rng_data = _session_magic;
+    SyncMsg body = {};
+    body.rng_data = _session_magic;
 
-    message->pkt.body = std::move(body);
+    message->pkt.body = body;
 }
 
 void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u16 magic)
@@ -194,10 +182,10 @@ void Gekko::MessageSystem::SendSyncResponse(NetAddress* addr, u16 magic)
 	message->pkt.header.type = SyncResponse;
 	message->pkt.header.magic = magic;
 
-    auto body = std::make_unique<SyncMsg>();
-    body->rng_data = _session_magic;
+    SyncMsg body = {};
+    body.rng_data = _session_magic;
 
-    message->pkt.body = std::move(body);
+    message->pkt.body = body;
 }
 
 void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame, i8 local_advantage)
@@ -215,11 +203,11 @@ void Gekko::MessageSystem::SendInputAck(Handle player, Frame frame, i8 local_adv
 	message->pkt.header.magic = plyr->session_magic;
 	message->pkt.header.type = InputAck;
 
-    auto body = std::make_unique<InputAckMsg>();
-	body->ack_frame = frame;
-	body->frame_advantage = local_advantage;
+    InputAckMsg body = {};
+	body.ack_frame = frame;
+	body.frame_advantage = local_advantage;
 
-    message->pkt.body = std::move(body);
+    message->pkt.body = body;
 }
 
 std::vector<Handle> Gekko::MessageSystem::GetRemoteHandlesForAddress(NetAddress* addr)
@@ -320,11 +308,11 @@ void Gekko::MessageSystem::SendSessionHealth(Frame frame, u32 checksum)
     // the address and magic is set later so dont worry about it now
     message->pkt.header.type = SessionHealth;
 
-    auto body = std::make_unique<SessionHealthMsg>();
-    body->frame = frame;
-    body->checksum = checksum;
+    SessionHealthMsg body = {};
+    body.frame = frame;
+    body.checksum = checksum;
 
-    message->pkt.body = std::move(body);
+    message->pkt.body = body;
 }
 
 void Gekko::MessageSystem::SendNetworkHealth()
@@ -342,11 +330,11 @@ void Gekko::MessageSystem::SendNetworkHealth()
     // the address and magic is set later so dont worry about it now
     message->pkt.header.type = NetworkHealth;
 
-    auto body = std::make_unique<NetworkHealthMsg>();
-    body->send_time = now;
-    body->received = false;
+    NetworkHealthMsg body = {};
+    body.send_time = now;
+    body.received = false;
 
-    message->pkt.body = std::move(body);
+    message->pkt.body = body;
 
     _last_sent_network_check = now;
 }
@@ -393,17 +381,12 @@ void Gekko::MessageSystem::SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bo
     auto& actors = spectators_only ? spectators : remotes;
 
     std::vector<u8> body_buffer;
+    zpp::bits::out body_out(body_buffer);
 
-    try {
-        zpp::serializer::memory_output_archive out(body_buffer);
-        out(pkt->pkt.body);
-    }
-    catch (const std::exception&)
-    {
+    if (failure(body_out(pkt->pkt.body))) {
         printf("failed to serialize packet body\n");
         return;
     }
-
 
     for (auto& actor : actors) {
         _bin_buffer.clear();
@@ -412,12 +395,8 @@ void Gekko::MessageSystem::SendDataToAll(NetData* pkt, GekkoNetAdapter* host, bo
             pkt->addr.Copy(&actor->address);
             pkt->pkt.header.magic = actor->session_magic;
 
-            try {
-                zpp::serializer::memory_output_archive out(_bin_buffer);
-                out(pkt->pkt.header);
-            }
-            catch (const std::exception&)
-            {
+            zpp::bits::out out(_bin_buffer);
+            if (failure(out(pkt->pkt.header))) {
                 printf("failed to serialize packet header\n");
                 continue;
             }
@@ -442,12 +421,8 @@ void Gekko::MessageSystem::SendDataTo(NetData* pkt, GekkoNetAdapter* host)
 {
     _bin_buffer.clear();
 
-    try {
-        zpp::serializer::memory_output_archive out(_bin_buffer);
-        out(pkt->pkt.header, pkt->pkt.body);
-    }
-    catch (const std::exception&)
-    {
+    zpp::bits::out out(_bin_buffer);
+    if (failure(out(pkt->pkt.header, pkt->pkt.body))) {
         printf("failed to serialize packet\n");
         return;
     }
@@ -532,7 +507,11 @@ void Gekko::MessageSystem::OnSyncRequest(NetAddress& addr, NetPacket& pkt)
 {
     i32 should_send = 0;
     u64 now = TimeSinceEpoch();
-    auto body = (SyncMsg*)pkt.body.get();
+    auto body = std::get_if<SyncMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
 
     // handle requests and set the peer its session magic for both remotes and spectators
     std::vector<std::unique_ptr<Player>>* current = &remotes;
@@ -563,7 +542,11 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
 {
     i32 should_send = 0;
     u64 now = TimeSinceEpoch();
-    auto body = (SyncMsg*)pkt.body.get();
+    auto body = std::get_if<SyncMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
 
     // handle sync responses for both remotes and spectators
     std::vector<std::unique_ptr<Player>>* current = &remotes;
@@ -611,7 +594,11 @@ void Gekko::MessageSystem::OnSyncResponse(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 {
-    auto body = (InputMsg*)pkt.body.get();
+    auto body = std::get_if<InputMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
 
     // RLE decompress if the sender compressed this packet
     if (body->compressed) {
@@ -657,7 +644,12 @@ void Gekko::MessageSystem::OnInputs(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
 {
-    auto body = (InputAckMsg*)pkt.body.get();
+    auto body = std::get_if<InputAckMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
+
     const Frame ack_frame = body->ack_frame;
     const i8 remote_advantage = (i8)body->frame_advantage;
 
@@ -677,7 +669,11 @@ void Gekko::MessageSystem::OnInputAck(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::OnSessionHealth(NetAddress& addr, NetPacket& pkt)
 {
-    auto body = (SessionHealthMsg*)pkt.body.get();
+    auto body = std::get_if<SessionHealthMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
 
     const Frame frame = body->frame;
     const u32 checksum = body->checksum;
@@ -701,7 +697,11 @@ void Gekko::MessageSystem::OnSessionHealth(NetAddress& addr, NetPacket& pkt)
 
 void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
 {
-    auto body = (NetworkHealthMsg*)pkt.body.get();
+    auto body = std::get_if<NetworkHealthMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
 
     // ok if its not a returned packet then update it and send it back to its specifc peer.
     if (!body->received) {
@@ -732,11 +732,11 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
         message->pkt.header.magic = player->session_magic;
         message->pkt.header.type = NetworkHealth;
 
-        auto new_body = std::make_unique<NetworkHealthMsg>();
-        new_body->send_time = body->send_time;
-        new_body->received = true;
+        NetworkHealthMsg new_body = {};
+        new_body.send_time = body->send_time;
+        new_body.received = true;
 
-        message->pkt.body = std::move(new_body);
+        message->pkt.body = new_body;
         message->addr.Copy(&addr);
         return;
     }
@@ -792,10 +792,7 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
             data.addr.Copy(&peer->address);
             data.pkt.header.type = packet_type;
             data.pkt.header.magic = peer->session_magic;
-
-            auto message = std::make_unique<InputMsg>();
-            message->Copy(&cached_msg);
-            data.pkt.body = std::move(message);
+            data.pkt.body = cached_msg;
 
             SendDataTo(&data, host);
         }
@@ -854,15 +851,13 @@ void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host,
         msg.input_count = input_count;
 
         // cache and send
-        InputMsg cached_msg;
-        cached_msg.Copy(&msg);
-        peer->input_cache.packets.push_back(std::move(cached_msg));
+        peer->input_cache.packets.push_back(msg);
 
         NetData data;
         data.addr.Copy(&peer->address);
         data.pkt.header.type = packet_type;
         data.pkt.header.magic = peer->session_magic;
-        data.pkt.body = std::make_unique<InputMsg>(std::move(msg));
+        data.pkt.body = std::move(msg);
 
         SendDataTo(&data, host);
     }
