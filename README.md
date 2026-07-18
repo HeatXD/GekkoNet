@@ -45,7 +45,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Also look at the examples to see how GekkoNet functions!
 
 ## Building Examples
-- The examples are built and ran using Visual Studio 2022
+- The examples are built and ran using Visual Studio 2026
 - The examples require SDL3 to function
   
 ## Building GekkoLib
