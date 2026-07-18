@@ -1,5 +1,6 @@
 #include "session.h"
 #include <cassert>
+#include <cstring>
 
 
 Gekko::StressSession::StressSession()
