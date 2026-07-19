@@ -45,6 +45,16 @@ void Gekko::SyncSystem::AddRemoteInput(Handle player, u8* input, Frame frame)
 	_input_buffers[player].AddInput(frame, input);
 }
 
+void Gekko::SyncSystem::OverwriteInput(Handle player, u8* input, Frame frame)
+{
+	// drop inputs from incorrect handles
+    if (player >= _num_players || player < 0) {
+        return;
+    }
+
+	_input_buffers[player].OverwriteInput(frame, input);
+}
+
 void Gekko::SyncSystem::IncrementFrame()
 {
 	_current_frame++;

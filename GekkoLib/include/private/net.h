@@ -31,7 +31,9 @@ namespace Gekko {
         SyncRequest,
         SyncResponse,
         SessionHealth,
-        NetworkHealth
+        NetworkHealth,
+        Disconnect,
+        DisconnectClaim
     };
 
     struct MsgHeader {
@@ -67,12 +69,27 @@ namespace Gekko {
         bool received;
     };
 
+    struct DisconnectMsg {
+    };
+
+    // claims which inputs the sender holds for a disconnected player and carries
+    // them along, so every peer can end that player on the same newest known frame.
+    struct DisconnectClaimMsg {
+        Handle player;
+        Frame start_frame;
+        Frame last_frame;
+
+        std::vector<u8> inputs;
+    };
+
     using MsgBody = std::variant<
         InputMsg,
         InputAckMsg,
         SyncMsg,
         SessionHealthMsg,
-        NetworkHealthMsg
+        NetworkHealthMsg,
+        DisconnectMsg,
+        DisconnectClaimMsg
     >;
 
     struct NetPacket {
@@ -87,6 +104,8 @@ namespace Gekko {
 
     struct NetStats {
         static const u64 DISCONNECT_TIMEOUT = 5000;
+        static const u64 DISCONNECT_MSG_DELAY = 200;
+        static const u64 DISCONNECT_CLAIM_HOLD = 2000;
         static const u64 SYNC_MSG_DELAY = 200;
         static const u64 NET_CHECK_DELAY = 500;
         static const u64 INPUT_RETRY_INTERVAL = 200;

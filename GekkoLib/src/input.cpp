@@ -1,6 +1,7 @@
 #include "input.h"
 
-#include <cstdlib> 
+#include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
 Gekko::InputBuffer::InputBuffer() {
@@ -98,6 +99,37 @@ void Gekko::InputBuffer::AddInput(Frame frame, u8* input)
 
     // always advance the buffer
     _last_received_input++;
+}
+
+void Gekko::InputBuffer::OverwriteInput(Frame frame, u8* input)
+{
+    // only inputs the buffer already received can be replaced.
+    if (frame < 0 || frame > _last_received_input) {
+        return;
+    }
+
+    const Frame idx = frame % _buff_size;
+    if (_inputs[idx]->frame != frame) {
+        return;
+    }
+
+    if (_inputs[idx]->IsEqualTo(input)) {
+        return;
+    }
+
+    _inputs[idx]->Init(frame, input, _input_size);
+
+    // register the frame as a misprediction so the next rollback corrects it.
+    // keep the queue sorted so the front stays the lowest incorrect frame.
+    auto it = std::lower_bound(
+        _incorrent_predicted_inputs.begin(),
+        _incorrent_predicted_inputs.end(),
+        frame
+    );
+
+    if (it == _incorrent_predicted_inputs.end() || *it != frame) {
+        _incorrent_predicted_inputs.insert(it, frame);
+    }
 }
 
 void Gekko::InputBuffer::SetDelay(u8 delay)

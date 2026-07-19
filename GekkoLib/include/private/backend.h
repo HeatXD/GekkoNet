@@ -85,6 +85,27 @@ namespace Gekko {
 
 		u64 last_input_send_time = 0;
 
+		u8 disconnect_msgs_left = 0;
+
+		u64 last_disconnect_msg_time = 0;
+
+		// the disconnect frames this peer last claimed per disconnected player.
+		std::map<Handle, Frame> peer_claims;
+
+		// the disconnect frames we last claimed towards this peer.
+		std::map<Handle, Frame> peer_claims_sent;
+
+		// the session wide agreed frame after which this players inputs are voided.
+		Frame disconnect_frame = INT32_MAX;
+
+		// the disconnect frame the inputs fed to the session are currently based on.
+		Frame applied_disconnect_frame = INT32_MAX;
+
+		// timestamps driving the claim exchange for this disconnected player.
+		u64 last_claim_sent_time = 0;
+
+		u64 last_claim_raise_time = 0;
+
 		AdvantageHistory adv_history;
 
 	private:
@@ -112,6 +133,12 @@ namespace Gekko {
 		Frame GetLastAddedInput(bool spectator = false);
 
 		bool CheckStatusActors();
+
+		bool DisconnectActor(Handle handle);
+
+		void SetDisconnectTimeout(u32 timeout);
+
+		Frame GetDisconnectHoldFrame();
 
         void SendSessionHealth(Frame frame, u32 checksum);
 
@@ -152,6 +179,10 @@ namespace Gekko {
 
 		void SendSyncResponse(NetAddress* addr, u16 magic);
 
+		void SendDisconnect(NetAddress* addr, u16 magic);
+
+		void SendPendingDisconnects();
+
 		void SendInputsToPeer(Player* peer, GekkoNetAdapter* host, bool spectator);
 
 		std::vector<Handle> GetRemoteHandlesForAddress(NetAddress* addr);
@@ -161,6 +192,12 @@ namespace Gekko {
 		Frame GetMinLastAckedFrame(bool spectator = false);
 
 		void HandleTooFarBehindActors(bool spectator = false);
+
+		void MarkActorDisconnected(Player* actor);
+
+		void SendPendingClaims();
+
+		void HandleUnrecoverableGap();
 
 		u64 TimeSinceEpoch();
 
@@ -182,13 +219,20 @@ namespace Gekko {
 
         void OnNetworkHealth(NetAddress& addr, NetPacket& pkt);
 
+        void OnDisconnect(NetAddress& addr, NetPacket& pkt);
+
+        void OnDisconnectClaim(NetAddress& addr, NetPacket& pkt);
+
 	private:
 		const u32 MAX_INPUT_QUEUE_SIZE = 128;
 	    const u32 NUM_TO_SYNC = 4;
+	    const u8 NUM_DISCONNECT_MSGS = 5;
 
 		u32 _input_size;
 
 		u16 _session_magic;
+
+		u64 _disconnect_timeout;
 
         u8  _num_players;
 
