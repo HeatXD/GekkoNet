@@ -54,6 +54,16 @@ int gekko_add_actor(GekkoSession* session, GekkoPlayerType player_type, GekkoNet
     return session->AddActor(player_type, !addr ? nullptr : addr);
 }
 
+bool gekko_disconnect_actor(GekkoSession* session, int actor)
+{
+    return session->DisconnectActor(actor);
+}
+
+void gekko_set_disconnect_timeout(GekkoSession* session, unsigned int timeout)
+{
+    session->SetDisconnectTimeout(timeout);
+}
+
 void gekko_set_local_delay(GekkoSession* session, int player, unsigned char delay)
 {
     session->SetLocalDelay(player, delay);

@@ -38,6 +38,8 @@ namespace Gekko {
 
 		void AddInput(Frame frame, u8* input);
 
+		void OverwriteInput(Frame frame, u8* input);
+
 		void SetDelay(u8 delay);
 
 		u8 GetDelay();

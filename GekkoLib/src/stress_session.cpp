@@ -60,6 +60,12 @@ i32 Gekko::StressSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
     return new_handle;
 }
 
+bool Gekko::StressSession::DisconnectActor(i32 actor)
+{
+    // no-op: stress sessions have no connections
+    return false;
+}
+
 void Gekko::StressSession::AddLocalInput(i32 player, void* input)
 {
     u8* inp = (u8*)input;
