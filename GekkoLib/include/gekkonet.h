@@ -188,6 +188,15 @@ GEKKONET_API void gekko_net_adapter_set(GekkoSession* session, GekkoNetAdapter* 
 
 GEKKONET_API int gekko_add_actor(GekkoSession* session, GekkoPlayerType player_type, GekkoNetAddress* addr);
 
+// disconnects an actor without destroying the session.
+// disconnecting a remote actor drops every actor which shares its address.
+// disconnecting a local actor means leaving the session and drops every remote actor and spectator.
+GEKKONET_API bool gekko_disconnect_actor(GekkoSession* session, int actor);
+
+// sets the time in ms without received packets before an actor is disconnected automatically.
+// a timeout of 0 disables automatic disconnecting. defaults to 5000ms.
+GEKKONET_API void gekko_set_disconnect_timeout(GekkoSession* session, unsigned int timeout);
+
 GEKKONET_API void gekko_set_local_delay(GekkoSession* session, int player, unsigned char delay);
 
 GEKKONET_API void gekko_set_runahead(GekkoSession* session, unsigned char runahead);

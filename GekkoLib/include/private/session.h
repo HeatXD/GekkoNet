@@ -18,6 +18,8 @@ struct GekkoSession {
     virtual void SetRunahead(u8 runahead) = 0;
     virtual void SetNetAdapter(GekkoNetAdapter* adapter) = 0;
     virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) = 0;
+    virtual bool DisconnectActor(i32 actor) = 0;
+    virtual void SetDisconnectTimeout(u32 timeout) = 0;
     virtual void AddLocalInput(i32 player, void* input) = 0;
     virtual GekkoGameEvent** UpdateSession(i32* count) = 0;
     virtual GekkoSessionEvent** Events(i32* count) = 0;
@@ -42,6 +44,10 @@ namespace Gekko {
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
         i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
+
+        bool DisconnectActor(i32 actor) override;
+
+        void SetDisconnectTimeout(u32 timeout) override;
 
         void AddLocalInput(i32 player, void* input) override;
 
@@ -85,6 +91,10 @@ namespace Gekko {
 		bool RollbackPending();
 
 		bool ConfirmedSaveDue();
+
+		Frame GetConfirmedFrame();
+
+		bool ShouldStallAdvance();
 
         void SendSessionHealthCheck();
 
@@ -131,6 +141,10 @@ namespace Gekko {
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
         i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
+
+        bool DisconnectActor(i32 actor) override;
+
+        void SetDisconnectTimeout(u32 timeout) override;
 
         void AddLocalInput(i32 player, void* input) override;
 
@@ -184,6 +198,10 @@ namespace Gekko {
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
         i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
+
+        bool DisconnectActor(i32 actor) override;
+
+        void SetDisconnectTimeout(u32 timeout) override {}
 
         void AddLocalInput(i32 player, void* input) override;
 
