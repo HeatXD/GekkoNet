@@ -186,6 +186,12 @@ int main(int argc, char* argv[]) {
                         printf("runahead: %d\n", current_runahead);
                     }
                     break;
+                case SDLK_F5:
+                    // leave the session, the game keeps running locally.
+                    if (gekko_disconnect_actor(session, local_players[0])) {
+                        printf("left the session\n");
+                    }
+                    break;
                 }
             }
         }
