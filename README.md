@@ -20,6 +20,9 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Remote Player Input Prediction Settings
 	- Runahead Support
 		- Locally simulate ahead speculatively to hide input delay, keeping input feeling responsive regardless of network conditions.
+- Actor Disconnection
+	- Disconnect actors without destroying the session, peers get notified right away.
+	- Configurable disconnect timeout, 0 disables automatic disconnecting.
 - Spectator Sessions
 	- Spectator Delay Settings.
 - Stress Sessions
