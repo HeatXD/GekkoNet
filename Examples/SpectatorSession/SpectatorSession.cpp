@@ -31,10 +31,10 @@ static void handle_frame_time(
 int main(int argc, char* argv[]) {
     using namespace GekkoGame;
 
-    if (argc != 4) {
+    if (argc < 4) {
         printf("Usage:\n");
-        printf("  Host:     %s -h <local_port> <remote_port>\n", argv[0]);
-        printf("  Spectate: %s -s <local_port> <remote_port>\n", argv[0]);
+        printf("  Host:     %s -h <local_port> <initial_spectator_port> [<late_port> <delay_seconds> ...]\n", argv[0]);
+        printf("  Spectate: %s -s <local_port> <host_port>\n", argv[0]);
         return 1;
     }
 
@@ -46,6 +46,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    if ((is_spectator && argc != 4) || (!is_spectator && (argc - 4) % 2 != 0)) {
+        printf("Invalid arguments for %s mode\n", is_spectator ? "spectator" : "host");
+        return 1;
+    }
+
     int local_port = atoi(argv[2]);
     int remote_port = atoi(argv[3]);
 
@@ -54,10 +59,53 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    struct SpectatorTarget {
+        std::string address;
+        int delay;
+        uint64_t add_time;
+        bool pending;
+    };
+
+    std::vector<SpectatorTarget> spectator_targets;
+    if (!is_spectator) {
+        spectator_targets.push_back({
+            "127.0.0.1:" + std::to_string(remote_port),
+            0,
+            0,
+            false
+        });
+
+        for (int i = 4; i < argc; i += 2) {
+            const int port = atoi(argv[i]);
+            const int delay = atoi(argv[i + 1]);
+            if (port <= 0 || port > 65535 || delay <= 0) {
+                printf("Late spectator ports must be valid and delays must be greater than zero\n");
+                return 1;
+            }
+
+            spectator_targets.push_back({
+                "127.0.0.1:" + std::to_string(port),
+                delay,
+                0,
+                true
+            });
+        }
+
+        if (spectator_targets.size() > 255) {
+            printf("Too many spectator slots\n");
+            return 1;
+        }
+    }
+
     const int NUM_PLAYERS = 2;
 
-    printf("%s mode - Local port: %d, Remote port: %d\n",
-        is_spectator ? "Spectator" : "Host", local_port, remote_port);
+    if (is_spectator) {
+        printf("Spectator mode - Local port: %d, Host port: %d\n", local_port, remote_port);
+    }
+    else {
+        printf("Host mode - Local port: %d, Spectator slots: %zu\n",
+            local_port, spectator_targets.size());
+    }
 
     // window init
     SDL_Init(SDL_INIT_VIDEO);
@@ -79,18 +127,13 @@ int main(int argc, char* argv[]) {
     config.desync_detection = true;
     config.input_size = sizeof(Input);
     config.state_size = sizeof(Gamestate::State);
-    config.max_spectators = 1;
+    config.max_spectators = is_spectator ? 0 : (unsigned char)spectator_targets.size();
     config.input_prediction_window = 10;
     config.spectator_delay = 300;
     config.num_players = NUM_PLAYERS;
 
     gekko_start(session, &config);
     gekko_net_adapter_set(session, gekko_default_adapter(local_port));
-
-    GekkoNetAddress rem_addr = {};
-    std::string address_str = "127.0.0.1:" + std::to_string(remote_port);
-    rem_addr.data = (void*)address_str.c_str();
-    rem_addr.size = address_str.size();
 
     int stats_handle = -1;
     if (!is_spectator) {
@@ -99,11 +142,25 @@ int main(int argc, char* argv[]) {
             gekko_add_actor(session, GekkoLocalPlayer, nullptr);
             gekko_set_local_delay(session, i, 1);
         }
-        // add spectator
-        stats_handle = gekko_add_actor(session, GekkoSpectator, &rem_addr);
+
+        const uint64_t now = SDL_GetTicks();
+        for (auto& target : spectator_targets) {
+            if (target.delay == 0) {
+                GekkoNetAddress address = { (void*)target.address.c_str(), (unsigned int)target.address.size() };
+                stats_handle = gekko_add_actor(session, GekkoSpectator, &address);
+                printf("Added initial spectator at %s\n", target.address.c_str());
+            }
+            else {
+                target.add_time = now + (uint64_t)target.delay * 1000;
+                printf("Spectator at %s will be added in %d seconds...\n",
+                    target.address.c_str(), target.delay);
+            }
+        }
     } else {
         // add host as remote player
-        stats_handle = gekko_add_actor(session, GekkoRemotePlayer, &rem_addr);
+        std::string host_address = "127.0.0.1:" + std::to_string(remote_port);
+        GekkoNetAddress address = { (void*)host_address.c_str(), (unsigned int)host_address.size() };
+        stats_handle = gekko_add_actor(session, GekkoRemotePlayer, &address);
     }
 
     // setup game
@@ -113,6 +170,26 @@ int main(int argc, char* argv[]) {
     bool running = true;
     while (running) {
         frame_start = SDL_GetPerformanceCounter();
+
+        for (auto& target : spectator_targets) {
+            if (!target.pending || SDL_GetTicks() < target.add_time) {
+                continue;
+            }
+
+            target.pending = false;
+            GekkoNetAddress address = { (void*)target.address.c_str(), (unsigned int)target.address.size() };
+            const int handle = gekko_add_actor(session, GekkoSpectator, &address);
+            if (handle >= 0) {
+                if (stats_handle < 0) {
+                    stats_handle = handle;
+                }
+                printf("Adding late spectator at %s to the active session...\n", target.address.c_str());
+            }
+            else {
+                printf("Failed to add late spectator at %s\n", target.address.c_str());
+            }
+        }
+
         gekko_network_poll(session);
 
         SDL_Event event;
