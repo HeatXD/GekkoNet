@@ -8,6 +8,8 @@
 #include "replay.h"
 #include "sync.h"
 
+#include <vector>
+
 namespace Gekko {
 
 	class SpectatorSession : public GekkoSession {
@@ -65,5 +67,11 @@ namespace Gekko {
         GameEventSystem _game_events;
 
         ReplaySystem _replay;
+
+        bool _spectator_state_pending;
+
+        Frame _spectator_state_frame;
+
+        std::vector<u8> _spectator_state;
 	};
 }

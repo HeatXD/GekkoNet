@@ -1,5 +1,6 @@
 #include "session/game_session.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -28,13 +29,16 @@ void Gekko::GameSession::Init(GekkoConfig* config)
     _sync.Init(_config.num_players, _config.input_size);
 
     // setup message system.
-    _msg.Init(_config.num_players, _config.input_size);
+    _msg.Init(_config.num_players, _config.input_size, _config.state_size);
 
     // setup game event system
     _game_events.Init(_config.input_size * _config.num_players);
 
     // setup state storage
     _storage.Init(_config.input_prediction_window, _config.state_size, _config.limited_saving);
+
+    _spectator_state.state = std::make_unique<u8[]>(_config.state_size);
+    _spectator_state.state_len = _config.state_size;
 
     // setup disconnected input for disconnected player within the session
     _disconnected_input = std::make_unique<u8[]>(_config.input_size);
@@ -73,12 +77,38 @@ i32 Gekko::GameSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
     }
 
     if (type == GekkoSpectator) {
+        if (_started && _config.state_size == 0) {
+            return ERR;
+        }
+
+        // Disconnected spectators no longer occupy a slot. Their remaining
+        // disconnect retries are retained outside the active routing records.
+        _msg.ReclaimDisconnectedSpectators();
+
         if (_msg.spectators.size() >= _config.max_spectators) {
             return ERR;
         }
 
-        u32 new_handle = _config.num_players + (u32)_msg.spectators.size();
-        _msg.spectators.push_back(std::make_unique<Player>(new_handle, type, address.get()));
+        Handle new_handle = _config.num_players;
+        const Handle end_handle = _config.num_players + _config.max_spectators;
+        for (; new_handle < end_handle; new_handle++) {
+            const bool in_use = std::any_of(
+                _msg.spectators.begin(),
+                _msg.spectators.end(),
+                [new_handle](const std::unique_ptr<Player>& player) {
+                    return player->handle == new_handle;
+                }
+            );
+
+            if (!in_use) {
+                break;
+            }
+        }
+
+        auto spectator = std::make_unique<Player>(new_handle, type, address.get());
+        spectator->requires_spectator_state = _started;
+        spectator->spectator_state_acked = !_started;
+        _msg.spectators.push_back(std::move(spectator));
 
         return new_handle;
     }
@@ -174,6 +204,10 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
 
         // check if the session is still doing alright.
         SessionIntegrityCheck();
+
+        // Sessions which do not hold a recent enough rollback save create one
+        // on demand when a spectator joins late.
+        CaptureSpectatorState();
 
         // then advance the session
         if (!ShouldStallAdvance() && _game_events.AddAdvanceEvent(_sync, false, _runahead_frames > 0)) {
@@ -457,6 +491,128 @@ void Gekko::GameSession::SendSpectatorInputs()
     }
 }
 
+void Gekko::GameSession::PrepareSpectatorStates()
+{
+    if (!_started || _config.state_size == 0) {
+        return;
+    }
+
+    const Frame oldest_input = _msg.GetOldestSpectatorInput();
+
+    for (auto& spectator : _msg.spectators) {
+        if (spectator->GetStatus() != Connected ||
+            !spectator->requires_spectator_state || spectator->spectator_state_acked) {
+            continue;
+        }
+
+        const bool state_too_old = spectator->spectator_state_configured &&
+            spectator->spectator_state_frame + 1 < oldest_input;
+        if (spectator->spectator_state_configured && !state_too_old) {
+            continue;
+        }
+
+        Frame state_frame = _config.limited_saving ? _last_saved_frame : GetConfirmedFrame();
+        const Frame oldest_state = _config.limited_saving
+            ? state_frame
+            : std::max((Frame)-1, state_frame - (Frame)_config.input_prediction_window - 1);
+
+        StateEntry* state = nullptr;
+        for (Frame frame = state_frame; frame >= oldest_state; frame--) {
+            auto candidate = _storage.GetState(frame);
+            if (candidate->frame == frame && candidate->state_len > 0 &&
+                candidate->state_len <= _config.state_size) {
+                state_frame = frame;
+                state = candidate;
+                break;
+            }
+        }
+
+        const Frame confirmed = GetConfirmedFrame();
+        if (_spectator_state.frame >= oldest_state &&
+            _spectator_state.frame <= confirmed && _spectator_state.state_len > 0 &&
+            _spectator_state.state_len <= _config.state_size &&
+            (!state || _spectator_state.frame > state_frame)) {
+            state_frame = _spectator_state.frame;
+            state = &_spectator_state;
+        }
+
+        if (!state || state_frame + 1 < oldest_input ||
+            (spectator->spectator_state_configured &&
+            state_frame <= spectator->spectator_state_frame)) {
+            continue;
+        }
+
+        _msg.SetSpectatorState(
+            spectator->handle,
+            state_frame,
+            state->state.get(),
+            state->state_len
+        );
+    }
+}
+
+void Gekko::GameSession::CaptureSpectatorState()
+{
+    if (_config.state_size == 0) {
+        return;
+    }
+
+    const Frame oldest_input = _msg.GetOldestSpectatorInput();
+    bool state_needed = false;
+    for (auto& spectator : _msg.spectators) {
+        if (spectator->GetStatus() != Connected ||
+            !spectator->requires_spectator_state || spectator->spectator_state_acked) {
+            continue;
+        }
+
+        if (!spectator->spectator_state_configured ||
+            spectator->spectator_state_frame + 1 < oldest_input) {
+            state_needed = true;
+            break;
+        }
+    }
+
+    const Frame current = _sync.GetCurrentFrame();
+    const Frame state_frame = std::min(current - 1, GetConfirmedFrame());
+    if (!state_needed || state_frame + 1 < oldest_input ||
+        state_frame <= _spectator_state.frame) {
+        return;
+    }
+
+    // Lockstep and local sessions are already sitting on the confirmed state.
+    if (state_frame == current - 1) {
+        _game_events.AddStateSaveEvent(state_frame, &_spectator_state);
+        return;
+    }
+
+    // A rollback session may be ahead of its confirmed frame. Re-simulate from
+    // its latest persistent save, capture the confirmed state along the way,
+    // and finish back at the state where this update started.
+    const Frame sync_frame = _last_saved_frame;
+    if (sync_frame >= state_frame) {
+        return;
+    }
+
+    auto saved = _storage.GetState(sync_frame);
+    if (saved->frame != sync_frame || saved->state_len == 0) {
+        return;
+    }
+
+    _sync.SetCurrentFrame(sync_frame);
+    _game_events.AddLoadEvent(_sync, _storage);
+    _sync.IncrementFrame();
+
+    for (Frame frame = sync_frame + 1; frame < current; frame++) {
+        _game_events.AddAdvanceEvent(_sync, true);
+        if (frame == state_frame) {
+            _game_events.AddStateSaveEvent(frame, &_spectator_state);
+        }
+        _sync.IncrementFrame();
+    }
+
+    assert(_sync.GetCurrentFrame() == current);
+}
+
 void Gekko::GameSession::HandleRollback()
 {
     Frame current = _sync.GetCurrentFrame();
@@ -512,6 +668,9 @@ void Gekko::GameSession::Poll()
     // process the data we received
     _msg.HandleData(_host, data, length);
 
+    // Existing sessions continue handshaking newly added spectators.
+    _msg.CheckStatusActors();
+
     // handle received inputs
     HandleReceivedInputs();
 
@@ -520,6 +679,9 @@ void Gekko::GameSession::Poll()
 
     // send inputs to spectators
     SendSpectatorInputs();
+
+    // Late spectators start from a confirmed state and receive only later inputs.
+    PrepareSpectatorStates();
 
     // send network health update
     SendNetworkHealthCheck();

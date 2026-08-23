@@ -33,7 +33,9 @@ namespace Gekko {
         SessionHealth,
         NetworkHealth,
         Disconnect,
-        DisconnectClaim
+        DisconnectClaim,
+        SpectatorState,
+        SpectatorStateAck
     };
 
     struct MsgHeader {
@@ -69,6 +71,18 @@ namespace Gekko {
         bool received;
     };
 
+    struct SpectatorStateMsg {
+        Frame frame;
+        u32 total_size;
+        u32 offset;
+
+        std::vector<u8> state;
+    };
+
+    struct SpectatorStateAckMsg {
+        Frame frame;
+    };
+
     struct DisconnectMsg {
     };
 
@@ -89,7 +103,9 @@ namespace Gekko {
         SessionHealthMsg,
         NetworkHealthMsg,
         DisconnectMsg,
-        DisconnectClaimMsg
+        DisconnectClaimMsg,
+        SpectatorStateMsg,
+        SpectatorStateAckMsg
     >;
 
     struct NetPacket {

@@ -10,6 +10,8 @@ Gekko::MessageSystem::MessageSystem()
 {
     _num_players = 0;
 	_input_size = 0;
+    _state_size = 0;
+    _accept_spectator_state = false;
     _last_sent_network_check = 0;
     _disconnect_timeout = NetStats::DISCONNECT_TIMEOUT;
 
@@ -20,10 +22,16 @@ Gekko::MessageSystem::MessageSystem()
     session_events = SessionEventSystem();
 }
 
-void Gekko::MessageSystem::Init(u8 num_players, u32 input_size)
+void Gekko::MessageSystem::Init(
+    u8 num_players,
+    u32 input_size,
+    u32 state_size,
+    bool accept_spectator_state)
 {
     _num_players = num_players;
 	_input_size = input_size;
+    _state_size = state_size;
+    _accept_spectator_state = accept_spectator_state;
 
     _net_player_queue.resize(num_players);
 
@@ -87,6 +95,9 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 
 void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
 {
+	// A late spectator must load its confirmed state before receiving inputs.
+    SendPendingSpectatorStates(host);
+
 	// send per-peer input packets to remotes
 	if (!remotes.empty() && !locals.empty()) {
 		for (auto& peer : remotes) {
@@ -242,6 +253,32 @@ void Gekko::MessageSystem::SendPendingDisconnects()
             SendDisconnect(&actor->address, actor->session_magic);
             actor->last_disconnect_msg_time = now;
             actor->disconnect_msgs_left--;
+        }
+    }
+
+    for (auto iter = _pending_disconnects.begin(); iter != _pending_disconnects.end(); ) {
+        auto& pending = *iter;
+
+        if (pending->messages_left == 0 || pending->address.GetSize() == 0 ||
+            pending->session_magic == 0) {
+            iter = _pending_disconnects.erase(iter);
+            continue;
+        }
+
+        if (pending->last_message_time + NetStats::DISCONNECT_MSG_DELAY > now) {
+            ++iter;
+            continue;
+        }
+
+        SendDisconnect(&pending->address, pending->session_magic);
+        pending->last_message_time = now;
+        pending->messages_left--;
+
+        if (pending->messages_left == 0) {
+            iter = _pending_disconnects.erase(iter);
+        }
+        else {
+            ++iter;
         }
     }
 }
@@ -482,6 +519,74 @@ Frame Gekko::MessageSystem::GetLastAddedInputFrom(Handle player)
 std::deque<std::unique_ptr<u8[]>>& Gekko::MessageSystem::GetNetPlayerQueue(Handle player)
 {
     return _net_player_queue[player].inputs;
+}
+
+void Gekko::MessageSystem::ReclaimDisconnectedSpectators()
+{
+    for (auto iter = spectators.begin(); iter != spectators.end(); ) {
+        auto& spectator = *iter;
+        if (spectator->GetStatus() != Disconnected) {
+            ++iter;
+            continue;
+        }
+
+        if (spectator->disconnect_msgs_left > 0 && spectator->address.GetSize() > 0 &&
+            spectator->session_magic != 0) {
+            auto pending = std::make_unique<PendingDisconnect>();
+            pending->address.Copy(&spectator->address);
+            pending->session_magic = spectator->session_magic;
+            pending->messages_left = spectator->disconnect_msgs_left;
+            pending->last_message_time = spectator->last_disconnect_msg_time;
+            _pending_disconnects.push_back(std::move(pending));
+        }
+
+        iter = spectators.erase(iter);
+    }
+}
+
+Frame Gekko::MessageSystem::GetOldestSpectatorInput()
+{
+    const auto& queue = _net_spectator_queue;
+    return queue.last_added_input - (Frame)queue.inputs.size() + 1;
+}
+
+void Gekko::MessageSystem::SetSpectatorState(
+    Handle spectator,
+    Frame frame,
+    const u8* state,
+    u32 state_size)
+{
+    if (!state || state_size == 0 || state_size > _state_size) {
+        return;
+    }
+
+    for (auto& player : spectators) {
+        if (player->handle != spectator || player->GetStatus() == Disconnected) {
+            continue;
+        }
+
+        player->spectator_state.assign(state, state + state_size);
+        player->spectator_state_frame = frame;
+        player->spectator_state_configured = true;
+        player->spectator_state_acked = false;
+        player->last_spectator_state_send_time = 0;
+        player->stats.last_acked_frame = frame;
+        player->input_cache.packets.clear();
+        return;
+    }
+}
+
+bool Gekko::MessageSystem::TakeSpectatorState(Frame& frame, std::vector<u8>& state)
+{
+    if (!_incoming_spectator_state.ready) {
+        return false;
+    }
+
+    frame = _incoming_spectator_state.frame;
+    state = _incoming_spectator_state.state;
+    _incoming_spectator_state.ready = false;
+    _incoming_spectator_state.taken = true;
+    return true;
 }
 
 void Gekko::MessageSystem::SetDisconnectTimeout(u32 timeout)
@@ -774,6 +879,12 @@ void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt, u32 pac
         case NetworkHealth:
             OnNetworkHealth(addr, pkt);
             return;
+        case SpectatorState:
+            OnSpectatorState(addr, pkt);
+            return;
+        case SpectatorStateAck:
+            OnSpectatorStateAck(addr, pkt);
+            return;
         case Disconnect:
             OnDisconnect(addr, pkt);
             return;
@@ -1056,6 +1167,122 @@ void Gekko::MessageSystem::OnNetworkHealth(NetAddress& addr, NetPacket& pkt)
     }
 }
 
+void Gekko::MessageSystem::OnSpectatorState(NetAddress& addr, NetPacket& pkt)
+{
+    auto body = std::get_if<SpectatorStateMsg>(&pkt.body);
+
+    if (!_accept_spectator_state || !body || _state_size == 0 || body->total_size == 0 ||
+        body->total_size > _state_size || body->state.empty() ||
+        body->offset % SPECTATOR_STATE_CHUNK_SIZE != 0 ||
+        body->offset >= body->total_size ||
+        body->state.size() > SPECTATOR_STATE_CHUNK_SIZE ||
+        body->state.size() > body->total_size - body->offset) {
+        return;
+    }
+
+    const u32 chunk_count =
+        1 + (body->total_size - 1) / SPECTATOR_STATE_CHUNK_SIZE;
+    const u32 chunk = body->offset / SPECTATOR_STATE_CHUNK_SIZE;
+    const u32 expected_size = std::min(
+        SPECTATOR_STATE_CHUNK_SIZE,
+        body->total_size - body->offset
+    );
+
+    if (chunk >= chunk_count || body->state.size() != expected_size) {
+        return;
+    }
+
+    auto& incoming = _incoming_spectator_state;
+    if (incoming.active && body->frame < incoming.frame) {
+        return;
+    }
+
+    if (incoming.active && body->frame == incoming.frame &&
+        body->total_size != incoming.total_size) {
+        return;
+    }
+
+    if (!incoming.active || body->frame > incoming.frame) {
+        incoming.active = true;
+        incoming.ready = false;
+        incoming.taken = false;
+        incoming.frame = body->frame;
+        incoming.total_size = body->total_size;
+        incoming.received_chunks = 0;
+        incoming.state.resize(body->total_size);
+        incoming.chunks.assign(chunk_count, false);
+    }
+
+    if (!incoming.chunks[chunk]) {
+        std::memcpy(incoming.state.data() + body->offset, body->state.data(), body->state.size());
+        incoming.chunks[chunk] = true;
+        incoming.received_chunks++;
+    }
+
+    if (incoming.received_chunks != incoming.chunks.size()) {
+        return;
+    }
+
+    if (!incoming.taken) {
+        incoming.ready = true;
+
+        // Inputs after the snapshot must be accepted as a new sequential stream.
+        for (auto& queue : _net_player_queue) {
+            queue.inputs.clear();
+            queue.last_added_input = incoming.frame;
+        }
+    }
+
+    _pending_output.push(std::make_unique<NetData>());
+    auto& message = _pending_output.back();
+    message->addr.Copy(&addr);
+    message->pkt.header.type = SpectatorStateAck;
+    message->pkt.header.magic = 0;
+    for (auto& player : remotes) {
+        if (player->address.Equals(addr)) {
+            message->pkt.header.magic = player->session_magic;
+            break;
+        }
+    }
+
+    if (message->pkt.header.magic == 0) {
+        _pending_output.pop();
+        return;
+    }
+
+    SpectatorStateAckMsg ack = {};
+    ack.frame = incoming.frame;
+    message->pkt.body = ack;
+}
+
+void Gekko::MessageSystem::OnSpectatorStateAck(NetAddress& addr, NetPacket& pkt)
+{
+    auto body = std::get_if<SpectatorStateAckMsg>(&pkt.body);
+
+    if (!body) {
+        return;
+    }
+
+    for (auto& player : spectators) {
+        if (!player->address.Equals(addr) || !player->spectator_state_configured ||
+            player->spectator_state_frame != body->frame) {
+            continue;
+        }
+
+        // The retained input window moved past this state while it was in
+        // flight. Keep the peer gated so the game session sends a newer one.
+        if (body->frame + 1 < GetOldestSpectatorInput()) {
+            return;
+        }
+
+        player->spectator_state_acked = true;
+        player->stats.last_acked_frame = body->frame;
+        player->spectator_state.clear();
+        player->input_cache.packets.clear();
+        return;
+    }
+}
+
 void Gekko::MessageSystem::OnDisconnect(NetAddress& addr, NetPacket& pkt)
 {
     auto body = std::get_if<DisconnectMsg>(&pkt.body);
@@ -1143,9 +1370,54 @@ void Gekko::MessageSystem::OnDisconnectClaim(NetAddress& addr, NetPacket& pkt)
     plyr->last_claim_sent_time = 0;
 }
 
+void Gekko::MessageSystem::SendPendingSpectatorStates(GekkoNetAdapter* host)
+{
+    const u64 now = TimeSinceEpoch();
+
+    for (auto& player : spectators) {
+        if (player->GetStatus() != Connected || !player->requires_spectator_state ||
+            !player->spectator_state_configured || player->spectator_state_acked ||
+            player->spectator_state.empty()) {
+            continue;
+        }
+
+        if (player->last_spectator_state_send_time + NetStats::INPUT_RETRY_INTERVAL > now) {
+            continue;
+        }
+
+        const u32 total_size = (u32)player->spectator_state.size();
+        for (u32 offset = 0; offset < total_size; offset += SPECTATOR_STATE_CHUNK_SIZE) {
+            const u32 chunk_size = std::min(SPECTATOR_STATE_CHUNK_SIZE, total_size - offset);
+
+            SpectatorStateMsg body = {};
+            body.frame = player->spectator_state_frame;
+            body.total_size = total_size;
+            body.offset = offset;
+            body.state.insert(
+                body.state.end(),
+                player->spectator_state.begin() + offset,
+                player->spectator_state.begin() + offset + chunk_size
+            );
+
+            NetData data;
+            data.addr.Copy(&player->address);
+            data.pkt.header.type = SpectatorState;
+            data.pkt.header.magic = player->session_magic;
+            data.pkt.body = std::move(body);
+            SendDataTo(&data, host);
+        }
+
+        player->last_spectator_state_send_time = now;
+    }
+}
+
 void Gekko::MessageSystem::SendInputsToPeer(Player* peer, GekkoNetAdapter* host, bool spectator)
 {
     if (peer->address.GetSize() == 0 || peer->GetStatus() == Disconnected) {
+        return;
+    }
+
+    if (spectator && peer->requires_spectator_state && !peer->spectator_state_acked) {
         return;
     }
 

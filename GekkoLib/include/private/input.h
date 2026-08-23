@@ -54,6 +54,8 @@ namespace Gekko {
 
 		Frame GetLastReceivedFrame();
 
+        void SetLastReceivedFrame(Frame frame);
+
         void ClearIncorrectFrames(Frame clear_limit);
 
 	private:

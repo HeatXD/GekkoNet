@@ -195,6 +195,7 @@ GEKKONET_API void gekko_net_adapter_set(GekkoSession* session, GekkoNetAdapter* 
 
 // adds a player or spectator and returns its handle, or -1 when it doesnt fit the session.
 // remote actors require an address, local ones dont.
+// adding a spectator after the session starts also requires a nonzero state_size.
 GEKKONET_API int gekko_add_actor(GekkoSession* session, GekkoPlayerType player_type, GekkoNetAddress* addr);
 
 // disconnects an actor without destroying the session.

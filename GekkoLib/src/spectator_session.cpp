@@ -7,6 +7,8 @@ Gekko::SpectatorSession::SpectatorSession()
 	_host = nullptr;
 	_started = false;
     _delay_spectator = false;
+    _spectator_state_pending = false;
+    _spectator_state_frame = GameInput::NULL_FRAME;
     _last_saved_frame = GameInput::NULL_FRAME - 1;
     _config = GekkoConfig();
 }
@@ -25,7 +27,7 @@ void Gekko::SpectatorSession::Init(GekkoConfig* config)
     _sync.Init(_config.num_players, _config.input_size, buffer_size);
 
     // setup message system.
-    _msg.Init(_config.num_players, _config.input_size);
+    _msg.Init(_config.num_players, _config.input_size, _config.state_size, true);
 
     // setup game event system
     _game_events.Init(_config.input_size * _config.num_players);
@@ -101,6 +103,15 @@ GekkoGameEvent** Gekko::SpectatorSession::UpdateSession(i32* count)
     if (AllActorsValid()) {
         // reset the game event buffer before doing anything else
         _game_events.Reset();
+
+        if (_spectator_state_pending) {
+            _game_events.AddStateLoadEvent(
+                _spectator_state_frame,
+                _spectator_state.data(),
+                (u32)_spectator_state.size()
+            );
+            _spectator_state_pending = false;
+        }
 
         // store the frames that went by for the replay
         UpdateRecording();
@@ -183,6 +194,24 @@ void Gekko::SpectatorSession::Poll()
 
     // process the data we received
     _msg.HandleData(_host, data, length);
+
+    _msg.CheckStatusActors();
+
+    Frame state_frame = GameInput::NULL_FRAME;
+    std::vector<u8> state;
+    if (_msg.TakeSpectatorState(state_frame, state)) {
+        // The snapshot contains the state after this frame, so playback starts
+        // with the next input frame.
+        const u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay;
+        _sync.Init(_config.num_players, _config.input_size, buffer_size);
+        _sync.SetCurrentFrame(state_frame + 1);
+        _sync.SetLastReceivedFrame(state_frame);
+
+        _spectator_state_frame = state_frame;
+        _spectator_state = std::move(state);
+        _spectator_state_pending = true;
+        _delay_spectator = (_config.spectator_delay > 0);
+    }
 
 	// handle received inputs
 	HandleReceivedInputs();

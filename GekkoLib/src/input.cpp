@@ -22,10 +22,13 @@ Gekko::InputBuffer::InputBuffer() {
 
 void Gekko::InputBuffer::Init(u8 delay, u8 input_window, u32 input_size, u32 buffer_size)
 {
+	_inputs.clear();
+
 	_input_delay = delay;
 	_input_size = input_size;
     _buff_size = buffer_size;
 	_input_prediction_window = input_window;
+    _running_ahead = false;
 
 	_last_received_input = GameInput::NULL_FRAME;
 
@@ -189,6 +192,13 @@ void Gekko::InputBuffer::ResetPrediction()
 Frame Gekko::InputBuffer::GetLastReceivedFrame()
 {
 	return _last_received_input;
+}
+
+void Gekko::InputBuffer::SetLastReceivedFrame(Frame frame)
+{
+    _last_received_input = frame;
+    ResetPrediction();
+    _incorrent_predicted_inputs.clear();
 }
 
 void Gekko::InputBuffer::ClearIncorrectFrames(Frame clear_limit)

@@ -25,6 +25,8 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Configurable disconnect timeout, 0 disables automatic disconnecting.
 - Spectator Sessions
 	- Spectator Delay Settings.
+	- Spectators can join and leave an active session while a slot is available.
+	- Late spectators load a confirmed state, then continue from its following inputs.
 - Stress Sessions
     - To help find desyncs it your local state, This is a local session which constantly rolls the simulation back over a user-specified check distance.
 - Replays
@@ -37,9 +39,6 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Desync Detection (Only when limited saving is disabled for now)
 - Automated builds
 - Network Statistics
-
-### Work in progress
-- Joining a session that's already in progress as a spectator (and maybe as a player later)
 
 ### Maybe Later
 - Game engine plugins

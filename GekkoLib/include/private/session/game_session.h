@@ -70,6 +70,10 @@ namespace Gekko {
 
 		void SendSpectatorInputs();
 
+        void PrepareSpectatorStates();
+
+        void CaptureSpectatorState();
+
 		void HandleRollback();
 
 		void HandleSavingConfirmedFrame();
@@ -118,5 +122,7 @@ namespace Gekko {
         GameEventSystem _game_events;
 
         ReplaySystem _replay;
+
+        StateEntry _spectator_state;
 	};
 }

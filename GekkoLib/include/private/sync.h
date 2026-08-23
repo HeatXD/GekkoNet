@@ -45,6 +45,8 @@ namespace Gekko {
 
         Frame GetLastReceivedFrom(Handle player);
 
+        void SetLastReceivedFrame(Frame frame);
+
         void ClearIncorrectFramesUpTo(Frame clear_limit);
 
 	private:

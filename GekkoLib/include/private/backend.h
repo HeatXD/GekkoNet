@@ -89,6 +89,19 @@ namespace Gekko {
 
 		u64 last_disconnect_msg_time = 0;
 
+        // Late spectators load this state before the host starts sending inputs.
+        bool requires_spectator_state = false;
+
+        bool spectator_state_configured = false;
+
+        bool spectator_state_acked = true;
+
+        Frame spectator_state_frame = GameInput::NULL_FRAME;
+
+        std::vector<u8> spectator_state;
+
+        u64 last_spectator_state_send_time = 0;
+
 		// the disconnect frames this peer last claimed per disconnected player.
 		std::map<Handle, Frame> peer_claims;
 
@@ -118,7 +131,12 @@ namespace Gekko {
 	public:
 		MessageSystem();
 
-        void Init(u8 num_players, u32 input_size);
+		void Init(
+            u8 num_players,
+            u32 input_size,
+            u32 state_size = 0,
+            bool accept_spectator_state = false
+        );
 
 		void AddInput(Frame input_frame, Handle player, u8 input[], bool remote = false);
 
@@ -134,7 +152,9 @@ namespace Gekko {
 
 		bool CheckStatusActors();
 
-		bool DisconnectActor(Handle handle);
+        bool DisconnectActor(Handle handle);
+
+        void ReclaimDisconnectedSpectators();
 
 		void SetDisconnectTimeout(u32 timeout);
 
@@ -147,6 +167,12 @@ namespace Gekko {
         Frame GetLastAddedInputFrom(Handle player);
 
         std::deque<std::unique_ptr<u8[]>>& GetNetPlayerQueue(Handle player);
+
+        Frame GetOldestSpectatorInput();
+
+        void SetSpectatorState(Handle spectator, Frame frame, const u8* state, u32 state_size);
+
+        bool TakeSpectatorState(Frame& frame, std::vector<u8>& state);
 
 	public:
 		std::vector<std::unique_ptr<Player>> locals;
@@ -185,6 +211,8 @@ namespace Gekko {
 
 		void SendInputsToPeer(Player* peer, GekkoNetAdapter* host, bool spectator);
 
+        void SendPendingSpectatorStates(GekkoNetAdapter* host);
+
 		std::vector<Handle> GetRemoteHandlesForAddress(NetAddress* addr);
 
 		Player* GetPlayerByHandle(Handle handle);
@@ -219,6 +247,10 @@ namespace Gekko {
 
         void OnNetworkHealth(NetAddress& addr, NetPacket& pkt);
 
+        void OnSpectatorState(NetAddress& addr, NetPacket& pkt);
+
+        void OnSpectatorStateAck(NetAddress& addr, NetPacket& pkt);
+
         void OnDisconnect(NetAddress& addr, NetPacket& pkt);
 
         void OnDisconnectClaim(NetAddress& addr, NetPacket& pkt);
@@ -226,9 +258,15 @@ namespace Gekko {
 	private:
 		const u32 MAX_INPUT_QUEUE_SIZE = 128;
 	    const u32 NUM_TO_SYNC = 4;
-	    const u8 NUM_DISCONNECT_MSGS = 5;
+		const u8 NUM_DISCONNECT_MSGS = 5;
+
+        const u32 SPECTATOR_STATE_CHUNK_SIZE = 900;
 
 		u32 _input_size;
+
+        u32 _state_size;
+
+        bool _accept_spectator_state;
 
 		u16 _session_magic;
 
@@ -241,6 +279,26 @@ namespace Gekko {
 
         // input queue for spectator inputs
         NetInputQueue _net_spectator_queue;
+
+        struct IncomingSpectatorState {
+            bool active = false;
+            bool ready = false;
+            bool taken = false;
+            Frame frame = GameInput::NULL_FRAME;
+            u32 total_size = 0;
+            u32 received_chunks = 0;
+            std::vector<u8> state;
+            std::vector<bool> chunks;
+        } _incoming_spectator_state;
+
+        struct PendingDisconnect {
+            NetAddress address;
+            u16 session_magic = 0;
+            u8 messages_left = 0;
+            u64 last_message_time = 0;
+        };
+
+        std::vector<std::unique_ptr<PendingDisconnect>> _pending_disconnects;
 
 		std::queue<std::unique_ptr<NetData>> _pending_output;
 
