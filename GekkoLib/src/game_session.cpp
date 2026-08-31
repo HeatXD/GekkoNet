@@ -1,4 +1,5 @@
 #include "session/game_session.h"
+#include "debug.h"
 
 #include <algorithm>
 #include <cassert>
@@ -341,7 +342,7 @@ void Gekko::GameSession::HandleSavingConfirmedFrame()
     const Frame confirmed_frame = GetConfirmedFrame();
     const Frame current = _sync.GetCurrentFrame();
 
-    assert(_last_saved_frame < confirmed_frame);
+    Gekko::Assert(_last_saved_frame < confirmed_frame);
 
     const Frame sync_frame = _last_saved_frame;
     const Frame frame_to_save = std::min(current - 1, confirmed_frame);
@@ -359,7 +360,7 @@ void Gekko::GameSession::HandleSavingConfirmedFrame()
     }
 
     // make sure that we are back where we started.
-    assert(_sync.GetCurrentFrame() == current);
+    Gekko::Assert(_sync.GetCurrentFrame() == current);
 }
 
 void Gekko::GameSession::SendSessionHealthCheck()
@@ -381,7 +382,7 @@ void Gekko::GameSession::SendSessionHealthCheck()
 
     auto sav = _storage.GetState(confirmed);
 
-    assert(sav->frame == confirmed);
+    Gekko::Assert(sav->frame == confirmed);
 
     _last_sent_healthcheck = confirmed;
 
@@ -651,7 +652,7 @@ void Gekko::GameSession::HandleRollback()
     _sync.ClearIncorrectFramesUpTo(current);
 
     // make sure that we are back where we started.
-    assert(_sync.GetCurrentFrame() == current);
+    Gekko::Assert(_sync.GetCurrentFrame() == current);
 }
 
 void Gekko::GameSession::Poll()
@@ -718,7 +719,7 @@ void Gekko::GameSession::HandleReceivedInputs()
             const Frame last_recv = _sync.GetLastReceivedFrom(handle) + 1;
             const Frame last_added = _msg.GetLastAddedInputFrom(handle);
 
-            assert(last_added - last_recv <= 128); // more then 128 frames behind sounds incorrect.
+            Gekko::Assert(last_added - last_recv <= 128); // more then 128 frames behind sounds incorrect.
 
             auto& input_q = _msg.GetNetPlayerQueue(handle);
             const Frame min_frame = last_added - (i32)input_q.size() + 1;

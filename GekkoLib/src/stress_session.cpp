@@ -1,5 +1,6 @@
 #include "session/stress_session.h"
-#include <cassert>
+#include "debug.h"
+
 #include <cstring>
 
 
@@ -147,7 +148,7 @@ void Gekko::StressSession::HandleRollback()
     }
 
     // make sure that we are back where we started.
-    assert(_sync.GetCurrentFrame() == current);
+    Gekko::Assert(_sync.GetCurrentFrame() == current);
 }
 
 void Gekko::StressSession::CheckForDesyncs(Frame check_frame)

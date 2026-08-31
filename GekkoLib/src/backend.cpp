@@ -1,6 +1,6 @@
 #include "backend.h"
+#include "debug.h"
 
-#include <cassert>
 #include <climits>
 #include <cstring>
 
@@ -892,7 +892,7 @@ void Gekko::MessageSystem::ParsePacket(NetAddress& addr, NetPacket& pkt, u32 pac
             OnDisconnectClaim(addr, pkt);
             return;
         default:
-            assert(false && "cannot process an unknown event!");
+            Gekko::Assert(false, "cannot process an unknown event!");
             return;
         }
     }
