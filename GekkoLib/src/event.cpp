@@ -222,7 +222,7 @@ void Gekko::GameEventSystem::AddLoadEvent(SyncSystem& sync, StateStorage& storag
     AddStateLoadEvent(frame_to_load, state->state.get(), state->state_len);
 }
 
-void Gekko::GameEventSystem::AddStateSaveEvent(Frame frame, StateEntry* state)
+void Gekko::GameEventSystem::AddStateSaveEvent(Frame frame, StateEntry* state, bool synchronized)
 {
     state->frame = frame;
 
@@ -232,6 +232,7 @@ void Gekko::GameEventSystem::AddStateSaveEvent(Frame frame, StateEntry* state)
     event->type = GekkoSaveEvent;
 
     event->data.save.frame = frame;
+    event->data.save.synchronized = synchronized;
     event->data.save.state = state->state.get();
     event->data.save.checksum = &state->checksum;
     event->data.save.state_len = &state->state_len;

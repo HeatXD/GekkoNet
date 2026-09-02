@@ -581,7 +581,7 @@ void Gekko::GameSession::CaptureSpectatorState()
 
     // Lockstep and local sessions are already sitting on the confirmed state.
     if (state_frame == current - 1) {
-        _game_events.AddStateSaveEvent(state_frame, &_spectator_state);
+        _game_events.AddStateSaveEvent(state_frame, &_spectator_state, true);
         return;
     }
 
@@ -605,7 +605,7 @@ void Gekko::GameSession::CaptureSpectatorState()
     for (Frame frame = sync_frame + 1; frame < current; frame++) {
         _game_events.AddAdvanceEvent(_sync, true);
         if (frame == state_frame) {
-            _game_events.AddStateSaveEvent(frame, &_spectator_state);
+            _game_events.AddStateSaveEvent(frame, &_spectator_state, true);
         }
         _sync.IncrementFrame();
     }

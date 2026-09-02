@@ -41,7 +41,7 @@ namespace Gekko {
 
         void AddLoadEvent(SyncSystem& sync, StateStorage& storage);
 
-        void AddStateSaveEvent(Frame frame, StateEntry* state);
+        void AddStateSaveEvent(Frame frame, StateEntry* state, bool synchronized = false);
 
         void AddStateLoadEvent(Frame frame, u8* state, u32 state_len);
 
