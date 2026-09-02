@@ -1,6 +1,6 @@
 #include "event.h"
+#include "debug.h"
 
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 
@@ -55,7 +55,7 @@ GekkoGameEvent* Gekko::GameEventBuffer::GetEvent(bool advance)
         }
     }
 
-    assert(idx != 0);
+    Gekko::Assert(idx != 0);
 
     return buff[idx - 1].get();
 }
@@ -73,7 +73,7 @@ GekkoSessionEvent* Gekko::SessionEventBuffer::GetEvent()
         _buffer.push_back(std::make_unique<GekkoSessionEvent>());
     }
 
-    assert(_index != 0);
+    Gekko::Assert(_index != 0);
 
     return _buffer[_index - 1].get();
 }
