@@ -14,6 +14,8 @@ Gekko::GameSession::GameSession()
     _runahead_start_frame = GameInput::NULL_FRAME;
     _runahead_frames = 0;
     _prediction_window = 0;
+    _health_frame = 0;
+    _health_captured = false;
     _config = GekkoConfig();
 }
 
@@ -48,8 +50,8 @@ void Gekko::GameSession::Init(GekkoConfig* config)
     _disconnected_input = std::make_unique<u8[]>(_config.input_size);
     std::memset(_disconnected_input.get(), 0, _config.input_size);
 
-    // we only detect desyncs whenever we are not limited saving for now.
-    _config.desync_detection = _config.limited_saving ? false : _config.desync_detection;
+    _health_state.state = std::make_unique<u8[]>(_config.state_size);
+    _health_state.state_len = _config.state_size;
 }
 
 void Gekko::GameSession::SetRunahead(u8 runahead)
@@ -201,6 +203,9 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         // reset the game event buffer before doing anything else
         _game_events.Reset();
 
+        // send a healthcheck if applicable
+        SendSessionHealthCheck();
+
         // add inputs so we can continue the session.
         AddDisconnectedPlayerInputs();
 
@@ -216,9 +221,6 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         // check if we need to save the confirmed frame
         HandleSavingConfirmedFrame();
 
-        // send a healthcheck if applicable
-        SendSessionHealthCheck();
-
         // check if the session is still doing alright.
         SessionIntegrityCheck();
 
@@ -231,6 +233,7 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
             if (!_config.limited_saving) {
                 _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             }
+            CaptureHealthState(_sync.GetCurrentFrame());
             _sync.IncrementFrame();
         }
 
@@ -372,6 +375,7 @@ void Gekko::GameSession::HandleSavingConfirmedFrame()
         if (frame == frame_to_save) {
             _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
         }
+        CaptureHealthState(frame);
         _sync.IncrementFrame();
     }
 
@@ -385,26 +389,46 @@ void Gekko::GameSession::SendSessionHealthCheck()
         return;
     }
 
-    const Frame current = _sync.GetCurrentFrame();
-    const Frame confirmed = (current - _config.max_prediction_window) - 1;
+    Frame confirmed = GameInput::NULL_FRAME;
+    u32 checksum = 0;
 
-    if (confirmed <= GameInput::NULL_FRAME) {
-        return;
+    if (_config.limited_saving) {
+        if (!_health_captured) {
+            SkipUnreachableHealthFrame();
+            return;
+        }
+
+        confirmed = _health_state.frame;
+        checksum = _health_state.checksum;
+
+        _health_captured = false;
+        _health_frame = confirmed + HEALTH_CHECK_INTERVAL;
+        SkipUnreachableHealthFrame();
     }
+    else {
+        const Frame current = _sync.GetCurrentFrame();
+        confirmed = (current - _config.max_prediction_window) - 1;
 
-    if (confirmed <= _last_sent_healthcheck) {
-        return;
+        if (confirmed <= GameInput::NULL_FRAME) {
+            return;
+        }
+
+        if (confirmed <= _last_sent_healthcheck) {
+            return;
+        }
+
+        auto sav = _storage.GetState(confirmed);
+
+        assert(sav->frame == confirmed);
+
+        checksum = sav->checksum;
     }
-
-    auto sav = _storage.GetState(confirmed);
-
-    assert(sav->frame == confirmed);
 
     _last_sent_healthcheck = confirmed;
 
-    _msg.local_health[confirmed] = sav->checksum;
+    _msg.local_health[confirmed] = checksum;
 
-    _msg.SendSessionHealth(confirmed, sav->checksum);
+    _msg.SendSessionHealth(confirmed, checksum);
 
     for (auto iter = _msg.local_health.begin();
         iter != _msg.local_health.end(); ) {
@@ -415,6 +439,29 @@ void Gekko::GameSession::SendSessionHealthCheck()
             ++iter;
         }
     }
+}
+
+void Gekko::GameSession::CaptureHealthState(Frame frame)
+{
+    if (!_config.desync_detection || !_config.limited_saving || _health_captured ||
+        frame != _health_frame || frame > GetConfirmedFrame()) {
+        return;
+    }
+
+    _game_events.AddStateSaveEvent(frame, &_health_state);
+    _health_captured = true;
+}
+
+void Gekko::GameSession::SkipUnreachableHealthFrame()
+{
+    const Frame current = _sync.GetCurrentFrame();
+    const bool resimulates = !IsLockstepActive() && !IsPlayingLocally();
+
+    if (_health_frame >= current || (resimulates && _health_frame > _last_saved_frame)) {
+        return;
+    }
+
+    _health_frame = current + (HEALTH_CHECK_INTERVAL - current % HEALTH_CHECK_INTERVAL) % HEALTH_CHECK_INTERVAL;
 }
 
 void Gekko::GameSession::SendNetworkHealthCheck()
@@ -624,6 +671,7 @@ void Gekko::GameSession::CaptureSpectatorState()
         if (frame == state_frame) {
             _game_events.AddStateSaveEvent(frame, &_spectator_state, true);
         }
+        CaptureHealthState(frame);
         _sync.IncrementFrame();
     }
 
@@ -661,6 +709,7 @@ void Gekko::GameSession::HandleRollback()
         if (!_config.limited_saving || frame == frame_to_save) {
             _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
         }
+        CaptureHealthState(frame);
         _sync.IncrementFrame();
     }
 

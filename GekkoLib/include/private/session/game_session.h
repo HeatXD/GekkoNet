@@ -94,6 +94,10 @@ namespace Gekko {
 
         void SendSessionHealthCheck();
 
+        void CaptureHealthState(Frame frame);
+
+        void SkipUnreachableHealthFrame();
+
         void SendNetworkHealthCheck();
 
         void SessionIntegrityCheck();
@@ -110,6 +114,10 @@ namespace Gekko {
 		u8 _runahead_frames;
 
 		u8 _prediction_window;
+
+		Frame _health_frame;
+
+		bool _health_captured;
 
 		std::unique_ptr<u8[]> _disconnected_input;
 
@@ -128,5 +136,9 @@ namespace Gekko {
         ReplaySystem _replay;
 
         StateEntry _spectator_state;
+
+        StateEntry _health_state;
+
+        static const Frame HEALTH_CHECK_INTERVAL = 16;
 	};
 }
