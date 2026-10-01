@@ -65,7 +65,7 @@ void Gekko::InputBuffer::AddInput(Frame frame, u8* input)
     }
 
     const Frame idx = frame % _buff_size;
-    if (_input_prediction_window > 0 && _first_predicted_input == frame) {
+    if (_first_predicted_input == frame) {
         if (!_inputs[idx]->IsEqualTo(input)) {
             // incorrect prediction
             _incorrent_predicted_inputs.push_back(_first_predicted_input);

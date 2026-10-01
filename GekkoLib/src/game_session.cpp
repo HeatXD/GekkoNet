@@ -13,6 +13,7 @@ Gekko::GameSession::GameSession()
     _last_sent_healthcheck = GameInput::NULL_FRAME;
     _runahead_start_frame = GameInput::NULL_FRAME;
     _runahead_frames = 0;
+    _prediction_window = 0;
     _config = GekkoConfig();
 }
 
@@ -25,6 +26,9 @@ void Gekko::GameSession::Init(GekkoConfig* config)
     // get given configs
     std::memcpy(&_config, config, sizeof(GekkoConfig));
 
+    _config.max_prediction_window = std::min(_config.max_prediction_window, (u8)(InputBuffer::DEFAULT_BUFF_SIZE / 2));
+    _prediction_window = _config.max_prediction_window;
+
     // setup input buffer for the players
     _sync.Init(_config.num_players, _config.input_size);
 
@@ -35,7 +39,7 @@ void Gekko::GameSession::Init(GekkoConfig* config)
     _game_events.Init(_config.input_size * _config.num_players);
 
     // setup state storage
-    _storage.Init(_config.input_prediction_window, _config.state_size, _config.limited_saving);
+    _storage.Init(_config.max_prediction_window, _config.state_size, _config.limited_saving);
 
     _spectator_state.state = std::make_unique<u8[]>(_config.state_size);
     _spectator_state.state_len = _config.state_size;
@@ -51,6 +55,19 @@ void Gekko::GameSession::Init(GekkoConfig* config)
 void Gekko::GameSession::SetRunahead(u8 runahead)
 {
     _runahead_frames = runahead;
+}
+
+void Gekko::GameSession::SetPredictionWindow(u8 window)
+{
+    if (IsLockstepActive()) {
+        return;
+    }
+
+    _prediction_window = std::min(window, _config.max_prediction_window);
+
+    for (auto& remote : _msg.remotes) {
+        _sync.SetInputPredictionWindow(remote->handle, _prediction_window);
+    }
 }
 
 void Gekko::GameSession::SetLocalDelay(i32 player, u8 delay)
@@ -129,7 +146,7 @@ i32 Gekko::GameSession::AddActor(GekkoPlayerType type, GekkoNetAddress* addr)
             }
 
             _msg.remotes.push_back(std::make_unique<Player>(new_handle, type, address.get()));
-            _sync.SetInputPredictionWindow(new_handle, _config.input_prediction_window);
+            _sync.SetInputPredictionWindow(new_handle, _prediction_window);
         }
 
         return new_handle;
@@ -369,7 +386,7 @@ void Gekko::GameSession::SendSessionHealthCheck()
     }
 
     const Frame current = _sync.GetCurrentFrame();
-    const Frame confirmed = (current - _config.input_prediction_window) - 1;
+    const Frame confirmed = (current - _config.max_prediction_window) - 1;
 
     if (confirmed <= GameInput::NULL_FRAME) {
         return;
@@ -514,7 +531,7 @@ void Gekko::GameSession::PrepareSpectatorStates()
         Frame state_frame = _config.limited_saving ? _last_saved_frame : GetConfirmedFrame();
         const Frame oldest_state = _config.limited_saving
             ? state_frame
-            : std::max((Frame)-1, state_frame - (Frame)_config.input_prediction_window - 1);
+            : std::max((Frame)-1, state_frame - (Frame)_config.max_prediction_window - 1);
 
         StateEntry* state = nullptr;
         for (Frame frame = state_frame; frame >= oldest_state; frame--) {
@@ -782,7 +799,7 @@ bool Gekko::GameSession::IsPlayingLocally()
 
 bool Gekko::GameSession::IsLockstepActive() const
 {
-    return _config.input_prediction_window == 0;
+    return _config.max_prediction_window == 0;
 }
 
 bool Gekko::GameSession::RollbackPending()
@@ -801,7 +818,7 @@ bool Gekko::GameSession::ConfirmedSaveDue()
     }
 
     const Frame diff = _sync.GetCurrentFrame() - (_last_saved_frame + 1);
-    return diff > _config.input_prediction_window;
+    return diff > _config.max_prediction_window;
 }
 
 Frame Gekko::GameSession::GetConfirmedFrame()
@@ -820,7 +837,7 @@ bool Gekko::GameSession::ShouldStallAdvance()
         return false;
     }
 
-    return _sync.GetCurrentFrame() - hold > (Frame)_config.input_prediction_window;
+    return _sync.GetCurrentFrame() - hold > (Frame)_prediction_window;
 }
 
 void Gekko::GameSession::RewindRunahead()

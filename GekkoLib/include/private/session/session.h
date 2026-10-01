@@ -8,6 +8,7 @@ struct GekkoSession {
     virtual void Init(GekkoConfig* config) = 0;
     virtual void SetLocalDelay(i32 player, u8 delay) {}
     virtual void SetRunahead(u8 runahead) {}
+    virtual void SetPredictionWindow(u8 window) {}
     virtual void SetNetAdapter(GekkoNetAdapter* adapter) {}
     virtual i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) { return -1; }
     virtual bool DisconnectActor(i32 actor) { return false; }

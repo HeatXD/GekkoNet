@@ -23,6 +23,8 @@ namespace Gekko {
 
         void SetRunahead(u8 runahead) override;
 
+        void SetPredictionWindow(u8 window) override;
+
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
         i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
@@ -106,6 +108,8 @@ namespace Gekko {
 		Frame _runahead_start_frame;
 
 		u8 _runahead_frames;
+
+		u8 _prediction_window;
 
 		std::unique_ptr<u8[]> _disconnected_input;
 
