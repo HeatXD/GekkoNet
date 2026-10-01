@@ -141,6 +141,7 @@ int main(int argc, char* argv[]) {
 
     unsigned char current_delay = 10;
     unsigned char current_runahead = 8;
+    unsigned char current_window = config.max_input_prediction_window;
 
     bool running = true;
     while (running) {
@@ -190,6 +191,20 @@ int main(int argc, char* argv[]) {
                     // leave the session, the game keeps running locally.
                     if (gekko_disconnect_actor(session, local_players[0])) {
                         printf("left the session\n");
+                    }
+                    break;
+                case SDLK_F6:
+                    if (current_window > 0) {
+                        current_window--;
+                        gekko_set_input_prediction_window(session, current_window);
+                        printf("input prediction window: %d\n", current_window);
+                    }
+                    break;
+                case SDLK_F7:
+                    if (current_window < config.max_input_prediction_window) {
+                        current_window++;
+                        gekko_set_input_prediction_window(session, current_window);
+                        printf("input prediction window: %d\n", current_window);
                     }
                     break;
                 }
