@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
     config.input_size = sizeof(Input);
     config.state_size = sizeof(Gamestate::State);
     config.max_spectators = is_spectator ? 0 : (unsigned char)spectator_targets.size();
-    config.max_prediction_window = 10;
+    config.max_input_prediction_window = 10;
     config.spectator_delay = 300;
     config.num_players = NUM_PLAYERS;
 

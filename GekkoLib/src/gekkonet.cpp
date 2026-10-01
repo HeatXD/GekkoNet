@@ -81,9 +81,9 @@ void gekko_set_runahead(GekkoSession* session, unsigned char runahead)
     session->SetRunahead(runahead);
 }
 
-void gekko_set_prediction_window(GekkoSession* session, unsigned char window)
+void gekko_set_input_prediction_window(GekkoSession* session, unsigned char window)
 {
-    session->SetPredictionWindow(window);
+    session->SetInputPredictionWindow(window);
 }
 
 void gekko_add_local_input(GekkoSession* session, int player, void* input)

@@ -23,7 +23,7 @@ namespace Gekko {
 
         void SetRunahead(u8 runahead) override;
 
-        void SetPredictionWindow(u8 window) override;
+        void SetInputPredictionWindow(u8 window) override;
 
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
@@ -113,7 +113,7 @@ namespace Gekko {
 
 		u8 _runahead_frames;
 
-		u8 _prediction_window;
+		u8 _input_prediction_window;
 
 		Frame _health_frame;
 

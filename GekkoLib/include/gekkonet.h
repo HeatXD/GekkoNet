@@ -65,7 +65,7 @@ typedef enum GekkoSessionType {
 typedef struct GekkoConfig {
     unsigned char num_players;
     unsigned char max_spectators;
-    unsigned char max_prediction_window;
+    unsigned char max_input_prediction_window;
     unsigned int spectator_delay;
     unsigned int input_size;
     unsigned int state_size;
@@ -217,10 +217,10 @@ GEKKONET_API void gekko_set_local_delay(GekkoSession* session, int player, unsig
 GEKKONET_API void gekko_set_runahead(GekkoSession* session, unsigned char runahead);
 
 // sets how many frames the session may predict ahead of its remote players.
-// the window is clamped to the configs max_prediction_window, which also
+// the window is clamped to the configs max_input_prediction_window, which also
 // decides how many states the session keeps around for rolling back.
 // a window of 0 stops predicting but still corrects earlier mispredictions.
-GEKKONET_API void gekko_set_prediction_window(GekkoSession* session, unsigned char window);
+GEKKONET_API void gekko_set_input_prediction_window(GekkoSession* session, unsigned char window);
 
 // hands the input of a local player to the session, once per player per frame.
 GEKKONET_API void gekko_add_local_input(GekkoSession* session, int player, void* input);

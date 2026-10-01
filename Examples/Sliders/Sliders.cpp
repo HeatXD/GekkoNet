@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
     config.input_size = sizeof(Input);
     config.state_size = sizeof(State);
     config.max_spectators = 0;
-    config.max_prediction_window = 10;
+    config.max_input_prediction_window = 10;
     config.num_players = num_players;
 
     gekko_start(session, &config);
