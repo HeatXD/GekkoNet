@@ -101,6 +101,8 @@ namespace Gekko {
 
         void AddReplayFinishedEvent();
 
+        void AddReplayDesyncEvent(Frame frame, u32 checksum, u32 recorded_checksum);
+
     private:
         void AddEvent(GekkoSessionEvent* ev);
 

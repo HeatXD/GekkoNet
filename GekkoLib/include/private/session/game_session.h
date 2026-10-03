@@ -47,12 +47,24 @@ namespace Gekko {
 
         const u8* StopRecording(u32& length) override;
 
+        const u8* PeekRecording(u32& length) override;
+
+        bool RecordChecksums(u32 interval) override;
+
+        bool SetReplayUserData(const u8* data, u32 length) override;
+
 	private:
 		void Poll();
 
         void UpdateRecording();
 
+        void FlushRecording();
+
         void RecordInitialState();
+
+        void RecordConfirmedChecksums();
+
+        void CaptureChecksumState(Frame frame);
 
 		bool AllActorsValid();
 
@@ -124,5 +136,12 @@ namespace Gekko {
         ReplaySystem _replay;
 
         StateEntry _spectator_state;
+
+        // with limited saving, the confirmed frames a recording wants the checksum of.
+        std::vector<std::unique_ptr<StateEntry>> _checksum_states;
+
+        u32 _checksum_captures;
+
+        Frame _last_checksum_capture;
 	};
 }

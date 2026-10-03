@@ -158,6 +158,9 @@ int main(int argc, char* argv[]) {
                     if (!recording) {
                         recording = gekko_start_recording(session, true, false);
                         if (recording) {
+                            // verify every frame on playback and remember who played.
+                            gekko_record_checksums(session, 1);
+                            gekko_set_replay_user_data(session, &num_players, sizeof(num_players));
                             printf("recording started\n");
                         }
                     }
@@ -184,7 +187,13 @@ int main(int argc, char* argv[]) {
                     gekko_create(&replay, GekkoReplaySession);
                     if (gekko_load_replay(replay, replay_data.data(), (unsigned int)replay_data.size())) {
                         live_state = gs.state;
-                        printf("playing replay\n");
+                        unsigned int user_len = 0;
+                        const unsigned char* user = gekko_replay_user_data(replay, &user_len);
+                        int recorded_players = 0;
+                        if (user && user_len == sizeof(recorded_players)) {
+                            memcpy(&recorded_players, user, sizeof(recorded_players));
+                        }
+                        printf("playing replay of %d player(s)\n", recorded_players);
                     }
                     else {
                         gekko_destroy(&replay);
@@ -234,6 +243,12 @@ int main(int argc, char* argv[]) {
             int session_count = 0;
             GekkoSessionEvent** session_events = gekko_session_events(replay, &session_count);
             for (int i = 0; i < session_count; i++) {
+                if (session_events[i]->type == GekkoReplayDesync) {
+                    printf("replay desynced at frame %d: checksum %u, recorded %u\n",
+                        session_events[i]->data.replay_desynced.frame,
+                        session_events[i]->data.replay_desynced.checksum,
+                        session_events[i]->data.replay_desynced.recorded_checksum);
+                }
                 if (session_events[i]->type == GekkoReplayFinished) {
                     gekko_destroy(&replay);
                     gs.state = live_state;

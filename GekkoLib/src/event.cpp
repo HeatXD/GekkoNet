@@ -172,6 +172,16 @@ void Gekko::SessionEventSystem::AddReplayFinishedEvent()
     AddEvent(ev);
 }
 
+void Gekko::SessionEventSystem::AddReplayDesyncEvent(Frame frame, u32 checksum, u32 recorded_checksum)
+{
+    auto ev = _event_buffer.GetEvent();
+    ev->type = GekkoReplayDesync;
+    ev->data.replay_desynced.frame = frame;
+    ev->data.replay_desynced.checksum = checksum;
+    ev->data.replay_desynced.recorded_checksum = recorded_checksum;
+    AddEvent(ev);
+}
+
 void Gekko::GameEventSystem::Init(u32 input_size) {
     _event_buffer.Init(input_size);
     _event_buffer.Reset();

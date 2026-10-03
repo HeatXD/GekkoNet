@@ -114,7 +114,35 @@ bool Gekko::StressSession::StartRecording(bool save_initial_state, bool disable_
 
 const u8* Gekko::StressSession::StopRecording(u32& length)
 {
+    FlushRecording();
+
     return _replay.StopRecording(length);
+}
+
+const u8* Gekko::StressSession::PeekRecording(u32& length)
+{
+    FlushRecording();
+
+    return _replay.PeekRecording(length);
+}
+
+void Gekko::StressSession::FlushRecording()
+{
+    // the game handled the events of the last update by now, keep what they confirmed.
+    if (_replay.IsRecording() && !_replay.NeedsState()) {
+        _replay.RecordInputs(_sync);
+        _replay.RecordChecksums(_storage, _sync.GetCurrentFrame() - 1);
+    }
+}
+
+bool Gekko::StressSession::RecordChecksums(u32 interval)
+{
+    return _replay.SetChecksumInterval(interval);
+}
+
+bool Gekko::StressSession::SetReplayUserData(const u8* data, u32 length)
+{
+    return _replay.SetUserData(data, length);
 }
 
 void Gekko::StressSession::UpdateRecording()
@@ -128,6 +156,9 @@ void Gekko::StressSession::UpdateRecording()
     }
 
     _replay.RecordInputs(_sync);
+
+    // a local session has no unconfirmed frames, every frame it saved is final.
+    _replay.RecordChecksums(_storage, _sync.GetCurrentFrame() - 1);
 }
 
 void Gekko::StressSession::HandleRollback()

@@ -145,7 +145,8 @@ typedef enum GekkoSessionEventType {
     GekkoSpectatorPaused,
     GekkoSpectatorUnpaused,
     GekkoDesyncDetected,
-    GekkoReplayFinished
+    GekkoReplayFinished,
+    GekkoReplayDesync
 } GekkoSessionEventType;
 
 typedef struct GekkoSessionEvent {
@@ -169,6 +170,11 @@ typedef struct GekkoSessionEvent {
             unsigned int remote_checksum;
             int remote_handle;
         } desynced;
+        struct GekkoReplayDesynced {
+            int frame;
+            unsigned int checksum;
+            unsigned int recorded_checksum;
+        } replay_desynced;
     } data;
 } GekkoSessionEvent;
 
@@ -245,9 +251,31 @@ GEKKONET_API bool gekko_start_recording(GekkoSession* session, bool save_initial
 // until the session records again or gets destroyed.
 GEKKONET_API const unsigned char* gekko_stop_recording(GekkoSession* session, unsigned int* length);
 
+// returns the replay recorded so far without stopping the recording, for example to keep it
+// on disk while the session runs. the memory is owned by the session and stays valid
+// until the next call to gekko_peek_recording or gekko_stop_recording.
+GEKKONET_API const unsigned char* gekko_peek_recording(GekkoSession* session, unsigned int* length);
+
+// stores the checksums the game returns for its saved frames in the current recording,
+// for every frame divisible by interval (1 records every saved frame, 0 none).
+// only frames whose inputs are confirmed are recorded. spectator sessions issue a save event
+// for each such frame to get its checksum. call after gekko_start_recording.
+// a replay session raises GekkoReplayDesync at the first frame whose checksum differs.
+GEKKONET_API bool gekko_record_checksums(GekkoSession* session, unsigned int interval);
+
+// stores a copy of application data in the current recording, like a build id or the
+// local player. a later call replaces it. call after gekko_start_recording.
+GEKKONET_API bool gekko_set_replay_user_data(GekkoSession* session, const void* data, unsigned int length);
+
 // loads a serialized replay into a replay session.
 // the config is stored within the replay so calling gekko_start is not needed.
+// a replay session saves every frame that has a recorded checksum and compares the
+// checksum the game returns with it.
 GEKKONET_API bool gekko_load_replay(GekkoSession* session, const unsigned char* replay_data, unsigned int length);
+
+// returns the application data of the replay loaded into a replay session,
+// or null when it has none. the memory is owned by the session.
+GEKKONET_API const unsigned char* gekko_replay_user_data(GekkoSession* session, unsigned int* length);
 
 #ifndef GEKKONET_NO_ASIO
 
