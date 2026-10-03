@@ -32,6 +32,8 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 - Replays
 	- Record the inputs of any session, optionally together with the gamestate the recording starts at.
 	- Replay Sessions play the recording back frame by frame.
+	- Optionally store the checksums of the recorded frames, a Replay Session then reports the first frame that plays back differently.
+	- Attach application data to a recording, like a build id, and read it back after loading.
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
 - Abstracted socket manager.

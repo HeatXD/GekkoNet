@@ -1,5 +1,6 @@
 #include "replay.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -21,6 +22,7 @@ bool Gekko::ReplaySystem::StartRecording(GekkoConfig config, Frame frame, bool s
 
     _start_frame = frame;
     _last_recorded_frame = frame - 1;
+    _last_checksum_frame = frame - 1;
 
     _needs_state = save_state && config.state_size > 0;
 
@@ -39,9 +41,39 @@ const u8* Gekko::ReplaySystem::StopRecording(u32& length)
 
     if (_mode != Recording) return nullptr;
 
+    const u8* data = Serialize(length);
+
+    _mode = None;
+
+    return data;
+}
+
+const u8* Gekko::ReplaySystem::PeekRecording(u32& length)
+{
+    length = 0;
+
+    if (_mode != Recording) return nullptr;
+
+    return Serialize(length);
+}
+
+const u8* Gekko::ReplaySystem::Serialize(u32& length)
+{
+    length = 0;
+
     RecordPendingState();
 
     const u32 block = InputSize();
+
+    // a checksum can only be verified for a frame the replay holds the inputs of,
+    // keep later ones aside while serializing.
+    const u64 recorded_frames = _replay.inputs.size() / block;
+    size_t kept = _replay.checksums.size();
+    while (kept > 0 && (u64)_replay.checksums[kept - 1].frame >= recorded_frames) {
+        kept--;
+    }
+    std::vector<ReplayChecksum> later(_replay.checksums.begin() + kept, _replay.checksums.end());
+    _replay.checksums.resize(kept);
 
     std::vector<u8> packed;
     if (!_no_compression && block > 0 && !_replay.inputs.empty()) {
@@ -57,14 +89,24 @@ const u8* Gekko::ReplaySystem::StopRecording(u32& length)
 
     _bin_buffer.clear();
     zpp::bits::out out(_bin_buffer);
-    const bool bad = failure(out(_replay));
+    const bool bad = failure(out(
+        _replay.header,
+        _replay.version,
+        _replay.compressed,
+        _replay.config,
+        _replay.inputs,
+        _replay.initial_state,
+        _replay.checksum_interval,
+        _replay.checksums,
+        _replay.user_data
+    ));
 
     if (use_packed) {
         _replay.inputs.swap(packed);
         _replay.compressed = false;
     }
 
-    _mode = None;
+    _replay.checksums.insert(_replay.checksums.end(), later.begin(), later.end());
 
     if (bad) {
         printf("failed to serialize replay data\n");
@@ -130,8 +172,65 @@ void Gekko::ReplaySystem::RecordState(const u8* state, u32 length, Frame frame)
 
     _start_frame = frame + 1;
     _last_recorded_frame = frame;
+    _last_checksum_frame = frame;
 
     _needs_state = false;
+}
+
+bool Gekko::ReplaySystem::SetChecksumInterval(u32 interval)
+{
+    if (_mode != Recording) return false;
+
+    _replay.checksum_interval = interval;
+
+    return true;
+}
+
+bool Gekko::ReplaySystem::SetUserData(const u8* data, u32 length)
+{
+    if (_mode != Recording || (!data && length > 0)) return false;
+
+    if (length == 0) {
+        _replay.user_data.clear();
+    }
+    else {
+        _replay.user_data.assign(data, data + length);
+    }
+
+    return true;
+}
+
+bool Gekko::ReplaySystem::WantsChecksum(Frame frame) const
+{
+    if (_mode != Recording || _needs_state || _replay.checksum_interval == 0) return false;
+
+    if (frame < 0 || frame < _start_frame || frame <= _last_checksum_frame) return false;
+
+    return frame % (Frame)_replay.checksum_interval == 0;
+}
+
+void Gekko::ReplaySystem::RecordChecksums(StateStorage& storage, Frame up_to)
+{
+    if (_mode != Recording || _needs_state || _replay.checksum_interval == 0) return;
+
+    for (Frame frame = std::max(_last_checksum_frame + 1, _start_frame); frame <= up_to; frame++) {
+        // frames the session did not save, or whose save got overwritten, stay without one.
+        auto state = storage.GetState(frame);
+        if (state->frame == frame) {
+            RecordChecksum(frame, state->checksum);
+        }
+    }
+
+    _last_checksum_frame = std::max(_last_checksum_frame, up_to);
+}
+
+void Gekko::ReplaySystem::RecordChecksum(Frame frame, u32 checksum)
+{
+    if (!WantsChecksum(frame)) return;
+
+    _replay.checksums.push_back({ frame - _start_frame, checksum });
+
+    _last_checksum_frame = frame;
 }
 
 bool Gekko::ReplaySystem::NeedsState()
@@ -168,7 +267,29 @@ bool Gekko::ReplaySystem::LoadReplay(const u8* replay_data, u32 length)
     bool bad = true;
     try {
         zpp::bits::in in(_bin_buffer);
-        bad = failure(in(_replay));
+        bad = failure(in(_replay.header, _replay.version));
+
+        if (!bad && _replay.header == ReplayBlob::MAGIC) {
+            if (_replay.version == ReplayBlob::FORMAT_VERSION_1) {
+                bad = failure(in(
+                    _replay.compressed,
+                    _replay.config,
+                    _replay.inputs,
+                    _replay.initial_state
+                ));
+            }
+            else if (_replay.version == ReplayBlob::FORMAT_VERSION) {
+                bad = failure(in(
+                    _replay.compressed,
+                    _replay.config,
+                    _replay.inputs,
+                    _replay.initial_state,
+                    _replay.checksum_interval,
+                    _replay.checksums,
+                    _replay.user_data
+                ));
+            }
+        }
     }
     catch (...) {
         bad = true;
@@ -186,7 +307,8 @@ bool Gekko::ReplaySystem::LoadReplay(const u8* replay_data, u32 length)
         return false;
     }
 
-    if (_replay.version != ReplayBlob::FORMAT_VERSION) {
+    if (_replay.version != ReplayBlob::FORMAT_VERSION &&
+        _replay.version != ReplayBlob::FORMAT_VERSION_1) {
         printf("unsupported replay version %u\n", _replay.version);
         Reset();
         return false;
@@ -217,7 +339,14 @@ bool Gekko::ReplaySystem::LoadReplay(const u8* replay_data, u32 length)
         _replay.compressed = false;
     }
 
+    if (!ValidChecksums()) {
+        printf("invalid replay checksums\n");
+        Reset();
+        return false;
+    }
+
     _current_frame = 0;
+    _next_checksum = 0;
     _mode = Replaying;
 
     return true;
@@ -246,6 +375,35 @@ bool Gekko::ReplaySystem::NextReplayInput(u8* input)
     return true;
 }
 
+bool Gekko::ReplaySystem::RecordedChecksum(Frame frame, u32& checksum)
+{
+    if (_mode != Replaying) return false;
+
+    const auto& checksums = _replay.checksums;
+    while (_next_checksum < checksums.size() && checksums[_next_checksum].frame < frame) {
+        _next_checksum++;
+    }
+
+    if (_next_checksum >= checksums.size() || checksums[_next_checksum].frame != frame) {
+        return false;
+    }
+
+    checksum = checksums[_next_checksum].checksum;
+
+    return true;
+}
+
+const u8* Gekko::ReplaySystem::UserData(u32& length) const
+{
+    length = 0;
+
+    if (_mode != Replaying || _replay.user_data.empty()) return nullptr;
+
+    length = (u32)_replay.user_data.size();
+
+    return _replay.user_data.data();
+}
+
 GekkoConfig Gekko::ReplaySystem::Config()
 {
     return _replay.config;
@@ -267,6 +425,8 @@ void Gekko::ReplaySystem::Reset()
     _start_frame = 0;
     _current_frame = 0;
     _last_recorded_frame = GameInput::NULL_FRAME;
+    _last_checksum_frame = GameInput::NULL_FRAME;
+    _next_checksum = 0;
 
     _needs_state = false;
     _pending_state = false;
@@ -282,4 +442,24 @@ void Gekko::ReplaySystem::Reset()
 u32 Gekko::ReplaySystem::InputSize() const
 {
     return _replay.config.input_size * _replay.config.num_players;
+}
+
+bool Gekko::ReplaySystem::ValidChecksums() const
+{
+    if (_replay.checksums.empty()) return true;
+
+    if (_replay.checksum_interval == 0) return false;
+
+    // checksums belong to recorded frames and are stored in frame order.
+    const u64 frames = _replay.inputs.size() / InputSize();
+
+    Frame previous = GameInput::NULL_FRAME;
+    for (auto& entry : _replay.checksums) {
+        if (entry.frame <= previous || (u64)entry.frame >= frames) {
+            return false;
+        }
+        previous = entry.frame;
+    }
+
+    return true;
 }

@@ -134,9 +134,45 @@ const unsigned char* gekko_stop_recording(GekkoSession* session, unsigned int* l
     return data;
 }
 
+const unsigned char* gekko_peek_recording(GekkoSession* session, unsigned int* length)
+{
+    unsigned int len = 0;
+
+    const unsigned char* data = session->PeekRecording(len);
+
+    if (length) {
+        *length = len;
+    }
+
+    return data;
+}
+
+bool gekko_record_checksums(GekkoSession* session, unsigned int interval)
+{
+    return session->RecordChecksums(interval);
+}
+
+bool gekko_set_replay_user_data(GekkoSession* session, const void* data, unsigned int length)
+{
+    return session->SetReplayUserData((const u8*)data, length);
+}
+
 bool gekko_load_replay(GekkoSession* session, const unsigned char* replay_data, unsigned int length)
 {
     return session->LoadReplay(replay_data, length);
+}
+
+const unsigned char* gekko_replay_user_data(GekkoSession* session, unsigned int* length)
+{
+    unsigned int len = 0;
+
+    const unsigned char* data = session->ReplayUserData(len);
+
+    if (length) {
+        *length = len;
+    }
+
+    return data;
 }
 
 #ifndef GEKKONET_NO_ASIO
