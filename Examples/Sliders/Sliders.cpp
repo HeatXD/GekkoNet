@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
     config.input_size = sizeof(Input);
     config.state_size = sizeof(State);
     config.max_spectators = 0;
-    config.input_prediction_window = 10;
+    config.max_input_prediction_window = 10;
     config.num_players = num_players;
 
     gekko_start(session, &config);
@@ -190,6 +190,8 @@ int main(int argc, char* argv[]) {
     State game = {};
     Input inputs[MAX_PLAYERS] = {};
 
+    unsigned char current_window = config.max_input_prediction_window;
+
     bool running = true;
     while (running) {
         frame_start = SDL_GetPerformanceCounter();
@@ -199,6 +201,24 @@ int main(int argc, char* argv[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 running = false;
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN) {
+                switch (event.key.key) {
+                case SDLK_F1:
+                    if (current_window > 0) {
+                        current_window--;
+                        gekko_set_input_prediction_window(session, current_window);
+                        printf("input prediction window: %d\n", current_window);
+                    }
+                    break;
+                case SDLK_F2:
+                    if (current_window < config.max_input_prediction_window) {
+                        current_window++;
+                        gekko_set_input_prediction_window(session, current_window);
+                        printf("input prediction window: %d\n", current_window);
+                    }
+                    break;
+                }
             }
         }
 

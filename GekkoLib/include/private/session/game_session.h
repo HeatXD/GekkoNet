@@ -23,6 +23,8 @@ namespace Gekko {
 
         void SetRunahead(u8 runahead) override;
 
+        void SetInputPredictionWindow(u8 window) override;
+
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
         i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
@@ -92,6 +94,10 @@ namespace Gekko {
 
         void SendSessionHealthCheck();
 
+        void CaptureHealthState(Frame frame);
+
+        void SkipUnreachableHealthFrame();
+
         void SendNetworkHealthCheck();
 
         void SessionIntegrityCheck();
@@ -106,6 +112,12 @@ namespace Gekko {
 		Frame _runahead_start_frame;
 
 		u8 _runahead_frames;
+
+		u8 _input_prediction_window;
+
+		Frame _health_frame;
+
+		bool _health_captured;
 
 		std::unique_ptr<u8[]> _disconnected_input;
 
@@ -124,5 +136,9 @@ namespace Gekko {
         ReplaySystem _replay;
 
         StateEntry _spectator_state;
+
+        StateEntry _health_state;
+
+        static const Frame HEALTH_CHECK_INTERVAL = 16;
 	};
 }

@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     config.state_size = sizeof(Gamestate::State);
     config.max_spectators = 0;
     // local play is lockstep: no prediction window, no rollback.
-    config.input_prediction_window = 0;
+    config.max_input_prediction_window = 0;
     config.limited_saving = true;
     config.desync_detection = false;
     config.num_players = num_players;
