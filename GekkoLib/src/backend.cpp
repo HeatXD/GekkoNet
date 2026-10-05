@@ -76,7 +76,7 @@ void Gekko::MessageSystem::AddInput(Frame input_frame, Handle player, u8 input[]
 
     // discard acked inputs (local) or just cap the queue (remote)
     Frame min_ack = remote ? (Frame)INT_MAX : GetMinLastAckedFrame(false);
-    input_q.TrimToAck(min_ack, MAX_INPUT_QUEUE_SIZE);
+    input_q.TrimToAck(min_ack, _accept_spectator_state ? MAX_SPECTATOR_INPUT_QUEUE_SIZE : MAX_INPUT_QUEUE_SIZE);
 }
 
 void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
@@ -90,7 +90,7 @@ void Gekko::MessageSystem::AddSpectatorInput(Frame input_frame, u8 input[])
 	}
 
     // discard acked inputs and cap the queue
-    input_q.TrimToAck(GetMinLastAckedFrame(true), MAX_INPUT_QUEUE_SIZE);
+    input_q.TrimToAck(GetMinLastAckedFrame(true), MAX_SPECTATOR_INPUT_QUEUE_SIZE);
 }
 
 void Gekko::MessageSystem::SendPendingOutput(GekkoNetAdapter* host)
