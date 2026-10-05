@@ -1,5 +1,6 @@
 #include "session/spectator_session.h"
 
+#include <algorithm>
 #include <cstring>
 
 Gekko::SpectatorSession::SpectatorSession()
@@ -23,9 +24,8 @@ void Gekko::SpectatorSession::Init(GekkoConfig* config)
     // get given configs
     std::memcpy(&_config, config, sizeof(GekkoConfig));
 
-    // setup input buffer for the players (add size for spectator delay)
-    u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay;
-    _sync.Init(_config.num_players, _config.input_size, buffer_size);
+    // setup input buffer for the players (room for the spectator delay and for falling behind)
+    _sync.Init(_config.num_players, _config.input_size, InputBufferSize());
 
     // setup message system.
     _msg.Init(_config.num_players, _config.input_size, _config.state_size, true);
@@ -142,6 +142,21 @@ GekkoGameEvent** Gekko::SpectatorSession::UpdateSession(i32* count)
     return _game_events.Data();
 }
 
+u32 Gekko::SpectatorSession::InputBufferSize() const
+{
+    return InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay + CATCH_UP_FRAMES;
+}
+
+i32 Gekko::SpectatorSession::SpectatorBufferedFrames()
+{
+    const Frame received = _sync.GetMinReceivedFrame();
+    if (received == GameInput::NULL_FRAME) {
+        return 0;
+    }
+
+    return std::max(0, (i32)(received - _sync.GetCurrentFrame() + 1));
+}
+
 GekkoSessionEvent** Gekko::SpectatorSession::Events(i32* count)
 {
     *count = (i32)_msg.session_events.GetRecentEvents().size();
@@ -254,8 +269,7 @@ void Gekko::SpectatorSession::Poll()
     if (_msg.TakeSpectatorState(state_frame, state)) {
         // The snapshot contains the state after this frame, so playback starts
         // with the next input frame.
-        const u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay;
-        _sync.Init(_config.num_players, _config.input_size, buffer_size);
+        _sync.Init(_config.num_players, _config.input_size, InputBufferSize());
         _sync.SetCurrentFrame(state_frame + 1);
         _sync.SetLastReceivedFrame(state_frame);
 

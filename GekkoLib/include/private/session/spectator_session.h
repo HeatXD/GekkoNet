@@ -30,6 +30,8 @@ namespace Gekko {
 
         GekkoSessionEvent** Events(i32* count) override;
 
+        i32 SpectatorBufferedFrames() override;
+
         void NetworkStats(i32 player, GekkoNetworkStats* stats) override;
 
         void NetworkPoll() override;
@@ -45,6 +47,13 @@ namespace Gekko {
         bool SetReplayUserData(const u8* data, u32 length) override;
 
 	private:
+        // input frames the buffer holds beyond the spectator delay: received frames stay until
+        // they are played, so a spectator that falls behind (a slow load) must not overwrite
+        // frames it has not played yet. a minute at 60 frames per second.
+        static const u32 CATCH_UP_FRAMES = 3600;
+
+        u32 InputBufferSize() const;
+
 		void Poll();
 
 		bool AllActorsValid();

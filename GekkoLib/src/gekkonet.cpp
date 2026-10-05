@@ -106,6 +106,11 @@ float gekko_frames_ahead(GekkoSession* session)
     return session->FramesAhead();
 }
 
+int gekko_spectator_buffered_frames(GekkoSession* session)
+{
+    return session->SpectatorBufferedFrames();
+}
+
 void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* stats)
 {
     session->NetworkStats(player, stats);
