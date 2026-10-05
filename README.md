@@ -27,6 +27,7 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Spectator Delay Settings.
 	- Spectators can join and leave an active session while a slot is available.
 	- Late spectators load a confirmed state, then continue from its following inputs.
+	- Spectators that fall behind can catch up using gekko_spectator_buffered_frames.
 - Stress Sessions
     - To help find desyncs it your local state, This is a local session which constantly rolls the simulation back over a user-specified check distance.
 - Replays

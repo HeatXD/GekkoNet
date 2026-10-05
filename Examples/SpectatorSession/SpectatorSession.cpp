@@ -288,13 +288,18 @@ int main(int argc, char* argv[]) {
             SDL_SetWindowTitle(window, title);
         }
 
-        handle_frame_time(
-            frame_start,
-            frame_time_ns,
-            frame_delay_ns,
-            performance_frequency,
-            gekko_frames_ahead(session)
-        );
+        // a spectator that fell behind its delay runs unpaced until it caught up.
+        const bool catching_up = is_spectator &&
+            gekko_spectator_buffered_frames(session) > (int)config.spectator_delay + 8;
+        if (!catching_up) {
+            handle_frame_time(
+                frame_start,
+                frame_time_ns,
+                frame_delay_ns,
+                performance_frequency,
+                gekko_frames_ahead(session)
+            );
+        }
     }
 
     gekko_default_adapter_destroy();
