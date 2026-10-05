@@ -240,9 +240,7 @@ GEKKONET_API GekkoSessionEvent** gekko_session_events(GekkoSession* session, int
 // the average amount of frames this session runs ahead of its remote players.
 GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
 
-// spectator sessions: how many received frames wait to be played (the spectator delay included).
-// a spectator that holds more than its delay fell behind and may play faster to catch up.
-// other sessions return 0.
+// spectator sessions: received frames not played yet. 0 for other sessions.
 GEKKONET_API int gekko_spectator_buffered_frames(GekkoSession* session);
 
 // copies the network stats gathered for a remote actor or spectator.

@@ -47,9 +47,7 @@ namespace Gekko {
         bool SetReplayUserData(const u8* data, u32 length) override;
 
 	private:
-        // input frames the buffer holds beyond the spectator delay: received frames stay until
-        // they are played, so a spectator that falls behind (a slow load) must not overwrite
-        // frames it has not played yet. a minute at 60 frames per second.
+        // room for a spectator that fell behind (a minute at 60 fps).
         static const u32 CATCH_UP_FRAMES = 3600;
 
         u32 InputBufferSize() const;

@@ -257,10 +257,6 @@ namespace Gekko {
 
 	private:
 		const u32 MAX_INPUT_QUEUE_SIZE = 128;
-        // the inputs relayed to spectators: a spectator acks what it received only when it polls,
-        // and one long frame of its own (a load) can stop that for seconds. the host keeps every
-        // input a spectator has not acked until the disconnect timeout drops it (5 s, 300 frames
-        // at 60 fps), and the spectator keeps what one poll receives, so no input goes missing.
         const u32 MAX_SPECTATOR_INPUT_QUEUE_SIZE = 600;
 	    const u32 NUM_TO_SYNC = 4;
 		const u8 NUM_DISCONNECT_MSGS = 5;
