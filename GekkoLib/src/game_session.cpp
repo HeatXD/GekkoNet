@@ -876,7 +876,8 @@ void Gekko::GameSession::HandleReceivedInputs()
                     int current_idx = i - min_frame;
                     u8* input = input_q[current_idx].get();
                     _sync.AddRemoteInput(handle, input, i);
-                    const i8 local_adv = (i8)(current_frame - i - local_delay);
+                    // + delay: each peer then rolls back latency - own delay
+                    const i8 local_adv = (i8)(current_frame - i + local_delay);
                     _msg.SendInputAck(handle, i, local_adv);
                 }
             }
@@ -903,7 +904,7 @@ void Gekko::GameSession::SendLocalInputs()
                 const Frame current_frame = _sync.GetCurrentFrame();
                 for (auto& remote : _msg.remotes) {
                     if (remote->GetStatus() == Connected) {
-                        const i8 local_adv = (i8)(current_frame - _sync.GetLastReceivedFrom(remote->handle) - (Frame)delay);
+                        const i8 local_adv = (i8)(current_frame - _sync.GetLastReceivedFrom(remote->handle) + (Frame)delay);
                         remote->adv_history.SetLocalAdvantage(local_adv);
                         remote->adv_history.Update(frame);
                     }

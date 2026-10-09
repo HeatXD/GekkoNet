@@ -237,7 +237,7 @@ GEKKONET_API GekkoGameEvent** gekko_update_session(GekkoSession* session, int* c
 // returns the events the last update raised, like actors connecting or a replay finishing.
 GEKKONET_API GekkoSessionEvent** gekko_session_events(GekkoSession* session, int* count);
 
-// the average amount of frames this session runs ahead of its remote players.
+// the average amount of frames this session runs ahead of its remote players, input delays included.
 GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
 
 // spectator sessions: received frames not played yet. 0 for other sessions.
