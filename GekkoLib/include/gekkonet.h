@@ -186,6 +186,14 @@ typedef struct GekkoNetworkStats {
     float jitter;
 } GekkoNetworkStats;
 
+typedef struct GekkoRollbackStats {
+    unsigned int total_count;
+    unsigned int last_frames;
+    float avg_frames;
+    unsigned int max_frames;
+    unsigned int total_stalls;
+} GekkoRollbackStats;
+
 // Public Facing API
 
 // creates a session of the given type. the handle has to be empty.
@@ -237,7 +245,7 @@ GEKKONET_API GekkoGameEvent** gekko_update_session(GekkoSession* session, int* c
 // returns the events the last update raised, like actors connecting or a replay finishing.
 GEKKONET_API GekkoSessionEvent** gekko_session_events(GekkoSession* session, int* count);
 
-// the average amount of frames this session runs ahead of its remote players, input delays included.
+// the amount of frames this session runs ahead of its slowest remote player, input delays included.
 GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
 
 // spectator sessions: received frames not played yet. 0 for other sessions.
@@ -245,6 +253,10 @@ GEKKONET_API int gekko_spectator_buffered_frames(GekkoSession* session);
 
 // copies the network stats gathered for a remote actor or spectator.
 GEKKONET_API void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* stats);
+
+// copies the rollback stats of the session. total_count is the number of rollbacks so far and the frames are the ones resimulated per rollback.
+// total_stalls is the number of updates which could not advance because inputs were missing.
+GEKKONET_API void gekko_rollback_stats(GekkoSession* session, GekkoRollbackStats* stats);
 
 // sends and receives packets without advancing the session.
 GEKKONET_API void gekko_network_poll(GekkoSession* session);
