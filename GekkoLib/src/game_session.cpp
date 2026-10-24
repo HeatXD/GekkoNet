@@ -237,15 +237,16 @@ f32 Gekko::GameSession::FramesAhead()
         return 0.f;
     }
 
-    f32 sum = 0.f;
-    i32 count = 0;
+    bool found = false;
+    f32 ahead = 0.f;
     for (auto& remote : _msg.remotes) {
         if (remote->GetStatus() == Connected) {
-            sum += remote->adv_history.GetAverageAdvantage();
-            count++;
+            const f32 adv = remote->adv_history.GetAverageAdvantage();
+            ahead = found ? std::max(ahead, adv) : adv;
+            found = true;
         }
     }
-    return count > 0 ? sum / (f32)count : 0.f;
+    return ahead;
 }
 
 void Gekko::GameSession::NetworkStats(i32 player, GekkoNetworkStats* stats)
