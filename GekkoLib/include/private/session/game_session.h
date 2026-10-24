@@ -103,6 +103,7 @@ namespace Gekko {
             u32 count = 0;
             u32 last_frames = 0;
             u32 max_frames = 0;
+            u32 stalls = 0;
             u64 total_frames = 0;
         };
 

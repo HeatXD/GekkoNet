@@ -185,6 +185,7 @@ typedef struct GekkoRollbackStats {
     unsigned int last_frames;
     float avg_frames;
     unsigned int max_frames;
+    unsigned int total_stalls;
 } GekkoRollbackStats;
 
 // Public Facing API
@@ -239,6 +240,7 @@ GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
 GEKKONET_API void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* stats);
 
 // copies the rollback stats of the session. total_count is the number of rollbacks so far and the frames are the ones resimulated per rollback.
+// total_stalls is the number of updates which could not advance because inputs were missing.
 GEKKONET_API void gekko_rollback_stats(GekkoSession* session, GekkoRollbackStats* stats);
 
 // sends and receives packets without advancing the session.

@@ -213,7 +213,10 @@ GekkoGameEvent** Gekko::GameSession::UpdateSession(i32* count)
         CaptureSpectatorState();
 
         // then advance the session
-        if (!ShouldStallAdvance() && _game_events.AddAdvanceEvent(_sync, false, _runahead_frames > 0)) {
+        if (ShouldStallAdvance() || !_game_events.AddAdvanceEvent(_sync, false, _runahead_frames > 0)) {
+            _rollback_stats.stalls++;
+        }
+        else {
             if (!_config.limited_saving) {
                 _game_events.AddSaveEvent(_sync, _storage, &_last_saved_frame);
             }
@@ -283,6 +286,7 @@ void Gekko::GameSession::RollbackStats(GekkoRollbackStats* stats)
     stats->avg_frames = _rollback_stats.count > 0
         ? (f32)_rollback_stats.total_frames / (f32)_rollback_stats.count : 0.f;
     stats->max_frames = _rollback_stats.max_frames;
+    stats->total_stalls = _rollback_stats.stalls;
 }
 
 void Gekko::GameSession::NetworkPoll()
