@@ -23,15 +23,29 @@ namespace Gekko {
 
         bool LoadReplay(const u8* replay_data, u32 length) override;
 
+        const u8* ReplayUserData(u32& length) override;
+
     private:
         void AddInitialStateLoad();
 
         bool AddNextReplayInputs();
 
+        void AddChecksumSave(Frame frame);
+
+        void VerifyChecksum();
+
     private:
         bool _started;
 
         bool _finished;
+
+        bool _desynced;
+
+        bool _checksum_pending;
+
+        u32 _recorded_checksum;
+
+        StateEntry _checksum_state;
 
         GekkoConfig _config;
 

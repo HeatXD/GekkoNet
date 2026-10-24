@@ -23,6 +23,8 @@ namespace Gekko {
 
         void SetRunahead(u8 runahead) override;
 
+        void SetInputPredictionWindow(u8 window) override;
+
         void SetNetAdapter(GekkoNetAdapter* adapter) override;
 
         i32 AddActor(GekkoPlayerType type, GekkoNetAddress* addr) override;
@@ -49,12 +51,24 @@ namespace Gekko {
 
         const u8* StopRecording(u32& length) override;
 
+        const u8* PeekRecording(u32& length) override;
+
+        bool RecordChecksums(u32 interval) override;
+
+        bool SetReplayUserData(const u8* data, u32 length) override;
+
 	private:
 		void Poll();
 
         void UpdateRecording();
 
+        void FlushRecording();
+
         void RecordInitialState();
+
+        void RecordConfirmedChecksums();
+
+        void CaptureChecksumState(Frame frame);
 
 		bool AllActorsValid();
 
@@ -94,6 +108,10 @@ namespace Gekko {
 
         void SendSessionHealthCheck();
 
+        void CaptureHealthState(Frame frame);
+
+        void SkipUnreachableHealthFrame();
+
         void SendNetworkHealthCheck();
 
         void SessionIntegrityCheck();
@@ -117,6 +135,12 @@ namespace Gekko {
 
 		u8 _runahead_frames;
 
+		u8 _input_prediction_window;
+
+		Frame _health_frame;
+
+		bool _health_captured;
+
 		std::unique_ptr<u8[]> _disconnected_input;
 
 		GekkoConfig _config;
@@ -134,6 +158,17 @@ namespace Gekko {
         ReplaySystem _replay;
 
         StateEntry _spectator_state;
+
+        StateEntry _health_state;
+
+        static const Frame HEALTH_CHECK_INTERVAL = 16;
+
+        // with limited saving, the confirmed frames a recording wants the checksum of.
+        std::vector<std::unique_ptr<StateEntry>> _checksum_states;
+
+        u32 _checksum_captures;
+
+        Frame _last_checksum_capture;
 
         RollbackCounters _rollback_stats;
 	};

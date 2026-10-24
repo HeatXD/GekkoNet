@@ -65,7 +65,7 @@ void Gekko::InputBuffer::AddInput(Frame frame, u8* input)
     }
 
     const Frame idx = frame % _buff_size;
-    if (_input_prediction_window > 0 && _first_predicted_input == frame) {
+    if (_first_predicted_input == frame) {
         if (!_inputs[idx]->IsEqualTo(input)) {
             // incorrect prediction
             _incorrent_predicted_inputs.push_back(_first_predicted_input);
@@ -242,8 +242,11 @@ bool Gekko::InputBuffer::HandleInputPrediction(Frame frame)
 }
 
 bool Gekko::InputBuffer::CanPredictInput() {
-	const Frame diff = std::abs(_last_predicted_input) - std::abs(_first_predicted_input) + 1;
-	return _input_prediction_window > 0 && diff < _input_prediction_window;
+	if (_first_predicted_input == GameInput::NULL_FRAME) {
+		return _input_prediction_window > 0;
+	}
+	const Frame diff = _last_predicted_input - _first_predicted_input + 1;
+	return diff < _input_prediction_window;
 }
 
 u32 Gekko::InputBuffer::PreviousFrame(Frame frame)

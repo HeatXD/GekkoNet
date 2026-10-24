@@ -1,5 +1,6 @@
 #include "session/spectator_session.h"
 
+#include <algorithm>
 #include <cstring>
 
 Gekko::SpectatorSession::SpectatorSession()
@@ -9,6 +10,7 @@ Gekko::SpectatorSession::SpectatorSession()
     _delay_spectator = false;
     _spectator_state_pending = false;
     _spectator_state_frame = GameInput::NULL_FRAME;
+    _checksum_pending = false;
     _last_saved_frame = GameInput::NULL_FRAME - 1;
     _config = GekkoConfig();
 }
@@ -22,15 +24,18 @@ void Gekko::SpectatorSession::Init(GekkoConfig* config)
     // get given configs
     std::memcpy(&_config, config, sizeof(GekkoConfig));
 
-    // setup input buffer for the players (add size for spectator delay)
-    u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay;
-    _sync.Init(_config.num_players, _config.input_size, buffer_size);
+    // setup input buffer for the players (room for the spectator delay and for falling behind)
+    _sync.Init(_config.num_players, _config.input_size, InputBufferSize());
 
     // setup message system.
     _msg.Init(_config.num_players, _config.input_size, _config.state_size, true);
 
     // setup game event system
     _game_events.Init(_config.input_size * _config.num_players);
+
+    _checksum_state.state = std::make_unique<u8[]>(_config.state_size);
+    _checksum_state.state_len = _config.state_size;
+    _checksum_pending = false;
 
     // start paused so the buffer fills before playback begins
     _delay_spectator = (_config.spectator_delay > 0);
@@ -124,12 +129,32 @@ GekkoGameEvent** Gekko::SpectatorSession::UpdateSession(i32* count)
 
         // then advance the session
         if (_game_events.AddAdvanceEvent(_sync, false)) {
+            const Frame frame = _sync.GetCurrentFrame();
+            if (_replay.WantsChecksum(frame)) {
+                _game_events.AddStateSaveEvent(frame, &_checksum_state);
+                _checksum_pending = true;
+            }
             _sync.IncrementFrame();
         }
     }
 
     *count = _game_events.Count();
     return _game_events.Data();
+}
+
+u32 Gekko::SpectatorSession::InputBufferSize() const
+{
+    return InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay + CATCH_UP_FRAMES;
+}
+
+i32 Gekko::SpectatorSession::SpectatorBufferedFrames()
+{
+    const Frame received = _sync.GetMinReceivedFrame();
+    if (received == GameInput::NULL_FRAME) {
+        return 0;
+    }
+
+    return std::max(0, (i32)(received - _sync.GetCurrentFrame() + 1));
 }
 
 GekkoSessionEvent** Gekko::SpectatorSession::Events(i32* count)
@@ -165,7 +190,46 @@ bool Gekko::SpectatorSession::StartRecording(bool save_initial_state, bool disab
 
 const u8* Gekko::SpectatorSession::StopRecording(u32& length)
 {
+    FlushRecording();
+
     return _replay.StopRecording(length);
+}
+
+const u8* Gekko::SpectatorSession::PeekRecording(u32& length)
+{
+    FlushRecording();
+
+    return _replay.PeekRecording(length);
+}
+
+void Gekko::SpectatorSession::FlushRecording()
+{
+    // the game handled the events of the last update by now, keep what they confirmed.
+    if (_replay.IsRecording() && !_replay.NeedsState()) {
+        _replay.RecordInputs(_sync);
+        RecordPendingChecksum();
+    }
+}
+
+bool Gekko::SpectatorSession::RecordChecksums(u32 interval)
+{
+    return _replay.SetChecksumInterval(interval);
+}
+
+bool Gekko::SpectatorSession::SetReplayUserData(const u8* data, u32 length)
+{
+    return _replay.SetUserData(data, length);
+}
+
+void Gekko::SpectatorSession::RecordPendingChecksum()
+{
+    if (!_checksum_pending) {
+        return;
+    }
+
+    _checksum_pending = false;
+
+    _replay.RecordChecksum(_checksum_state.frame, _checksum_state.checksum);
 }
 
 void Gekko::SpectatorSession::UpdateRecording()
@@ -179,6 +243,9 @@ void Gekko::SpectatorSession::UpdateRecording()
     }
 
     _replay.RecordInputs(_sync);
+
+    // spectators only play confirmed inputs, so the frame saved last update is final.
+    RecordPendingChecksum();
 }
 
 void Gekko::SpectatorSession::Poll()
@@ -202,8 +269,7 @@ void Gekko::SpectatorSession::Poll()
     if (_msg.TakeSpectatorState(state_frame, state)) {
         // The snapshot contains the state after this frame, so playback starts
         // with the next input frame.
-        const u32 buffer_size = InputBuffer::DEFAULT_BUFF_SIZE + _config.spectator_delay;
-        _sync.Init(_config.num_players, _config.input_size, buffer_size);
+        _sync.Init(_config.num_players, _config.input_size, InputBufferSize());
         _sync.SetCurrentFrame(state_frame + 1);
         _sync.SetLastReceivedFrame(state_frame);
 

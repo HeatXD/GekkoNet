@@ -27,11 +27,14 @@ I am personally not a big fan of the callback based approach of GGPO hence why I
 	- Spectator Delay Settings.
 	- Spectators can join and leave an active session while a slot is available.
 	- Late spectators load a confirmed state, then continue from its following inputs.
+	- Spectators that fall behind can catch up using gekko_spectator_buffered_frames.
 - Stress Sessions
     - To help find desyncs it your local state, This is a local session which constantly rolls the simulation back over a user-specified check distance.
 - Replays
 	- Record the inputs of any session, optionally together with the gamestate the recording starts at.
 	- Replay Sessions play the recording back frame by frame.
+	- Optionally store the checksums of the recorded frames, a Replay Session then reports the first frame that plays back differently.
+	- Attach application data to a recording, like a build id, and read it back after loading.
 - Limited Saving 
 	- Save the gamestate less often which might help games where saving the game is expensive. This is at the cost of more iterations advancing the gamestate during rollback.
 - Abstracted socket manager.

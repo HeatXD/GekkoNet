@@ -7,6 +7,9 @@ Gekko::ReplaySession::ReplaySession()
 {
     _started = false;
     _finished = false;
+    _desynced = false;
+    _checksum_pending = false;
+    _recorded_checksum = 0;
     _inputs = nullptr;
     _config = GekkoConfig();
 }
@@ -31,8 +34,12 @@ GekkoGameEvent** Gekko::ReplaySession::UpdateSession(i32* count)
             AddInitialStateLoad();
         }
 
+        // the game handled the save of the previous frame by now.
+        VerifyChecksum();
+
         if (AddNextReplayInputs()) {
             if (_game_events.AddAdvanceEvent(_sync, false)) {
+                AddChecksumSave(_sync.GetCurrentFrame());
                 _sync.IncrementFrame();
             }
         }
@@ -62,6 +69,9 @@ bool Gekko::ReplaySession::LoadReplay(const u8* replay_data, u32 length)
 
     _started = false;
     _finished = false;
+    _desynced = false;
+    _checksum_pending = false;
+    _recorded_checksum = 0;
 
     try {
         _sync.Init(_config.num_players, _config.input_size);
@@ -69,6 +79,10 @@ bool Gekko::ReplaySession::LoadReplay(const u8* replay_data, u32 length)
         _game_events.Init(_config.input_size * _config.num_players);
 
         _inputs = std::make_unique<u8[]>(_config.input_size * _config.num_players);
+
+        _checksum_state = StateEntry();
+        _checksum_state.state = std::make_unique<u8[]>(_config.state_size);
+        _checksum_state.state_len = _config.state_size;
     }
     catch (...) {
         printf("replay does not fit in memory\n");
@@ -105,4 +119,34 @@ bool Gekko::ReplaySession::AddNextReplayInputs()
     }
 
     return true;
+}
+
+const u8* Gekko::ReplaySession::ReplayUserData(u32& length)
+{
+    return _replay.UserData(length);
+}
+
+void Gekko::ReplaySession::AddChecksumSave(Frame frame)
+{
+    if (_desynced || !_replay.RecordedChecksum(frame, _recorded_checksum)) {
+        return;
+    }
+
+    _game_events.AddStateSaveEvent(frame, &_checksum_state);
+    _checksum_pending = true;
+}
+
+void Gekko::ReplaySession::VerifyChecksum()
+{
+    if (!_checksum_pending) {
+        return;
+    }
+
+    _checksum_pending = false;
+
+    if (_checksum_state.checksum != _recorded_checksum) {
+        // only the first mismatch is reported, every later frame follows from it.
+        _desynced = true;
+        _session_events.AddReplayDesyncEvent(_checksum_state.frame, _checksum_state.checksum, _recorded_checksum);
+    }
 }

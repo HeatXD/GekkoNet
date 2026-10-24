@@ -34,12 +34,20 @@ namespace Gekko {
 
         const u8* StopRecording(u32& length) override;
 
+        const u8* PeekRecording(u32& length) override;
+
+        bool RecordChecksums(u32 interval) override;
+
+        bool SetReplayUserData(const u8* data, u32 length) override;
+
     private:
         void HandleRollback();
 
         void CheckForDesyncs(Frame check_frame);
 
         void UpdateRecording();
+
+        void FlushRecording();
 
     private:
         GekkoConfig _config;

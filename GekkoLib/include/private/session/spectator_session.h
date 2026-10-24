@@ -30,6 +30,8 @@ namespace Gekko {
 
         GekkoSessionEvent** Events(i32* count) override;
 
+        i32 SpectatorBufferedFrames() override;
+
         void NetworkStats(i32 player, GekkoNetworkStats* stats) override;
 
         void NetworkPoll() override;
@@ -38,7 +40,18 @@ namespace Gekko {
 
         const u8* StopRecording(u32& length) override;
 
+        const u8* PeekRecording(u32& length) override;
+
+        bool RecordChecksums(u32 interval) override;
+
+        bool SetReplayUserData(const u8* data, u32 length) override;
+
 	private:
+        // room for a spectator that fell behind (a minute at 60 fps).
+        static const u32 CATCH_UP_FRAMES = 3600;
+
+        u32 InputBufferSize() const;
+
 		void Poll();
 
 		bool AllActorsValid();
@@ -48,6 +61,10 @@ namespace Gekko {
         bool ShouldDelaySpectator();
 
         void UpdateRecording();
+
+        void FlushRecording();
+
+        void RecordPendingChecksum();
 
 	private:
 		bool _started;
@@ -73,5 +90,10 @@ namespace Gekko {
         Frame _spectator_state_frame;
 
         std::vector<u8> _spectator_state;
+
+        // a spectator does not save on its own, it saves the frames a recording checksums.
+        StateEntry _checksum_state;
+
+        bool _checksum_pending;
 	};
 }

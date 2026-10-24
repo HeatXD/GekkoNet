@@ -257,6 +257,7 @@ namespace Gekko {
 
 	private:
 		const u32 MAX_INPUT_QUEUE_SIZE = 128;
+        const u32 MAX_SPECTATOR_INPUT_QUEUE_SIZE = 600;
 	    const u32 NUM_TO_SYNC = 4;
 		const u8 NUM_DISCONNECT_MSGS = 5;
 
