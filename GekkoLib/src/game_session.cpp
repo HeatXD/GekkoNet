@@ -14,6 +14,7 @@ Gekko::GameSession::GameSession()
     _runahead_start_frame = GameInput::NULL_FRAME;
     _runahead_frames = 0;
     _config = GekkoConfig();
+    _rollback_stats = RollbackCounters();
 }
 
 void Gekko::GameSession::Init(GekkoConfig* config)
@@ -21,6 +22,8 @@ void Gekko::GameSession::Init(GekkoConfig* config)
     _host = nullptr;
 
     _started = false;
+
+    _rollback_stats = RollbackCounters();
 
     // get given configs
     std::memcpy(&_config, config, sizeof(GekkoConfig));
@@ -271,6 +274,15 @@ void Gekko::GameSession::NetworkStats(i32 player, GekkoNetworkStats* stats)
             }
         }
     }
+}
+
+void Gekko::GameSession::RollbackStats(GekkoRollbackStats* stats)
+{
+    stats->total_count = _rollback_stats.count;
+    stats->last_frames = _rollback_stats.last_frames;
+    stats->avg_frames = _rollback_stats.count > 0
+        ? (f32)_rollback_stats.total_frames / (f32)_rollback_stats.count : 0.f;
+    stats->max_frames = _rollback_stats.max_frames;
 }
 
 void Gekko::GameSession::NetworkPoll()
@@ -647,6 +659,12 @@ void Gekko::GameSession::HandleRollback()
         }
         _sync.IncrementFrame();
     }
+
+    const u32 resimulated = (u32)(current - sync_frame - 1);
+    _rollback_stats.count++;
+    _rollback_stats.last_frames = resimulated;
+    _rollback_stats.max_frames = std::max(_rollback_stats.max_frames, resimulated);
+    _rollback_stats.total_frames += resimulated;
 
     // clear the marked mispredictions up to this point in the input buffer
     _sync.ClearIncorrectFramesUpTo(current);

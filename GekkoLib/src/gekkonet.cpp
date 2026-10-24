@@ -106,6 +106,11 @@ void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* s
     session->NetworkStats(player, stats);
 }
 
+void gekko_rollback_stats(GekkoSession* session, GekkoRollbackStats* stats)
+{
+    session->RollbackStats(stats);
+}
+
 void gekko_network_poll(GekkoSession* session)
 {
     session->NetworkPoll();

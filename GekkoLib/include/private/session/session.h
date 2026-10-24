@@ -17,6 +17,7 @@ struct GekkoSession {
     virtual GekkoSessionEvent** Events(i32* count) = 0;
     virtual f32 FramesAhead() { return 0.f; }
     virtual void NetworkStats(i32 player, GekkoNetworkStats* stats) {}
+    virtual void RollbackStats(GekkoRollbackStats* stats) { *stats = GekkoRollbackStats(); }
     virtual void NetworkPoll() {}
     virtual bool StartRecording(bool save_initial_state, bool disable_compression) { return false; }
     virtual const u8* StopRecording(u32& length) { return nullptr; }

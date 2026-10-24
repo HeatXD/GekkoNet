@@ -180,6 +180,13 @@ typedef struct GekkoNetworkStats {
     float jitter;
 } GekkoNetworkStats;
 
+typedef struct GekkoRollbackStats {
+    unsigned int total_count;
+    unsigned int last_frames;
+    float avg_frames;
+    unsigned int max_frames;
+} GekkoRollbackStats;
+
 // Public Facing API
 
 // creates a session of the given type. the handle has to be empty.
@@ -230,6 +237,9 @@ GEKKONET_API float gekko_frames_ahead(GekkoSession* session);
 
 // copies the network stats gathered for a remote actor or spectator.
 GEKKONET_API void gekko_network_stats(GekkoSession* session, int player, GekkoNetworkStats* stats);
+
+// copies the rollback stats of the session. total_count is the number of rollbacks so far and the frames are the ones resimulated per rollback.
+GEKKONET_API void gekko_rollback_stats(GekkoSession* session, GekkoRollbackStats* stats);
 
 // sends and receives packets without advancing the session.
 GEKKONET_API void gekko_network_poll(GekkoSession* session);
