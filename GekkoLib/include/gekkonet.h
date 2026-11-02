@@ -302,6 +302,7 @@ GEKKONET_API const unsigned char* gekko_replay_user_data(GekkoSession* session, 
 
 // creates the built in UDP adapter bound to the given port.
 // calling this again closes the socket the previous call opened.
+// returns null when the socket can not be opened.
 GEKKONET_API GekkoNetAdapter* gekko_default_adapter(unsigned short port);
 
 // closes the socket the built in adapter uses.

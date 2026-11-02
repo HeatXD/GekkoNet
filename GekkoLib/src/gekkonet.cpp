@@ -199,7 +199,7 @@ const unsigned char* gekko_replay_user_data(GekkoSession* session, unsigned int*
 #include <cstring>
 #include <iostream>
 
-static char _buffer[1024];
+static char _buffer[65536];
 static asio::error_code _ec;
 static asio::io_context _io_ctx;
 static asio::ip::udp::endpoint _remote;
@@ -220,9 +220,19 @@ static asio::ip::udp::endpoint STOE(const std::string& str) {
 
 
 static void asio_send(GekkoNetAddress* addr, const char* data, int length) {
+    if (!_socket) {
+        return;
+    }
+
     std::string address((char*)addr->data, addr->size);
 
-    auto endpoint = STOE(address);
+    asio::ip::udp::endpoint endpoint;
+    try {
+        endpoint = STOE(address);
+    }
+    catch (const std::exception&) {
+        return;
+    }
 
     _socket->send_to(asio::buffer(data, length), endpoint, 0, _ec);
 
@@ -234,10 +244,10 @@ static void asio_send(GekkoNetAddress* addr, const char* data, int length) {
 static GekkoNetResult** asio_receive(int* length) {
     _results.clear();
 
-    while (true) {
+    while (_socket) {
         const u32 len = (u32)_socket->receive_from(asio::buffer(_buffer), _remote, 0, _ec);
-        if (_ec && _ec != asio::error::would_block) {
-            // std::cout << "receive failed: " << _ec.message() << std::endl;
+        if (_ec == asio::error::connection_reset || _ec == asio::error::connection_refused) {
+            // an earlier send bounced, the next datagram can still be read.
             continue;
         }
         else if (!_ec) {
@@ -291,8 +301,20 @@ GekkoNetAdapter* gekko_default_adapter(unsigned short port) {
     }
 
     // setup socket
-    _socket = new asio::ip::udp::socket(_io_ctx, asio::ip::udp::endpoint(asio::ip::udp::v4(), port));
-    _socket->non_blocking(true);
+    asio::error_code ec;
+    _socket = new asio::ip::udp::socket(_io_ctx);
+    _socket->open(asio::ip::udp::v4(), ec);
+    if (!ec) {
+        _socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), port), ec);
+    }
+    if (!ec) {
+        _socket->non_blocking(true, ec);
+    }
+    if (ec) {
+        delete _socket;
+        _socket = nullptr;
+        return nullptr;
+    }
 
     return &default_sock;
 }
