@@ -152,7 +152,11 @@ void Gekko::MessageSystem::HandleData(GekkoNetAdapter* host, GekkoNetResult** da
         _bin_buffer.insert(_bin_buffer.begin(), (u8*)res->data, (u8*)res->data + res->data_len);
 
         NetPacket pkt;
-        zpp::bits::in in(_bin_buffer);
+        // Cap how much the archive will allocate from a length prefix. Untrusted
+        // datagrams can claim a huge size before the bytes are shown to be there,
+        // so without this a single packet can force a multi-gigabyte allocation.
+        // The default adapter receives into a 64 KiB buffer, so valid packets fit.
+        zpp::bits::in in(_bin_buffer, zpp::bits::alloc_limit<65536>{});
 
         if (failure(in(pkt.header, pkt.body))) {
             printf("failed to deserialize packet\n");
