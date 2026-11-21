@@ -1320,7 +1320,7 @@ void Gekko::MessageSystem::OnDisconnectClaim(NetAddress& addr, NetPacket& pkt)
     }
 
     // the carried inputs must cover the claimed frame range.
-    const u64 expected = (u64)(body->last_frame - body->start_frame + 1) * _input_size;
+    const u64 expected = (u64)((i64)body->last_frame - body->start_frame + 1) * _input_size;
     if (body->last_frame < body->start_frame || body->inputs.size() < expected) {
         return;
     }
