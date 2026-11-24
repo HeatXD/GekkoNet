@@ -671,7 +671,14 @@ void Gekko::GameSession::PrepareSpectatorStates()
             continue;
         }
 
-        Frame state_frame = _config.limited_saving ? _last_saved_frame : GetConfirmedFrame();
+        // states from the earliest mispredicted frame on are not rolled back yet.
+        Frame newest_correct = GetConfirmedFrame();
+        const Frame incorrect = _sync.GetMinIncorrectFrame();
+        if (incorrect != GameInput::NULL_FRAME) {
+            newest_correct = std::min(newest_correct, incorrect - 1);
+        }
+
+        Frame state_frame = _config.limited_saving ? _last_saved_frame : newest_correct;
         const Frame oldest_state = _config.limited_saving
             ? state_frame
             : std::max((Frame)-1, state_frame - (Frame)_config.max_input_prediction_window - 1);
